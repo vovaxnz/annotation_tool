@@ -1,5 +1,13 @@
 # projection_labeling_tool
 
+## Setup
+```
+pip install -r requirements.txt
+```
+
+If tkinter is not installed: `sudo apt-get install python3-tk`
+
+
 ## Import data
 
 ```
