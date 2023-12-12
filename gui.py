@@ -3,11 +3,10 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
-from labeling import ImageCanvas
-from interaction import UserInteraction, InputHandler
+from labeling import LabelingApp
 
 
-def scale_image(img: np.ndarray, x0: int, y0: int, scale: float) -> np.ndarray:
+def scale_image(img: np.ndarray, x0: int, y0: int, scale: float) -> np.ndarray: # TODO: MOVE TO CLASSES ALL ABANDONED METHODS
 
     # Get the original dimensions of the image
     h, w = img.shape[:2]
@@ -29,7 +28,7 @@ def scale_image(img: np.ndarray, x0: int, y0: int, scale: float) -> np.ndarray:
 
 
 class MainWindow(tk.Tk):
-    def __init__(self, canvas: ImageCanvas, user_interaction: UserInteraction):
+    def __init__(self, app: LabelingApp):
         super().__init__()
         self.title("Rectangle Drawing Tool")
         # Get screen width and height
@@ -39,34 +38,32 @@ class MainWindow(tk.Tk):
         # Set window size to screen size
         self.geometry(f"{screen_width}x{screen_height}+0+0")
 
-        self.canvas_view = CanvasView(self, canvas, user_interaction)
+        self.canvas_view = CanvasView(self, app)
         self.control_panel = ControlPanel(self)
         self.canvas_view.pack(side="left", fill="both", expand=True)
         self.control_panel.pack(side="right", fill="y")
 
 class CanvasView(tk.Canvas):
-    def __init__(self, parent, canvas: ImageCanvas, user_interaction: UserInteraction):
+    def __init__(self, parent, app: LabelingApp):
         super().__init__(parent, bg="black") 
 
         self.scale_factor = 1.0
         self.x0, self.y0 = 0, 0
-        self.image_canvas = canvas
-        self.user_interaction = user_interaction
-        self.input_handler = InputHandler(self.user_interaction)
+        self.app = app
 
-        self.bind("<Button-1>", self.scale_event_wrapper(self.input_handler.processLClickEvent))
-        self.bind("<Button-2>", self.scale_event_wrapper(self.input_handler.processMClickEvent))
-        self.bind("<Button-3>", self.scale_event_wrapper(self.input_handler.processRClickEvent))
-        self.bind("<B1-Motion>", self.scale_event_wrapper(self.input_handler.processMouseMoveEvent))
-        self.bind("<B3-Motion>", self.scale_event_wrapper(self.input_handler.processMouseMoveEvent))
-        self.bind("<ButtonRelease-1>", self.scale_event_wrapper(self.input_handler.processMouseReleaseEvent))
-        self.bind("<ButtonRelease-3>", self.scale_event_wrapper(self.input_handler.processMouseReleaseEvent))
+        self.bind("<Button-1>", self.scale_event_wrapper(self.handle_left_click))
+        self.bind("<Button-2>", self.scale_event_wrapper(self.handle_right_click))
+        self.bind("<Button-3>", self.scale_event_wrapper(self.handle_middle_click))
+        self.bind("<B1-Motion>", self.scale_event_wrapper(self.handle_mouse_move))
+        self.bind("<B3-Motion>", self.scale_event_wrapper(self.handle_mouse_move))
+        self.bind("<ButtonRelease-1>", self.scale_event_wrapper(self.handle_mouse_release))
+        self.bind("<ButtonRelease-3>", self.scale_event_wrapper(self.handle_mouse_release))
 
         # Set focus to the canvas to receive keyboard events
         self.focus_set()
-        self.bind("<e>", self.input_handler.processEPressEvent)
-        self.bind("<q>", self.input_handler.processQPressEvent)
-        self.bind("<w>", self.input_handler.processWPressEvent)
+        self.bind("<e>", self.handle_e_press)
+        self.bind("<q>", self.handle_q_press)
+        self.bind("<w>", self.handle_w_press)
 
         self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
@@ -74,6 +71,30 @@ class CanvasView(tk.Canvas):
 
         # Drawing loop to update the canvas
         self.after(50, self.update_canvas)
+
+    def handle_left_click(self, event: tk.Event):
+        self.app.handle_left_click(event.x, event.y)
+
+    def handle_right_click(self, event: tk.Event):
+        self.app.handle_right_click(event.x, event.y)
+
+    def handle_middle_click(self, event: tk.Event):
+        self.app.handle_middle_click(event.x, event.y)
+
+    def handle_mouse_move(self, event: tk.Event):
+        self.app.handle_mouse_move(event.x, event.y)
+
+    def handle_mouse_release(self, event: tk.Event):
+        self.app.handle_mouse_release(event.x, event.y)
+
+    def handle_e_press(self, event: tk.Event):
+        self.app.export_data()
+
+    def handle_q_press(self, event: tk.Event):
+        self.app.backward()
+
+    def handle_w_press(self, event: tk.Event):
+        self.app.forward()
 
     def scale_event_wrapper(self, handler):
         # Wrapper function to adjust event coordinates
@@ -120,7 +141,7 @@ class CanvasView(tk.Canvas):
 
     def update_canvas(self):
         # Convert the OpenCV image to a format suitable for Tkinter
-        cv_image = cv2.cvtColor(self.image_canvas.canvas, cv2.COLOR_BGR2RGB)
+        cv_image = cv2.cvtColor(self.app.canvas.canvas, cv2.COLOR_BGR2RGB)
         cv_image = scale_image(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
         pil_image = Image.fromarray(cv_image)
         tk_image = ImageTk.PhotoImage(image=pil_image)
@@ -135,6 +156,7 @@ class CanvasView(tk.Canvas):
         self.tk_image = tk_image
 
         self.after(50, self.update_canvas)
+
 
 class ControlPanel(tk.Frame):
     def __init__(self, parent):

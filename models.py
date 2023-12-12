@@ -80,7 +80,6 @@ class Rectangle(Base):
         intersection = find_intersection(act_m, act_b, opp_m, opp_b)
         if intersection is None:
             return
-        print("act_m, act_b, opp_m, opp_b", act_m, act_b, opp_m, opp_b, 'intersection', intersection)
         int_x, int_y = intersection
         self.xc = (x + opp_x) / 2
         self.yc = (y + opp_y) / 2

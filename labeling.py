@@ -171,7 +171,7 @@ def get_cam_config_for_img_name(img_name):
 
 class LabelingApp:
 
-    def __init__(self, img_dir: str):    
+    def __init__(self, img_dir: str, export_path: str):    
         self.canvas: ImageCanvas = None
 
         # Add images from the directory to the database
@@ -183,10 +183,45 @@ class LabelingApp:
                 img_object.save()
 
         self.img_dir = img_dir
+        self.export_path = export_path
 
         self.img_id = 0
         self.load_image()
-        
+    
+    def handle_left_click(self, x: int, y: int):
+        if self.canvas.mode == Mode.IDLE:
+            rect_id = self.canvas.get_selected_rectangle(x, y)
+            if rect_id is not None:
+                self.canvas.mode = Mode.MOVING
+            else:
+                self.canvas.start_point = (x, y)
+                self.canvas.mode = Mode.DRAWING
+        elif self.canvas.mode == Mode.DRAWING:
+            self.canvas.complete_drawing(x, y)
+            self.canvas.mode = Mode.IDLE
+
+    def handle_right_click(self, x: int, y: int):
+        if self.canvas.mode == Mode.IDLE:
+            rect_id = self.canvas.get_selected_rectangle(x, y)
+            if rect_id is not None:
+                self.canvas.mode = Mode.ROTATING
+    
+    def handle_middle_click(self, x: int, y: int):
+        self.canvas.remove_rectangle(x, y)
+        self.canvas.mode = Mode.IDLE
+
+    def handle_mouse_move(self, x: int, y: int):
+        if self.canvas.mode == Mode.MOVING:
+            self.canvas.move_selected_rectangle(x, y)
+        elif self.canvas.mode == Mode.ROTATING:
+            self.canvas.rotate_selected_rectangle(x, y)
+        self.canvas.update_canvas() 
+
+    def handle_mouse_release(self, x: int, y: int):
+        if self.canvas.mode in [Mode.MOVING, Mode.ROTATING]:
+            self.canvas.complete_rectangle()
+            self.canvas.mode = Mode.IDLE
+
     def load_image(self):
 
         img_name = self.img_names[self.img_id]
@@ -251,11 +286,11 @@ class LabelingApp:
         # load new image
         self.load_image()
 
-    def export_data(self, output_json):
+    def export_data(self):
 
         result_images = dict()
 
-        for image_name in tqdm(self.img_names, desc=f"Exporting data to {output_json}"):
+        for image_name in tqdm(self.img_names, desc=f"Exporting data to {self.export_path}"):
             image = Image.get(name=image_name)
             cfg = get_cam_config_for_img_name(image_name)
 
@@ -275,4 +310,4 @@ class LabelingApp:
                 
             result_images[image.name] = rectangles_2d
 
-        save_json(result_images, output_json) 
+        save_json(result_images, self.export_path) 
