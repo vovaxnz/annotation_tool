@@ -54,6 +54,7 @@ class ImageCanvas:
         self.ct: CoordinateTransformer = ct
         self.selected_rectangle_id = None
 
+        self.draw_figures = True
         self.mode = Mode.IDLE
         self.start_point: Optional[Tuple[int, int]] = None
 
@@ -73,8 +74,8 @@ class ImageCanvas:
 
         h = abs(start_point_scheme[1] - end_point_scheme[1])
         w = abs(start_point_scheme[0] - end_point_scheme[0])
-        yc = abs((start_point_scheme[1] + end_point_scheme[1]) / 2)
-        xc = abs((start_point_scheme[0] + end_point_scheme[0]) / 2)
+        yc = (start_point_scheme[1] + end_point_scheme[1]) / 2
+        xc = (start_point_scheme[0] + end_point_scheme[0]) / 2
         rectangle = Rectangle(h, w, xc, yc)
 
         self.rectangles.append(rectangle)
@@ -82,6 +83,9 @@ class ImageCanvas:
 
     def draw_rectangle(self, canvas: np.ndarray, rectangle: Rectangle):
         """Drawing the rectangle on the canvas"""
+        if not self.draw_figures:
+            return canvas
+
         points = rectangle.points
         for i in range(4):
             p1 = points[i]
@@ -159,15 +163,6 @@ class ImageCanvas:
             self.selected_rectangle_id = None
             self.update_canvas()
 
-def undistort_image(img: np.ndarray, mtx, dist, new_camera_mtx):
-    return cv2.undistort(img, mtx, dist, None, new_camera_mtx)
-
-def get_cam_config_for_img_name(img_name):
-    for cam_name, cfg in config.cam_configs.items():
-        if cam_name in img_name:
-            return cfg
-    raise RuntimeError(f"Config for image {img_name} is not found")
-
 
 class LabelingApp:
 
@@ -183,7 +178,7 @@ class LabelingApp:
                 img_object.save()
 
         self.img_dir = img_dir
-        self.export_path = export_path
+        self.export_path = export_path if export_path is not None else "result.json"
 
         self.img_id = 0
         self.load_image()
@@ -223,20 +218,22 @@ class LabelingApp:
             self.canvas.mode = Mode.IDLE
 
     def load_image(self):
-
+        
+        print(f'Img {self.img_id}')
         img_name = self.img_names[self.img_id]
         img_mat = cv2.imread(os.path.join(self.img_dir, img_name))
         image = Image.get(name=img_name)
 
         # Select cam config for this image 
-        cam_config: config.CamConfig = get_cam_config_for_img_name(img_name)
+        cam_config: config.CamConfig = self._get_cam_config_for_img_name(img_name)
 
         # Set image, rectangles, ct to canvas
-        img_mat = undistort_image(
+        img_mat = cv2.undistort(
             img_mat, 
-            mtx=cam_config.undistort["mtx"], 
-            dist=cam_config.undistort["dist"], 
-            new_camera_mtx=cam_config.undistort["new_camera_mtx"]
+            cam_config.undistort["mtx"], 
+            cam_config.undistort["dist"], 
+            None,
+            cam_config.undistort["new_camera_mtx"]
         )
 
         # Draw img id on image
@@ -288,11 +285,13 @@ class LabelingApp:
 
     def export_data(self):
 
+        self.save_image()
+
         result_images = dict()
 
         for image_name in tqdm(self.img_names, desc=f"Exporting data to {self.export_path}"):
             image = Image.get(name=image_name)
-            cfg = get_cam_config_for_img_name(image_name)
+            cfg = self._get_cam_config_for_img_name(image_name)
 
             ct = CoordinateTransformer(             
                 homography_matrix=cfg.transform_v2s,
@@ -304,10 +303,24 @@ class LabelingApp:
                 result_points = list()
                 for p in points:
                     p = ct.scheme_to_view(*p)
-                    p = distort_point(p[0], p[0], mtx=cfg.undistort["mtx"], dist=cfg.undistort["dist"], new_camera_mtx=cfg.undistort["new_camera_mtx"])
+                    p = distort_point(p[0], p[1], mtx=cfg.undistort["mtx"], dist=cfg.undistort["dist"], new_camera_mtx=cfg.undistort["new_camera_mtx"])
                     result_points.append(p)
                 rectangles_2d.append(result_points)
                 
             result_images[image.name] = rectangles_2d
 
         save_json(result_images, self.export_path) 
+
+    def switch_drawing_figures(self):
+        if self.canvas.draw_figures:
+            self.canvas.draw_figures = False
+        else:
+            self.canvas.draw_figures = True
+        self.canvas.update_canvas()
+
+    @staticmethod
+    def _get_cam_config_for_img_name(img_name):
+        for cam_name, cfg in config.cam_configs.items():
+            if cam_name in img_name:
+                return cfg
+        raise RuntimeError(f"Config for image {img_name} is not found")

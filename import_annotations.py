@@ -13,7 +13,7 @@ annotations = open_json(args.ann)
 for img_name, rects_data in annotations.items():
     image = Image.get(name=img_name)
     if image is not None:
-        if args.rewrite:
+        if args.overwrite:
             print("Image", img_name, "is already in the database, overwriting")
             image.delete()
         else:

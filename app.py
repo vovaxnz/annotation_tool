@@ -1,6 +1,5 @@
 import argparse
 from gui import MainWindow
-from interaction import UserInteraction, InputHandler
 from labeling import LabelingApp
 
 
@@ -11,7 +10,6 @@ class Application:
         """
         self.labeling_app = LabelingApp(img_dir, export_path=export_path) 
         self.main_window = MainWindow(app=self.labeling_app)
-
 
     def initialize_gui(self):
         self.main_window.mainloop()
