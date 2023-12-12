@@ -1,9 +1,31 @@
+from typing import Tuple
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
 from labeling import ImageCanvas
 from interaction import UserInteraction, InputHandler
+
+
+def scale_image(img: np.ndarray, x0: int, y0: int, scale: float) -> np.ndarray:
+
+    # Get the original dimensions of the image
+    h, w = img.shape[:2]
+
+    # Compute the new dimensions
+    new_width = int(w * scale)
+    new_height = int(h * scale)
+
+    # Resize the image
+    resized = cv2.resize(img, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
+
+    x0 = max(x0, 0)
+    y0 = max(y0, 0)
+
+    # Crop or pad the image
+    cropped = resized[int(y0):int(y0+h), int(x0):int(x0+w)]
+
+    return cropped
 
 
 class MainWindow(tk.Tk):
@@ -17,39 +39,89 @@ class MainWindow(tk.Tk):
         # Set window size to screen size
         self.geometry(f"{screen_width}x{screen_height}+0+0")
 
-        self.canvas_view = CanvasView(self, canvas, user_interaction, height=screen_height, width=screen_width)
+        self.canvas_view = CanvasView(self, canvas, user_interaction)
         self.control_panel = ControlPanel(self)
         self.canvas_view.pack(side="left", fill="both", expand=True)
         self.control_panel.pack(side="right", fill="y")
 
 class CanvasView(tk.Canvas):
-    def __init__(self, parent, canvas: ImageCanvas, user_interaction: UserInteraction, height: int, width: int):
+    def __init__(self, parent, canvas: ImageCanvas, user_interaction: UserInteraction):
         super().__init__(parent, bg="black") 
-        self.height, self.width = height, width
+
+        self.scale_factor = 1.0
+        self.x0, self.y0 = 0, 0
         self.image_canvas = canvas
         self.user_interaction = user_interaction
         self.input_handler = InputHandler(self.user_interaction)
-        self.bind("<Button-1>", self.input_handler.processLClickEvent)
-        self.bind("<Button-2>", self.input_handler.processMClickEvent)
-        self.bind("<Button-3>", self.input_handler.processRClickEvent)
-        self.bind("<B1-Motion>", self.input_handler.processMouseMoveEvent)
-        self.bind("<B3-Motion>", self.input_handler.processMouseMoveEvent)
-        self.bind("<ButtonRelease-1>", self.input_handler.processMouseReleaseEvent)
-        self.bind("<ButtonRelease-3>", self.input_handler.processMouseReleaseEvent)
+
+        self.bind("<Button-1>", self.scale_event_wrapper(self.input_handler.processLClickEvent))
+        self.bind("<Button-2>", self.scale_event_wrapper(self.input_handler.processMClickEvent))
+        self.bind("<Button-3>", self.scale_event_wrapper(self.input_handler.processRClickEvent))
+        self.bind("<B1-Motion>", self.scale_event_wrapper(self.input_handler.processMouseMoveEvent))
+        self.bind("<B3-Motion>", self.scale_event_wrapper(self.input_handler.processMouseMoveEvent))
+        self.bind("<ButtonRelease-1>", self.scale_event_wrapper(self.input_handler.processMouseReleaseEvent))
+        self.bind("<ButtonRelease-3>", self.scale_event_wrapper(self.input_handler.processMouseReleaseEvent))
+
         # Set focus to the canvas to receive keyboard events
         self.focus_set()
         self.bind("<e>", self.input_handler.processEPressEvent)
         self.bind("<q>", self.input_handler.processQPressEvent)
         self.bind("<w>", self.input_handler.processWPressEvent)
 
-        # Drawing loop to update the canvas
-        self.after(100, self.update_canvas)
+        self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
+        self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
+        self.bind("<Button-5>", self.on_mouse_wheel)  # For Unix/Linux, Zoom out
 
-        # TODO: Add zoom
+        # Drawing loop to update the canvas
+        self.after(50, self.update_canvas)
+
+    def scale_event_wrapper(self, handler):
+        # Wrapper function to adjust event coordinates
+        def wrapped_event(event):
+            # Adjust the event coordinates based on the current scale
+            scaled_event = event 
+            scaled_event.x, scaled_event.y = self.xy_screen_to_image(event.x, event.y)
+            # Call the actual event handler with the scaled event
+            return handler(scaled_event)
+
+        return wrapped_event
+
+    def on_mouse_wheel(self, event):
+
+        cursor_x, cursor_y = self.xy_screen_to_image(event.x, event.y)
+
+        cursor_old_x = cursor_x * self.scale_factor
+        cursor_old_y = cursor_y * self.scale_factor
+
+        scale_amount = 0.05  # Define how much each scroll affects the scale
+        if event.num == 5 or event.delta == -120:  # Scroll down or backward
+            self.scale_factor -= scale_amount
+            if self.scale_factor < 0.1:  # Prevent too much zoom out
+                self.scale_factor = 0.1
+        if event.num == 4 or event.delta == 120:  # Scroll up or forward
+            self.scale_factor += scale_amount
+            if self.scale_factor > 3:  # Prevent too much zoom in
+                self.scale_factor = 3
+
+        cursor_new_x = cursor_x * self.scale_factor
+        cursor_new_y = cursor_y * self.scale_factor
+
+        x_scale_delta = cursor_new_x - cursor_old_x
+        y_scale_delta = cursor_new_y - cursor_old_y
+        
+        self.x0 += x_scale_delta
+        self.y0 += y_scale_delta
+
+
+    def xy_screen_to_image(self, x, y) -> Tuple[int, int]:
+        x_orig = (x + self.x0) / self.scale_factor
+        y_orig = (y + self.y0) / self.scale_factor
+        return x_orig, y_orig
 
     def update_canvas(self):
         # Convert the OpenCV image to a format suitable for Tkinter
         cv_image = cv2.cvtColor(self.image_canvas.canvas, cv2.COLOR_BGR2RGB)
+        cv_image = scale_image(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
         pil_image = Image.fromarray(cv_image)
         tk_image = ImageTk.PhotoImage(image=pil_image)
 
@@ -62,7 +134,7 @@ class CanvasView(tk.Canvas):
         # Keep a reference to the image to prevent garbage collection
         self.tk_image = tk_image
 
-        self.after(100, self.update_canvas)
+        self.after(50, self.update_canvas)
 
 class ControlPanel(tk.Frame):
     def __init__(self, parent):
