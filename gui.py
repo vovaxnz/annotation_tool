@@ -46,6 +46,7 @@ class CanvasView(tk.Canvas):
         self.bind("<w>", self.handle_w_press)
         self.bind("<a>", self.handle_a_press)
         self.bind("<s>", self.handle_s_press)
+        self.bind("<t>", self.handle_t_press)
 
         self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
@@ -83,6 +84,9 @@ class CanvasView(tk.Canvas):
     def handle_a_press(self, event: tk.Event):
         self.app.switch_drawing_figures()
 
+    def handle_t_press(self, event: tk.Event):
+        self.app.toggle_image_trash_tag()
+
     def handle_s_press(self, event: tk.Event):
         self.fit_scale_for_image()
 
@@ -90,8 +94,6 @@ class CanvasView(tk.Canvas):
         win_w=self.winfo_width()
         win_h=self.winfo_height()
         img_h, img_w, c = self.app.canvas.image.shape
-        print('img_h, img_w, c', img_h, img_w, c)
-        print('win_w, win_h', win_w, win_h)
         h_scale = win_h / img_h 
         w_scale = win_w / img_w
 

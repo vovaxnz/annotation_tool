@@ -10,9 +10,13 @@ If tkinter is not installed: `sudo apt-get install python3-tk`
 
 ## Import data
 
+If you have pre-annotated figures you need first to import them to the database
+
 ```
 python import_annotations.py --ann data_to_import.json
 ```
+
+You can use `--overwrite` flag if annotations for those images are already in database and you need to overwrite them
 
 ## Annotate
 

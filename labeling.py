@@ -42,7 +42,7 @@ class CoordinateTransformer:
 
 class ImageCanvas:
 
-    def __init__(self, image: np.ndarray, ct: CoordinateTransformer, rectangles: List[Rectangle] = None):
+    def __init__(self, image: np.ndarray, ct: CoordinateTransformer, rectangles: List[Rectangle] = None, show_trash_label: bool = False):
         """
         Initialize a new ImageCanvas object.
 
@@ -50,6 +50,7 @@ class ImageCanvas:
         :param height: Height of the canvas.
         """
         self.image = image
+        self.canvas = np.copy(self.image)
         self.rectangles: list[Rectangle] = rectangles if rectangles is not None else list()
         self.ct: CoordinateTransformer = ct
         self.selected_rectangle_id = None
@@ -57,6 +58,8 @@ class ImageCanvas:
         self.draw_figures = True
         self.mode = Mode.IDLE
         self.start_point: Optional[Tuple[int, int]] = None
+
+        self.show_trash_label = show_trash_label
 
     @property
     def selected_rectangle(self) -> Rectangle:
@@ -112,6 +115,9 @@ class ImageCanvas:
         self.canvas = np.copy(self.image)
         for rect in self.rectangles:
             self.canvas = self.draw_rectangle(self.canvas, rect)
+
+        if self.show_trash_label:
+            self.canvas = cv2.putText(self.canvas, "TRASH", (30, 120), cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 0, 255), 8, cv2.LINE_AA)
 
     def save_canvas_state(self, file_path):
         """Save the current state of the canvas to a file. """
@@ -249,11 +255,13 @@ class LabelingApp:
                 ct = ct,
                 rectangles = list(image.rectangles),
                 image = img_mat,
+                show_trash_label = image.trash
             )
         else:
             self.canvas.ct = ct
             self.canvas.rectangles = list(image.rectangles)
             self.canvas.image = img_mat
+            self.canvas.show_trash_label = image.trash
         
         self.canvas.update_canvas()
 
@@ -307,9 +315,19 @@ class LabelingApp:
                     result_points.append(p)
                 rectangles_2d.append(result_points)
                 
-            result_images[image.name] = rectangles_2d
+            result_images[image.name] = {"trash": image.trash, "rectangles": rectangles_2d}
 
         save_json(result_images, self.export_path) 
+
+    def toggle_image_trash_tag(self):
+        image = Image.get(name=self.img_names[self.img_id])
+        if image.trash:
+            image.trash = False
+        else:
+            image.trash = True
+        image.save()
+        self.canvas.show_trash_label = image.trash
+        self.canvas.update_canvas()
 
     def switch_drawing_figures(self):
         if self.canvas.draw_figures:

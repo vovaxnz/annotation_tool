@@ -1,5 +1,5 @@
 from geometry import find_intersection, find_line_equation, line_length
-from sqlalchemy import create_engine, Column, Float, String, Integer, ForeignKey
+from sqlalchemy import Boolean, create_engine, Column, Float, String, Integer, ForeignKey
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import List, Tuple
 import math
@@ -121,6 +121,7 @@ class Image(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
+    trash = Column(Boolean, default=False)
 
     rectangles = relationship("Rectangle", back_populates="image")
 
