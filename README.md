@@ -54,5 +54,6 @@ python app.py --img path/to/img/ --result output.json
 
 8. Export annotations - E
 9. Mark image as trash - T
-10. At the corner and in the terminal you see current image ID
-11. Image annotations saved after moving to next/previous image or exporting annotations
+10. Copy annotations from previous image - C
+11. At the corner and in the terminal you see current image ID
+12. Image annotations saved after moving to next/previous image or exporting annotations

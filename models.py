@@ -45,6 +45,15 @@ class Rectangle(Base):
         session.delete(self)
         session.commit()
 
+    def copy(self) -> "Rectangle":
+        return Rectangle(
+            h=self.h,
+            w=self.w,
+            xc=self.xc,
+            yc=self.yc,
+            angle=self.angle
+        )
+
     @property
     def points(self) -> List[Tuple[float, float]]:
         """Returns points in order [[0, 0], [w, 0], [w, h], [0, h]] and rotated around [xc, yc] by angle. 

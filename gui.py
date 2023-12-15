@@ -47,6 +47,7 @@ class CanvasView(tk.Canvas):
         self.bind("<a>", self.handle_a_press)
         self.bind("<s>", self.handle_s_press)
         self.bind("<t>", self.handle_t_press)
+        self.bind("<c>", self.handle_c_press)
 
         self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
@@ -89,6 +90,9 @@ class CanvasView(tk.Canvas):
 
     def handle_s_press(self, event: tk.Event):
         self.fit_scale_for_image()
+
+    def handle_c_press(self, event: tk.Event):
+        self.app.copy_figures_from_previous_image()
 
     def fit_scale_for_image(self):
         win_w=self.winfo_width()

@@ -336,6 +336,12 @@ class LabelingApp:
             self.canvas.draw_figures = True
         self.canvas.update_canvas()
 
+    def copy_figures_from_previous_image(self):
+        if self.img_id > 0:
+            prev_image = Image.get(name=self.img_names[self.img_id - 1])
+            self.canvas.rectangles = [rect.copy() for rect in prev_image.rectangles]
+        self.canvas.update_canvas()
+
     @staticmethod
     def _get_cam_config_for_img_name(img_name):
         for cam_name, cfg in config.cam_configs.items():
