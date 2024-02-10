@@ -6,6 +6,20 @@ from typing import Dict, List, Tuple
 Base = declarative_base()
 
 
+class SessionNotConfiguredException(Exception):
+    """Custom exception to indicate the session is not configured."""
+    pass
+
+
+def get_session():
+    """Session factory to ensure the session is configured before use."""
+    try:
+        # Attempt to use the Session to provoke an error if not configured
+        return Session()
+    except (AttributeError, Exception):
+        raise SessionNotConfiguredException("Session is not configured. Please run configure_database() before performing database operations.")
+
+
 class Rectangle(Base): # TODO: Rename to bbox
     __tablename__ = 'rectangle'
 
@@ -33,12 +47,12 @@ class Rectangle(Base): # TODO: Rename to bbox
         self.active_point_id = None
 
     def save(self):
-        session = Session()
+        session = get_session()
         session.add(self)
         session.commit()
 
     def delete(self):
-        session = Session()
+        session = get_session()
         session.delete(self)
         session.commit()
 
@@ -81,30 +95,27 @@ class Image(Base): # TODO: Add relationship with a mask
 
     @classmethod
     def get(cls, name):
-        session = Session()
+        session = get_session()
         return session.query(cls).filter(cls.name == name).first()
 
     def __init__(self, name):
         self.name = name
 
     def save(self):
-        session = Session()
+        session = get_session()
         session.add(self)
         session.commit()
 
     def delete(self):
-        session = Session()
+        session = get_session()
         for rectangle in self.rectangles:
             session.delete(rectangle)
         session.delete(self)
         session.commit()
         
-# Initialize the database engine
-database_path = 'sqlite:///db.sqlite' # TODO: Use own database for each annotation project
-engine = create_engine(database_path)
 
-# Create all tables in the engine
-Base.metadata.create_all(engine)
-
-# Create a session factory
-Session = scoped_session(sessionmaker(bind=engine))
+def configure_database(database_path):
+    global Session
+    engine = create_engine(database_path)
+    Base.metadata.create_all(engine)  # Make sure all tables are created
+    Session = scoped_session(sessionmaker(bind=engine))
