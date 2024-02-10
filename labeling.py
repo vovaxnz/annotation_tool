@@ -3,12 +3,9 @@ import os
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import cv2
-import json
 from enum import Enum, auto
-import config
 
 from tqdm import tqdm
-from geometry import distort_point
 from models import Image, Rectangle
 from utils import open_json, save_json
 
@@ -20,39 +17,13 @@ class Mode(Enum):
     IDLE = auto()
 
 
-class CoordinateTransformer:
-    def __init__(self, 
-            homography_matrix: str,
-            homography_matrix_reversed: str, 
-        ): 
-        self.view_to_scheme_matrix = np.array(homography_matrix)
-        self.scheme_to_view_matrix = np.array(homography_matrix_reversed)
-
-    def view_to_scheme(self, x: float, y: float) -> Tuple[float, float]:
-        return self._transform(x, y, self.view_to_scheme_matrix)
-    
-    def scheme_to_view(self, x: float, y: float) -> Tuple[float, float]:
-        return self._transform(x, y, self.scheme_to_view_matrix)
-    
-    def _transform(self, x: float, y: float, matrix) -> Tuple[float, float]:
-        source_position = np.array([x, y], dtype=np.float32)
-        result_position = cv2.perspectiveTransform(np.array([source_position[None, :]], dtype=np.float32), matrix)
-        return tuple(result_position[0][0])
-
 
 class ImageCanvas:
 
-    def __init__(self, image: np.ndarray, ct: CoordinateTransformer, rectangles: List[Rectangle] = None, show_trash_label: bool = False):
-        """
-        Initialize a new ImageCanvas object.
-
-        :param width: Width of the canvas.
-        :param height: Height of the canvas.
-        """
+    def __init__(self, image: np.ndarray, rectangles: List[Rectangle] = None, show_trash_label: bool = False):
         self.image = image
         self.canvas = np.copy(self.image)
         self.rectangles: list[Rectangle] = rectangles if rectangles is not None else list()
-        self.ct: CoordinateTransformer = ct
         self.selected_rectangle_id = None
 
         self.draw_figures = True
@@ -70,15 +41,10 @@ class ImageCanvas:
 
     def add_rectangle(self, start_point: Tuple[int, int], end_point: Tuple[int, int]):
         """ Add a new rectangle to the canvas. """
-
-        # Convert points to scheme
-        start_point_scheme = self.ct.view_to_scheme(*start_point)
-        end_point_scheme = self.ct.view_to_scheme(*end_point)
-
-        h = abs(start_point_scheme[1] - end_point_scheme[1])
-        w = abs(start_point_scheme[0] - end_point_scheme[0])
-        yc = (start_point_scheme[1] + end_point_scheme[1]) / 2
-        xc = (start_point_scheme[0] + end_point_scheme[0]) / 2
+        h = abs(start_point[1] - end_point[1])
+        w = abs(start_point[0] - end_point[0])
+        yc = (start_point[1] + end_point[1]) / 2
+        xc = (start_point[0] + end_point[0]) / 2
         rectangle = Rectangle(h, w, xc, yc)
 
         self.rectangles.append(rectangle)
@@ -93,20 +59,13 @@ class ImageCanvas:
         for i in range(4):
             p1 = points[i]
             p2 = points[(i + 1) % 4]
-            
-            # Convert scheme to view
-            p1_v = self.ct.scheme_to_view(*p1)
-            p2_v = self.ct.scheme_to_view(*p2)
-
-            canvas = cv2.line(canvas, (int(p1_v[0]), int(p1_v[1])), (int(p2_v[0]), int(p2_v[1])), (255, 255, 255), 2)
+            canvas = cv2.line(canvas, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (255, 255, 255), 2)
 
         for i, point in enumerate(points):
-            color = config.POINT_COLORS[i]
-            point = self.ct.scheme_to_view(*point)
             radius = 5
             if i == rectangle.active_point_id:
                 radius = 8
-            cv2.circle(canvas, (int(point[0]), int(point[1])), radius, color, -1)
+            cv2.circle(canvas, (int(point[0]), int(point[1])), radius, (0, 255, 0), -1)
 
         return canvas
 
@@ -126,7 +85,6 @@ class ImageCanvas:
     def search_near_point(self, x: int, y: int, rectangle: Rectangle, threshold: int = 10) -> Optional[int]:
         """Returns id of point of near rectangle"""
         for i, point in enumerate(rectangle.points):
-            point = self.ct.scheme_to_view(*point)
             if abs(point[0] - x) <= threshold and abs(point[1] - y) <= threshold:
                 return i
     
@@ -150,14 +108,10 @@ class ImageCanvas:
             self.selected_rectangle_id = None
         self.update_canvas()
 
-    def rotate_selected_rectangle(self, x, y):
-        if self.selected_rectangle is not None:
-            x, y = self.ct.view_to_scheme(x, y)
-            self.selected_rectangle.rotate_by_active_point(x, y)
+
 
     def move_selected_rectangle(self, x, y):
         if self.selected_rectangle is not None:
-            x, y = self.ct.view_to_scheme(x, y)
             self.selected_rectangle.move_active_point(x, y)
 
     def remove_rectangle(self, x, y):
@@ -230,35 +184,18 @@ class LabelingApp:
         img_mat = cv2.imread(os.path.join(self.img_dir, img_name))
         image = Image.get(name=img_name)
 
-        # Select cam config for this image 
-        cam_config: config.CamConfig = self._get_cam_config_for_img_name(img_name)
-
-        # Set image, rectangles, ct to canvas
-        img_mat = cv2.undistort(
-            img_mat, 
-            cam_config.undistort["mtx"], 
-            cam_config.undistort["dist"], 
-            None,
-            cam_config.undistort["new_camera_mtx"]
-        )
 
         # Draw img id on image
         cv2.putText(img_mat, str(self.img_id), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 1, cv2.LINE_AA)
 
-        ct = CoordinateTransformer(
-            homography_matrix=cam_config.transform_v2s,
-            homography_matrix_reversed=cam_config.transform_s2v, 
-        )
 
         if self.canvas is None:
             self.canvas = ImageCanvas(
-                ct = ct,
                 rectangles = list(image.rectangles),
                 image = img_mat,
                 show_trash_label = image.trash
             )
         else:
-            self.canvas.ct = ct
             self.canvas.rectangles = list(image.rectangles)
             self.canvas.image = img_mat
             self.canvas.show_trash_label = image.trash
@@ -296,26 +233,9 @@ class LabelingApp:
         self.save_image()
 
         result_images = dict()
-
         for image_name in tqdm(self.img_names, desc=f"Exporting data to {self.export_path}"):
             image = Image.get(name=image_name)
-            cfg = self._get_cam_config_for_img_name(image_name)
-
-            ct = CoordinateTransformer(             
-                homography_matrix=cfg.transform_v2s,
-                homography_matrix_reversed=cfg.transform_s2v, 
-            )
-            rectangles_2d = list()
-            for rectangle in image.rectangles:
-                points = rectangle.points
-                result_points = list()
-                for p in points:
-                    p = ct.scheme_to_view(*p)
-                    p = distort_point(p[0], p[1], mtx=cfg.undistort["mtx"], dist=cfg.undistort["dist"], new_camera_mtx=cfg.undistort["new_camera_mtx"])
-                    result_points.append(p)
-                rectangles_2d.append(result_points)
-                
-            result_images[image.name] = {"trash": image.trash, "rectangles": rectangles_2d}
+            result_images[image.name] = {"trash": image.trash, "rectangles": [rectangle.points for rectangle in image.rectangles]}
 
         save_json(result_images, self.export_path) 
 
@@ -342,9 +262,3 @@ class LabelingApp:
             self.canvas.rectangles = [rect.copy() for rect in prev_image.rectangles]
         self.canvas.update_canvas()
 
-    @staticmethod
-    def _get_cam_config_for_img_name(img_name):
-        for cam_name, cfg in config.cam_configs.items():
-            if cam_name in img_name:
-                return cfg
-        raise RuntimeError(f"Config for image {img_name} is not found")

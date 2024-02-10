@@ -1,31 +1,3 @@
-
-from dataclasses import dataclass
-import json
-from typing import Dict
-
-import numpy as np
-
-
-@dataclass
-class CamConfig:
-    transform_s2v: Dict
-    transform_v2s: Dict
-    undistort: Dict
-
-cam_config_path = "cam_config.json"
-
-with open(cam_config_path) as file:
-    cam_config_dict = json.load(file)
-
-cam_configs: Dict[str, CamConfig] = {
-    cam_name: CamConfig(
-        transform_s2v=parameters["transform_s2v"],
-        transform_v2s=parameters["transform_v2s"],
-        undistort={key: np.array(value) for key, value in parameters["undistort"].items()},
-    ) 
-    for cam_name, parameters in cam_config_dict.items()
-}
-
 class ColorBGR:
     Red = (0, 0, 255)
     Lime = (0, 255, 0)
@@ -45,12 +17,3 @@ class ColorBGR:
     Brown = (19, 69, 139)
     Color1 = (1, 1, 1)
 
-POINT_COLORS = [
-    ColorBGR.Red, # FL
-    ColorBGR.Yellow, # FR
-    ColorBGR.Cyan, # BR
-    ColorBGR.Purple # BL
-]
-
-
-database_path = 'sqlite:///db.sqlite'

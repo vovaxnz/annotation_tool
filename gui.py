@@ -9,7 +9,7 @@ from labeling import LabelingApp
 class MainWindow(tk.Tk):
     def __init__(self, app: LabelingApp):
         super().__init__()
-        self.title("Rectangle Drawing Tool")
+        self.title("Annotation Tool")
         # Get screen width and height
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
