@@ -1,49 +1,61 @@
 
 
+import os
 from typing import Dict, List
-from models import Image, Rectangle
-from utils import open_json
+from models import Label, LabeledImage, BBox, Value
 
 
-def import_project(
-    data: List[Dict],
-    db_path: str, # TODO: Use separate db for each project
-    overwrite: bool = False,
-):
+def import_project(data: List[Dict], img_dir: str, overwrite: bool = False):
     """
-    {"labels": {"name": "", "color": "yellow"}, "images": {"bboxes": [], "masks": [], "name": ""}}}
-    
+    {
+        "labels": {"name": "", "color": "yellow", "hotkey": "1"}, 
+        "images": {"img_name.jpg": {"bboxes": [], "masks": [], "review_labels": []}}},
+        "review_mode": False,
+        "annotation_mode": "BBOXES",
+    }
     """
     
-    # TODO: Set current image id to 0
-    ...
+    # Set current image id to 0
+    img_id_row = Value.get("img_id")
+    if img_id_row is None:
+        img_id_row = Value(name="img_id", value=0)
+        img_id_row.save()
 
-    # TODO: Add labels and their colors
-    ...
 
+    for label_dict in data["labels"]:
+        label = Label(
+            name=label_dict["name"],
+            color=label_dict["color"],
+            hotkey=label_dict["hotkey"]
+        )
+        label.save()
+        
+    for img_name in os.listdir(img_dir):
+        img_info = data["images"].get(img_name)
+        if img_info is not None:
+            bboxes = img_info["bboxes"]
+            masks = img_info["masks"]
+        else:
+            bboxes = list()
+            masks = list()
 
-    for img_info in data["images"]:
-        bboxes = img_info["bboxes"]
-        masks = img_info["masks"]
-        img_name = img_info["name"]
-
-        image = Image.get(name=img_name)
+        image = LabeledImage.get(name=img_name)
         if image is not None:
             if overwrite:
-                print("Image", img_name, "is already in the database, overwriting")
+                print("LabeledImage", img_name, "is already in the database, overwriting")
                 image.delete()
             else:
-                print("Image", img_name, "is already in the database, skipping")
+                print("LabeledImage", img_name, "is already in the database, skipping")
                 continue
-        img = Image(name=img_name)
+        img = LabeledImage(name=img_name)
         
         for bbox in bboxes:
-            rect = Rectangle(
+            rect = BBox(
                 x1=bbox["x1"],
                 y1=bbox["y1"],
                 x2=bbox["x2"],
                 y2=bbox["y2"],
                 label=bbox["label"],
             )
-            img.rectangles.append(rect)
+            img.bboxes.append(rect)
         img.save()
