@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import json
 import math
 import os
+import time
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import cv2
@@ -48,6 +49,9 @@ class LabelingApp:
         for img_name in self.img_names: # Check that images from the directory are in the the database
             img_object = LabeledImage.get(name=img_name)
             assert img_object is not None, f"{img_name} is not found in the database"
+
+        self.tick_time = time.time()
+        self.max_action_time_sec = 10
 
         self.img_dir = img_dir
         self.export_path = export_path if export_path is not None else "result.json"
@@ -96,13 +100,19 @@ class LabelingApp:
             figures_hidden=self.hide_figures
         )
 
+    def update_time_counter(self):
+        curr_time = time.time()
+        step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
+        self.tick_time = curr_time
+        self.duration_hours += step_duration / 3600
+
     def get_selected_figure_id(self, x: int, y: int) -> Optional[int]:
         raise NotImplementedError
     
     def draw_figure(self, canvas: np.ndarray, figure, highlight: bool = False) -> np.ndarray:
         raise NotImplementedError
 
-    def update_canvas(self):
+    def update_canvas(self): # TODO: Implement in the child classes. Create visualizer class and move to it the logic of visualization.
         self.canvas = np.copy(self.orig_image)
 
         if not self.hide_figures:

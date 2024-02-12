@@ -73,10 +73,12 @@ class CanvasView(tk.Canvas):
     def handle_left_mouse_press(self, event: tk.Event):
         self.app.handle_left_mouse_press(event.x, event.y)
         self.update_frame = True
+        self.app.update_time_counter()
 
     def handle_right_mouse_press(self, event: tk.Event):
         self.app.handle_right_mouse_press(event.x, event.y)
         self.update_frame = True
+        self.app.update_time_counter()
 
     def handle_mouse_move(self, event: tk.Event):
         self.app.handle_mouse_move(event.x, event.y)
@@ -85,13 +87,14 @@ class CanvasView(tk.Canvas):
     def handle_left_mouse_release(self, event: tk.Event):
         self.app.handle_left_mouse_release(event.x, event.y)
         self.update_frame = True
+        self.app.update_time_counter()
 
     def handle_right_mouse_release(self, event: tk.Event):
         self.app.handle_right_mouse_release(event.x, event.y)
         self.update_frame = True
+        self.app.update_time_counter()
 
     def handle_mouse_hover(self, event: tk.Event):
-        # print("real position", event.x, event.y)
         self.app.handle_mouse_hover(event.x, event.y)
         self.update_frame = True
 
@@ -124,6 +127,7 @@ class CanvasView(tk.Canvas):
             self.app.complete_project()
             print("Annotation completed")
             # TODO: Exit application
+        self.app.update_time_counter()
         self.update_frame = True
         
 
@@ -179,7 +183,6 @@ class CanvasView(tk.Canvas):
         self.app.update_canvas()
         self.update_frame = True
 
-
     def update_canvas(self):
         if self.update_frame:
 
@@ -203,14 +206,12 @@ class CanvasView(tk.Canvas):
 
         self.after(30, self.update_canvas)
         
-
     def xy_screen_to_image(self, x, y) -> Tuple[int, int]: 
         """Transforms coordinates on the window to the coordinates on the image"""
         x_rel_unscaled, y_rel_unscaled = x / self.scale_factor, y / self.scale_factor
         x_img, y_img = x_rel_unscaled + self.x0, y_rel_unscaled + self.y0
         return int(x_img), int(y_img)
 
-    
     def get_image_zone(self, img: np.ndarray, x0: int, y0: int, scale: float) -> np.ndarray:
         win_w=self.winfo_width()
         win_h=self.winfo_height()
