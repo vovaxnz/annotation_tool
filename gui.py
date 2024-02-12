@@ -5,23 +5,35 @@ import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
 from labeling import LabelingApp
+from tkinter import ttk
+from tkinter import font
 
 
 class MainWindow(tk.Tk):
     def __init__(self, app: LabelingApp):
         super().__init__()
         self.title("Annotation Tool")
-        # Get screen width and height
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-
-        # Set window size to screen size
         self.geometry(f"{screen_width}x{screen_height}+0+0")
 
-        self.canvas_view = CanvasView(self, app)
-        self.control_panel = ControlPanel(self)
-        self.canvas_view.pack(side="left", fill="both", expand=True)
-        self.control_panel.pack(side="right", fill="y")
+        # Create a container frame for better layout control
+        self.container = tk.Frame(self)
+        self.container.pack(side="top", fill="both", expand=True)
+
+        # Use grid layout within the container
+        self.container.grid_rowconfigure(0, weight=1)  # CanvasView row, make it expandable
+        self.container.grid_columnconfigure(0, weight=1)  # Single column for simplicity
+
+        # Initialize CanvasView and StatusBar within the container
+        self.canvas_view = CanvasView(self.container, app)
+        self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
+
+        self.status_bar = StatusBar(self.container, app)
+        self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
+
+        # Ensure the StatusBar takes minimal vertical space
+        self.container.grid_rowconfigure(1, weight=0, minsize=40)
 
 class CanvasView(tk.Canvas):
     def __init__(self, parent, app: LabelingApp):
@@ -54,10 +66,9 @@ class CanvasView(tk.Canvas):
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
         self.bind("<Button-5>", self.on_mouse_wheel)  # For Unix/Linux, Zoom out
 
-        # Drawing loop to update the canvas
         self.app.update_canvas()
-        self.after(30, self.update_canvas)
-        self.after(60, self.fit_image)
+
+        self.bind("<Configure>", self.on_resize)
 
     def handle_left_mouse_press(self, event: tk.Event):
         self.app.handle_left_mouse_press(event.x, event.y)
@@ -83,6 +94,10 @@ class CanvasView(tk.Canvas):
         # print("real position", event.x, event.y)
         self.app.handle_mouse_hover(event.x, event.y)
         self.update_frame = True
+
+    def on_resize(self, event):
+        self.update_canvas()
+        self.fit_image()
 
     def handle_key_press(self, event: tk.Event):
         if event.char.isdigit(): 
@@ -214,7 +229,106 @@ class CanvasView(tk.Canvas):
 
         cropped = cv2.resize(cropped, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
         return cropped
-    
-class ControlPanel(tk.Frame):
-    def __init__(self, parent):
-        super().__init__(parent)
+
+
+class StatusBar(tk.Frame):
+    def __init__(self, parent, app, **kw):
+        super().__init__(parent, **kw)
+        self.app: LabelingApp = app
+
+        # Create labels within the status bar
+        self.mode_label = tk.Label(self, bd=1)
+        self.class_label = tk.Label(self, bd=1)
+        self.trash_label = tk.Label(self, bd=1)
+        self.hidden_label = tk.Label(self, bd=1)
+        self.img_id_label = tk.Label(self, bd=1)
+        self.speed_label = tk.Label(self, bd=1)
+        self.processed_label = tk.Label(self, bd=1)
+        self.progress_bar = ttk.Progressbar(self, orient="horizontal", mode="determinate")
+        self.duration_label = tk.Label(self, bd=1)
+
+        # Place each label in the grid
+        self.mode_label.grid(row=0, column=0, sticky='ew')
+        sep1 = ttk.Separator(self, orient='vertical')
+        sep1.grid(row=0, column=1, sticky='ns')
+        
+        self.class_label.grid(row=0, column=2, sticky='ew')
+        sep2 = ttk.Separator(self, orient='vertical')
+        sep2.grid(row=0, column=3, sticky='ns')
+        
+        self.trash_label.grid(row=0, column=4, sticky='ew')
+        sep3 = ttk.Separator(self, orient='vertical')
+        sep3.grid(row=0, column=5, sticky='ns')
+
+        self.hidden_label.grid(row=0, column=6, sticky='ew')
+        sep3 = ttk.Separator(self, orient='vertical')
+        sep3.grid(row=0, column=7, sticky='ns')
+        
+        self.img_id_label.grid(row=0, column=8, sticky='ew')
+        sep4 = ttk.Separator(self, orient='vertical')
+        sep4.grid(row=0, column=9, sticky='ns')
+        
+        self.processed_label.grid(row=0, column=10, sticky='ew')
+        sep6 = ttk.Separator(self, orient='vertical')
+        sep6.grid(row=0, column=11, sticky='ns')
+        
+        self.progress_bar.grid(row=0, column=12, sticky='ew')
+        sep7 = ttk.Separator(self, orient='vertical')
+        sep7.grid(row=0, column=13, sticky='ns')
+        
+        self.speed_label.grid(row=0, column=14, sticky='ew')
+        sep5 = ttk.Separator(self, orient='vertical')
+        sep5.grid(row=0, column=15, sticky='ns')
+        
+        self.duration_label.grid(row=0, column=16, sticky='ew')
+        sep8 = ttk.Separator(self, orient='vertical')
+        sep8.grid(row=0, column=17, sticky='ns')
+
+        # Ensure the progress bar expands to fill available space 
+        self.columnconfigure(12, weight=1)
+
+        # Apply font settings to labels
+        label_font = font.Font(family="Ubuntu Condensed", size=15)
+        self.mode_label.config(font=label_font)
+        self.class_label.config(font=label_font)
+        self.trash_label.config(font=label_font)
+        self.hidden_label.config(font=label_font)
+        self.img_id_label.config(font=label_font)
+        self.speed_label.config(font=label_font)
+        self.processed_label.config(font=label_font)
+        self.duration_label.config(font=label_font)
+
+        # Set padding around labels to prevent overflow
+        for col in range(0, 17):
+            self.grid_columnconfigure(col, pad=30)
+
+        # Sef fixed size
+        self.grid_columnconfigure(2, minsize=150)  # For class_label
+        self.grid_columnconfigure(4, minsize=120)  # For trash_label
+        self.grid_columnconfigure(6, minsize=120)  # For hidden_label
+        self.grid_columnconfigure(8, minsize=120)  # For img_id_label
+
+        self.update_status()
+
+    def update_status(self):
+        status_data = self.app.status_data 
+        
+        # Update labels
+        self.mode_label.config(text=f"Mode: {status_data.annotation_mode}")
+        self.class_label.config(text=f"Class: {status_data.selected_class}", bg=status_data.class_color)
+        trash_text = "Trash" if status_data.is_trash else "not Trash"
+        trash_color = "red" if status_data.is_trash else self.trash_label.master.cget('bg')
+        self.trash_label.config(text=trash_text, bg=trash_color)
+
+        hidden_text = "All Hidden" if status_data.figures_hidden else "All Visible"
+        hidden_color = "blue" if status_data.figures_hidden else self.hidden_label.master.cget('bg')
+        self.hidden_label.config(text=hidden_text, bg=hidden_color)
+
+        self.img_id_label.config(text=f"Img id: {status_data.img_id}")
+        self.speed_label.config(text=f"Speed: {status_data.speed_per_hour} img/hour")
+        self.processed_label.config(text=f"Processed: {status_data.processed_percent} % ({status_data.number_of_processed}/{status_data.number_of_images})")
+        self.progress_bar["value"] = status_data.processed_percent
+        self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
+        
+        # Schedule the next update
+        self.after(30, self.update_status)

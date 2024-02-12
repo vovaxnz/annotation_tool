@@ -78,8 +78,9 @@ class Label(Base):
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.hotkey)))
 
-    def first(self) -> "Label":        
-        return self.all()[0]
+    @classmethod
+    def first(cls) -> "Label":        
+        return cls.all()[0]
 
 
 class BBox(Base):

@@ -1,4 +1,5 @@
 
+from dataclasses import dataclass
 import math
 import os
 from typing import Dict, List, Optional, Tuple
@@ -22,6 +23,22 @@ class AnnotationMode(Enum):
     BBOXES = "BBOXES"
     SEGMENTATION = "SEGMENTATION"
 
+
+@dataclass
+class StatusData:
+    selected_class: str
+    class_color: str
+    is_trash: bool
+    annotation_mode: str
+    speed_per_hour: float
+    processed_percent: float
+    img_id: int
+    annotation_hours: float
+    number_of_processed: int
+    number_of_images: int
+    figures_hidden: bool
+
+
 class LabelingApp:
 
     def __init__(self, img_dir: str, export_path: str, annotation_mode: AnnotationMode, review_mode: bool = False):    
@@ -34,7 +51,11 @@ class LabelingApp:
         self.img_dir = img_dir
         self.export_path = export_path if export_path is not None else "result.json"
 
-        self.img_id = 0 # TODO Get current image id from the database
+        # TODO Get this values from the database at application start
+        self.img_id = 0 
+        self.duration_hours = 0
+        self.processed_img_ids: set = set()
+
         self.orig_image: np.ndarray = None
         self.canvas: np.ndarray = None
         self.is_trash = False
@@ -46,7 +67,7 @@ class LabelingApp:
 
         self.mode = Mode.IDLE
 
-        self.active_label: str = "person" # TODO Labels.first().name where first is selected from sorted by hotkey
+        self.active_label: Label = Label.first()
 
         self.annotation_mode: AnnotationMode = annotation_mode # TODO: Get annotation mode from the database
         self.review_mode: bool = review_mode # TODO: If review mode - user can not edit figures and only adds the points to the images. This points cannot be edited in non-review mode. User only can hide them.
@@ -57,6 +78,22 @@ class LabelingApp:
 
         self.load_image()
 
+    @property
+    def status_data(self):
+        number_of_processed = len(self.processed_img_ids)
+        return StatusData(
+            selected_class=self.active_label.name,
+            class_color=self.active_label.color,
+            is_trash=self.is_trash,
+            annotation_mode=self.annotation_mode.name,
+            speed_per_hour=round(number_of_processed / (self.duration_hours + 1e-7), 2),
+            img_id=self.img_id,
+            processed_percent=round(number_of_processed / (len(self.img_names) + 1e-7) * 100, 2),
+            annotation_hours=round(self.duration_hours, 2),
+            number_of_processed=number_of_processed,
+            number_of_images=len(self.img_names),
+            figures_hidden=self.hide_figures
+        )
 
     def get_selected_figure_id(self, x: int, y: int) -> Optional[int]:
         raise NotImplementedError
@@ -77,16 +114,8 @@ class LabelingApp:
             # Draw vertical and horizontal lines (black and white)
             self.canvas = cv2.line(self.canvas, (int(self.cursor_x), 0), (int(self.cursor_x), h), (255, 255, 255), 1)
             self.canvas = cv2.line(self.canvas, (int(self.cursor_x + 1), 0), (int(self.cursor_x + 1), h), (0, 0, 0), 1)
-
             self.canvas = cv2.line(self.canvas, (0, int(self.cursor_y)), (w, int(self.cursor_y)), (255, 255, 255), 1)
             self.canvas = cv2.line(self.canvas, (0, int(self.cursor_y + 1)), (w, int(self.cursor_y + 1)), (0, 0, 0), 1)
-
-
-        # TODO: Write trash, active class, annotation mode and other info on the status panel on the bottom of the window
-        # Draw img id on image
-        cv2.putText(self.canvas, str(self.img_id), (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 1, cv2.LINE_AA)
-        if self.is_trash: 
-            self.canvas = cv2.putText(self.canvas, "TRASH", (30, 120), cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 0, 255), 8, cv2.LINE_AA)
 
 
     def load_image(self):
@@ -102,16 +131,21 @@ class LabelingApp:
 
     def forward(self):
         self.save_image()
+        self.processed_img_ids.add(self.img_id)
         if self.img_id < len(self.img_names) - 1:
             self.img_id += 1
         self.load_image()
+        self.hide_figures = False
+        
         ... # TODO Save current image id to the database
 
     def backward(self):
         self.save_image()
+        self.processed_img_ids.add(self.img_id)
         if self.img_id > 0:
             self.img_id -= 1
         self.load_image()
+        self.hide_figures = False
         ... # TODO Save current image id to the database
 
     def complete_project(self):
@@ -159,10 +193,10 @@ class LabelingApp:
         labels = Label.all()
         if label_id < len(labels) - 1:
             label = labels[label_id]
-            self.active_label = label.name
+            self.active_label = label
         
         if self.selected_figure_id is not None:
-            self.figures[self.selected_figure_id].label = self.active_label
+            self.figures[self.selected_figure_id].label = self.active_label.name
             self.figures[self.selected_figure_id].save()
             self.update_canvas()
 
@@ -218,12 +252,15 @@ class BboxLabelingApp(LabelingApp):
         if highlight:
             line_width += 1
 
-        canvas = cv2.rectangle(canvas, (int(figure.x1), int(figure.y1)), (int(figure.x2), int(figure.y2)), (255, 255, 255), line_width)
+        for layer_id in range(line_width):
+
+            canvas = cv2.rectangle(canvas, (int(figure.x1 - layer_id), int(figure.y1 - layer_id)), (int(figure.x2 + layer_id), int(figure.y2 + layer_id)), (255, 255, 255), 1)
 
         for point in figure.points:
             if point.close_to(self.cursor_x, self.cursor_y):
                 circle_radius = max(1, int(7 / ((self.scale_factor + 1e-7) ** (1/3))))
-                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 255, 0), -1)
+                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), -1)
+                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), 2)
 
         return canvas
     
@@ -255,7 +292,7 @@ class BboxLabelingApp(LabelingApp):
             y1 = min(self.start_point[1], y)
             x2 = max(self.start_point[0], x)
             y2 = max(self.start_point[1], y)
-            bbox = BBox(x1, y1, x2, y2, self.active_label)
+            bbox = BBox(x1, y1, x2, y2, self.active_label.name)
             self.figures.append(bbox)
 
     def release_bbox(self):
