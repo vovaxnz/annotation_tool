@@ -204,16 +204,15 @@ class LabelingApp:
             self.figures = [figure.copy() for figure in self.get_image_figures(prev_image)]
         self.update_canvas()
 
-    def change_label(self, label_id: int):
-        labels = Label.all()
-        if label_id < len(labels) - 1:
-            label = labels[label_id]
+    def change_label(self, label_hotkey: int):
+        label = Label.get_by_hotkey(label_hotkey)
+        if label is not None:
             self.active_label = label
-        
-        if self.selected_figure_id is not None:
-            self.figures[self.selected_figure_id].label = self.active_label.name
-            self.figures[self.selected_figure_id].save()
-            self.update_canvas()
+            
+            if self.selected_figure_id is not None:
+                self.figures[self.selected_figure_id].label = self.active_label.name
+                self.figures[self.selected_figure_id].save()
+                self.update_canvas()
 
     def remove_selected_figure(self):
         if self.selected_figure_id is not None:
@@ -260,15 +259,15 @@ class BboxLabelingApp(LabelingApp):
     def draw_figure(self, canvas: np.ndarray, figure: BBox, highlight: bool = False) -> np.ndarray:
         """Drawing the bbox on the canvas"""
 
-        # TODO: Use color of corresponding label
-
-        line_width = max(1, int(3 / ((self.scale_factor + 1e-7) ** (1/3))))
+        line_width = max(1, int(4 / ((self.scale_factor + 1e-7) ** (1/3))))
 
         if highlight:
             line_width += 1
 
+        label = Label.get_by_name(figure.label)
+
         for layer_id in range(line_width):
-            canvas = cv2.rectangle(canvas, (int(figure.x1 - layer_id), int(figure.y1 - layer_id)), (int(figure.x2 + layer_id), int(figure.y2 + layer_id)), (255, 255, 255), 1)
+            canvas = cv2.rectangle(canvas, (int(figure.x1 - layer_id), int(figure.y1 - layer_id)), (int(figure.x2 + layer_id), int(figure.y2 + layer_id)), label.color_bgr, 1)
 
         for point in figure.points:
             if point.close_to(self.cursor_x, self.cursor_y):
@@ -283,7 +282,7 @@ class BboxLabelingApp(LabelingApp):
         if self.start_point is not None:
             x1, x2 = sorted([self.cursor_x, self.start_point[0]])
             y1, y2 = sorted([self.cursor_y, self.start_point[1]])
-            cv2.rectangle(self.canvas, (int(x1), int(y1)), (int(x2), int(y2)), (255, 255, 255), 1)
+            cv2.rectangle(self.canvas, (int(x1), int(y1)), (int(x2), int(y2)), self.active_label.color_bgr, 1)
 
 
     def get_rect_point_id(self, x: int, y: int) -> Tuple[Optional[int], Optional[int]]:

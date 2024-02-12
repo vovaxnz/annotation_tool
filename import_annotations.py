@@ -18,16 +18,20 @@ def import_project(data: List[Dict], img_dir: str, overwrite: bool = False):
     # Set current image id to 0
     Value.update_value("img_id", 0, overwrite=False)
 
-
-
     for label_dict in data["labels"]:
-        label = Label(
-            name=label_dict["name"],
-            color=label_dict["color"],
-            hotkey=label_dict["hotkey"]
-        )
+        label = Label.get_by_name(name=label_dict["name"])
+        if label is None:
+            label = Label(
+                name=label_dict["name"],
+                color=label_dict["color"],
+                hotkey=label_dict["hotkey"]
+            )
+        else:
+            label.color = label_dict["color"]
+            label.hotkey = label_dict["hotkey"]
         label.save()
-        
+
+
     for img_name in os.listdir(img_dir):
         img_info = data["images"].get(img_name)
         if img_info is not None:

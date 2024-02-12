@@ -4,6 +4,8 @@ from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarati
 from typing import Any, List, Optional, Tuple
 from typing import Dict, List, Tuple
 
+from config import ColorBGR
+
 Base = declarative_base()
 
 
@@ -41,8 +43,7 @@ class Value(Base):
     @classmethod
     def get(cls, name) -> Optional["Value"]:
         session = get_session()
-        row = session.query(cls).filter(cls.name == name).first()
-        return row
+        return session.query(cls).filter(cls.name == name).first()
         
     @classmethod
     def update_value(cls, name, value, overwrite=True):
@@ -75,15 +76,33 @@ class Label(Base):
     __tablename__ = 'label'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String)
+    name = Column(String, unique=True)
     color = Column(String)
-    hotkey = Column(String)
+    hotkey = Column(String, unique=True)
 
     def __init__(self, name: str, color: str, hotkey: str):
         self.name = name
         self.color = color
         self.hotkey = hotkey
 
+    @property
+    def color_bgr(self) -> Tuple[int, int, int]:
+        try:
+            color = getattr(ColorBGR, self.color)
+        except AttributeError:
+            color = ColorBGR.white
+        return color
+    
+    @classmethod
+    def get_by_name(cls, name):
+        session = get_session()
+        return session.query(cls).filter(cls.name == name).first()
+    
+    @classmethod
+    def get_by_hotkey(cls, hotkey):
+        session = get_session()
+        return session.query(cls).filter(cls.hotkey == hotkey).first()
+    
     def save(self):
         session = get_session()
         session.add(self)
