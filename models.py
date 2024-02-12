@@ -39,12 +39,28 @@ class Value(Base):
     value = Column(String)
 
     @classmethod
-    def get(cls, name) -> Optional[Any]:
+    def get(cls, name) -> Optional["Value"]:
         session = get_session()
         row = session.query(cls).filter(cls.name == name).first()
+        return row
+        
+    @classmethod
+    def update_value(cls, name, value, overwrite=True):
+        row = cls.get(name=name)
+        if row is None:
+            row = Value(name=name, value=str(value))
+            row.save()
+        else:
+            if overwrite:
+                row.value = str(value)
+                row.save()
+    
+    @classmethod
+    def get_value(cls, name) -> Optional[str]:
+        row = cls.get(name=name)
         if row is not None:
             return row.value
-        
+    
     def __init__(self, name: str, value: str):
         self.name = name
         self.value = value

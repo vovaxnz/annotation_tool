@@ -16,10 +16,8 @@ def import_project(data: List[Dict], img_dir: str, overwrite: bool = False):
     """
     
     # Set current image id to 0
-    img_id_row = Value.get("img_id")
-    if img_id_row is None:
-        img_id_row = Value(name="img_id", value=0)
-        img_id_row.save()
+    Value.update_value("img_id", 0, overwrite=False)
+
 
 
     for label_dict in data["labels"]:

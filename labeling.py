@@ -1,5 +1,6 @@
 
 from dataclasses import dataclass
+import json
 import math
 import os
 from typing import Dict, List, Optional, Tuple
@@ -8,7 +9,7 @@ import cv2
 from enum import Enum, auto
 
 from tqdm import tqdm
-from models import Label, LabeledImage, BBox, Point
+from models import Label, LabeledImage, BBox, Point, Value
 from utils import open_json, save_json
 
 
@@ -51,10 +52,10 @@ class LabelingApp:
         self.img_dir = img_dir
         self.export_path = export_path if export_path is not None else "result.json"
 
-        # TODO Get this values from the database at application start
         self.img_id = 0 
         self.duration_hours = 0
         self.processed_img_ids: set = set()
+        self.load_state()
 
         self.orig_image: np.ndarray = None
         self.canvas: np.ndarray = None
@@ -129,6 +130,21 @@ class LabelingApp:
     def save_image(self): 
         raise NotImplementedError
 
+    def save_state(self):
+        Value.update_value("img_id", self.img_id)
+        Value.update_value("duration_hours", self.duration_hours)
+        Value.update_value("processed_img_ids", list(self.processed_img_ids))
+
+    def load_state(self):
+        img_id = Value.get_value("img_id")
+        self.img_id = int(img_id) if img_id is not None else self.img_id
+
+        duration_hours = Value.get_value("duration_hours")
+        self.duration_hours = float(duration_hours) if duration_hours is not None else self.duration_hours
+
+        processed_img_ids = Value.get_value("processed_img_ids")
+        self.processed_img_ids = set(json.loads(processed_img_ids)) if processed_img_ids is not None else self.processed_img_ids
+
     def forward(self):
         self.save_image()
         self.processed_img_ids.add(self.img_id)
@@ -136,9 +152,8 @@ class LabelingApp:
             self.img_id += 1
         self.load_image()
         self.hide_figures = False
+        self.save_state()
         
-        ... # TODO Save current image id to the database
-
     def backward(self):
         self.save_image()
         self.processed_img_ids.add(self.img_id)
@@ -146,7 +161,7 @@ class LabelingApp:
             self.img_id -= 1
         self.load_image()
         self.hide_figures = False
-        ... # TODO Save current image id to the database
+        self.save_state()
 
     def complete_project(self):
 
@@ -253,14 +268,13 @@ class BboxLabelingApp(LabelingApp):
             line_width += 1
 
         for layer_id in range(line_width):
-
             canvas = cv2.rectangle(canvas, (int(figure.x1 - layer_id), int(figure.y1 - layer_id)), (int(figure.x2 + layer_id), int(figure.y2 + layer_id)), (255, 255, 255), 1)
 
         for point in figure.points:
             if point.close_to(self.cursor_x, self.cursor_y):
-                circle_radius = max(1, int(7 / ((self.scale_factor + 1e-7) ** (1/3))))
-                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), -1)
-                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), 2)
+                circle_radius = max(1, int(4 / ((self.scale_factor + 1e-7) ** (1/3))))
+                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)
+                cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), 2)
 
         return canvas
     
