@@ -44,13 +44,18 @@ class CanvasView(tk.Canvas):
         self.scale_factor = 1.0
         self.x0, self.y0 = 0, 0
 
+        # For calculating panning delta
+        self.click_win_x, self.click_win_y = 0, 0
+        self.start_x0, self.start_y0 = 0, 0
+        self.panning = False
+
         self.update_frame = True
 
         self.bind("<Button-1>", self.scale_event_wrapper(self.handle_left_mouse_press))
-        self.bind("<Button-3>", self.scale_event_wrapper(self.handle_right_mouse_press))
+        self.bind("<Button-3>", self.handle_right_mouse_press)
 
         self.bind("<B1-Motion>", self.scale_event_wrapper(self.handle_mouse_move))
-        self.bind("<B3-Motion>", self.scale_event_wrapper(self.handle_mouse_move))
+        self.bind("<B3-Motion>", self.handle_right_mouse_motion)
 
         self.bind("<Motion>", self.scale_event_wrapper(self.handle_mouse_hover))
 
@@ -70,15 +75,43 @@ class CanvasView(tk.Canvas):
 
         self.bind("<Configure>", self.on_resize)
 
+    def handle_right_mouse_motion(self, event: tk.Event):
+        if self.panning:
+            win_cursor_x, win_cursor_y = event.x, event.y
+            
+            delta_x = (self.click_win_x - win_cursor_x) / self.scale_factor
+            self.x0 = self.start_x0 + delta_x
+            delta_y = (self.click_win_y - win_cursor_y) / self.scale_factor
+            self.y0 = self.start_y0 + delta_y 
+            
+            # Restrict x0y0 to be no less than 0 and no more than 2/3 of image
+            # win_w=self.winfo_width()
+            # win_h=self.winfo_height()
+            self.x0 = max(0, self.x0)
+            self.y0 = max(0, self.y0)
+            self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
+            self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
+            self.app.update_canvas()
+
+        self.scale_event_wrapper(self.handle_mouse_move)(event)
+
+
+    def handle_right_mouse_press(self, event: tk.Event):
+
+        self.app.handle_right_mouse_press(*self.xy_screen_to_image(event.x, event.y))
+        self.update_frame = True
+        self.app.update_time_counter()
+
+        self.panning = True
+        self.click_win_x, self.click_win_y = event.x, event.y
+        self.start_x0, self.start_y0 = self.x0, self.y0
+
     def handle_left_mouse_press(self, event: tk.Event):
         self.app.handle_left_mouse_press(event.x, event.y)
         self.update_frame = True
         self.app.update_time_counter()
 
-    def handle_right_mouse_press(self, event: tk.Event):
-        self.app.handle_right_mouse_press(event.x, event.y)
-        self.update_frame = True
-        self.app.update_time_counter()
+
 
     def handle_mouse_move(self, event: tk.Event):
         self.app.handle_mouse_move(event.x, event.y)
@@ -93,6 +126,7 @@ class CanvasView(tk.Canvas):
         self.app.handle_right_mouse_release(event.x, event.y)
         self.update_frame = True
         self.app.update_time_counter()
+        self.panning = False
 
     def handle_mouse_hover(self, event: tk.Event):
         self.app.handle_mouse_hover(event.x, event.y)
@@ -164,7 +198,7 @@ class CanvasView(tk.Canvas):
         if event.num == 5 or event.delta == -120:  # Zoom out
             self.scale_factor = max(self.scale_factor / scale_multiplier, 0.5)
         elif event.num == 4 or event.delta == 120:  # Zoom in
-            self.scale_factor = min(self.scale_factor * scale_multiplier, 8)
+            self.scale_factor = min(self.scale_factor * scale_multiplier, 10)
 
 
         self.x0 = (cursor_x - (event.x / self.scale_factor))
@@ -173,8 +207,8 @@ class CanvasView(tk.Canvas):
         # Restrict x0y0 to be no less than 0 and no more than 2/3 of image
         self.x0 = max(0, self.x0)
         self.y0 = max(0, self.y0)
-        self.x0 = min(int(self.app.orig_image.shape[1]*0.6), self.x0)
-        self.y0 = min(int(self.app.orig_image.shape[0]*0.6), self.y0)
+        self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
+        self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
 
         self.app.scale_factor = self.scale_factor
 
@@ -186,7 +220,6 @@ class CanvasView(tk.Canvas):
     def update_canvas(self):
         if self.update_frame:
 
-            print("update", time.time())
             # Convert the OpenCV image to a format suitable for Tkinter
             cv_image = cv2.cvtColor(self.app.canvas, cv2.COLOR_BGR2RGB)
             cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
