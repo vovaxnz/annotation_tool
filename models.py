@@ -8,6 +8,7 @@ from config import ColorBGR
 
 Base = declarative_base()
 
+session_configured = False
 
 class SessionNotConfiguredException(Exception):
     """Custom exception to indicate the session is not configured."""
@@ -16,12 +17,9 @@ class SessionNotConfiguredException(Exception):
 
 def get_session():
     """Session factory to ensure the session is configured before use."""
-    try:
-        # Attempt to use the Session to provoke an error if not configured
-        return Session()
-    except (AttributeError, Exception):
+    if not session_configured:
         raise SessionNotConfiguredException("Session is not configured. Please run configure_database() before performing database operations.")
-
+    return session
 
 class Point:
 
@@ -118,6 +116,34 @@ class Label(Base):
         return cls.all()[0]
 
 
+
+class ReviewLabel(Base):
+    __tablename__ = 'review_label'
+
+    id = Column(Integer, primary_key=True)
+    image_id = Column(Integer, ForeignKey('image.id'))
+    x = Column(Integer)
+    y = Column(Integer)
+    text = Column(String)
+
+    image = relationship("LabeledImage", back_populates="review_labels")
+
+    def __init__(self, x, y, text):
+        self.x = x
+        self.y = y
+        self.text = text
+    
+    def save(self):
+        session = get_session()
+        session.add(self)
+        session.commit()
+
+    def delete(self):
+        session = get_session()
+        session.delete(self)
+        session.commit()
+
+
 class BBox(Base):
     __tablename__ = 'bbox'
 
@@ -204,6 +230,7 @@ class LabeledImage(Base):
     trash = Column(Boolean, default=False)
 
     bboxes = relationship("BBox", back_populates="image")
+    review_labels = relationship("ReviewLabel", back_populates="image")
     # masks = relationship("Mask", back_populates="image")  # TODO: Add relationship with a mask
 
     @classmethod
@@ -218,19 +245,35 @@ class LabeledImage(Base):
         session = get_session()
         session.add(self)
         session.commit()
+    
+    @classmethod
+    def save_batch(cls, limages: List["LabeledImage"]):
+        session = get_session()
+        for limage in limages:
+            session.add(limage)
+        session.commit()
 
     def delete(self):
         session = get_session()
         for bbox in self.bboxes:
             session.delete(bbox)
+        for review_label in self.review_labels:
+            session.delete(review_label)
         # for mask in self.masks:
         #     session.delete(mask)
         session.delete(self)
         session.commit()
-        
+    
+    def clear_review_labels(self):
+        for review_label in self.review_labels:
+            review_label.delete()
+
 
 def configure_database(database_path):
-    global Session
+    global session
+    global session_configured
     engine = create_engine(database_path)
     Base.metadata.create_all(engine)  # Make sure all tables are created
     Session = scoped_session(sessionmaker(bind=engine))
+    session = Session()
+    session_configured = True

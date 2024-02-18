@@ -1,9 +1,15 @@
-import argparse
+import os
+from api_requests import get_project_ids, get_project_data
+from exceptions import MessageBoxException
 from gui import MainWindow
 from import_annotations import import_project
-from labeling import LabelingApp, get_labeling_app, AnnotationMode
+from labeling import AnnotationStage, LabelingApp, get_labeling_app
 from models import configure_database
+from path_manager import PathManager
+from file_transfer import FileTransferClient
 from utils import open_json
+from config import address
+import tkinter as tk
 
 
 class Application:
@@ -17,73 +23,99 @@ class Application:
         self.initialize_gui()
 
 
+class ProjectSelector:
+    def __init__(self, project_ids):
+        self.project_ids = project_ids
+        self.selected_project_id = None
 
-if __name__ == "__main__":
+    def select(self):
+        self.root = tk.Tk()
+        self.root.title("Select Project")
 
-    img_dir = "data/img"
+        if not self.project_ids:
+            self._display_no_projects_message()
+        else:
+            self._create_project_buttons()
 
-    configure_database("sqlite:///data/db.sqlite")
+        self.root.mainloop()
+        return self.selected_project_id
+
+    def _create_project_buttons(self):
+        label = tk.Label(self.root, text="Select project", font=('Helvetica', 16))
+        label.pack(pady=10)
+        for id in self.project_ids:
+            button = tk.Button(self.root, text=str(id), command=lambda id=id: self._select_project(id))
+            button.pack(pady=5, padx=10, fill=tk.X)
+
+    def _display_no_projects_message(self):
+        label = tk.Label(self.root, text="You don't have any projects", font=('Helvetica', 16))
+        label.pack(pady=10)
+        ok_button = tk.Button(self.root, text="OK", command=self.root.destroy)
+        ok_button.pack(pady=5)
+
+    def _select_project(self, id):
+        self.selected_project_id = id
+        self.root.destroy()
+
+
+def start():
+    available_project_ids = get_project_ids()
+    ps = ProjectSelector(available_project_ids)
+    project_id: int = ps.select()
+    if project_id is None: 
+        return
+
+    annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path = get_project_data(project_id)
+    pm = PathManager(project_id)
+    ftc = FileTransferClient(address)
+    print(annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path)
+
+    if not os.path.isfile(pm.figures_ann_path):
+        ftc.download(
+            local_path=pm.figures_ann_path, 
+            remote_path=figures_ann_path,
+        )
+    if annotation_stage == AnnotationStage.CORRECTION or annotation_stage == AnnotationStage.REVIEW:
+        ftc.download(
+            local_path=pm.review_ann_path, 
+            remote_path=review_ann_path,
+            skip_unavailable=True
+        )
+
+    img_ann_number = len(open_json(pm.figures_ann_path)["images"])
+    if os.path.isdir(pm.images_path):
+        img_number = len(os.listdir(pm.images_path))
+    else:
+        img_number = 0
+
+    if not os.path.isdir(pm.images_path) or img_number != img_ann_number:
+        ftc.download(
+            local_path=pm.images_path, 
+            remote_path=img_path,
+        )
+
+    img_number = len(os.listdir(pm.images_path))
+    if img_number != img_ann_number:
+        raise MessageBoxException(f"The project {project_id} has a different number of images and annotations. Re-lauch application to download again or, if that doesn't help, ask to fix the project")
+
+    configure_database(pm.db_path)
+
     import_project(
-        data=open_json("data/ann.json"),
-        img_dir=img_dir,
+        figures_ann_path=pm.figures_ann_path,
+        review_ann_path=pm.review_ann_path,
+        img_dir=pm.images_path,
         overwrite=False,
     )
                 
     labeling_app: LabelingApp = get_labeling_app(
-        img_dir=img_dir, 
-        export_path="data/exported.json", 
-        review_mode=False, 
-        annotation_mode=AnnotationMode.BBOXES
+        img_dir=pm.images_path, 
+        export_path=pm.figures_ann_path,
+        annotation_stage=annotation_stage, 
+        annotation_mode=annotation_mode
     )
     app = Application(labeling_app=labeling_app)
     app.run()
 
-# def start(project_id: int):
-#     # Get project directory name and path
-#     ...
-    
-#     # if there is no directory, 
 
-#         # Create a directory for project
-#         ...
-
-#         # get path to images and annotation via api
-#         ...
-
-#         # Download annotations via ssh
-#         ...
-
-#         # Download images via ssh (if they are not downloaded already)
-#         ...
-
-#         # Add annotations to the database if database is not yet created inside the project directory
-#         ...
-
-#         configure_database(database_path)
-#         import_project(
-#             data: List[Dict],
-#             overwrite: bool = False,
-#         )
-#         # Add images from the directory to the database
-#         img_names = sorted(os.listdir(img_dir))
-#         for img_name in self.img_names:
-#             img_object = LabeledImage.get(name=img_name)
-#             if img_object is None:
-#                 img_object = LabeledImage(name=img_name)
-#                 img_object.save()
-                
-#     labeling_app: LabelingApp = get_labeling_app(
-#         img_dir="/home/vova/code/annotation_tool/data/img", 
-#         export_path="/home/vova/code/annotation_tool/data/exported.json", 
-#         review_mode=False, 
-#         annotation_mode=...
-#     )
-#     app = Application(labeling_app=labeling_app)
-#     app.run()
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--n", type=int)
-#     args = parser.parse_args()
-#     start(project_id=args.n)
+if __name__ == "__main__":
+    start()

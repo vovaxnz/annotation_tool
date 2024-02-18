@@ -10,6 +10,7 @@ import cv2
 from enum import Enum, auto
 
 from tqdm import tqdm
+from exceptions import MessageBoxException
 from models import Label, LabeledImage, BBox, Point, Value
 from utils import open_json, save_json
 
@@ -22,9 +23,14 @@ class Mode(Enum):
 
 
 class AnnotationMode(Enum):
-    BBOXES = "BBOXES"
+    OBJECT_DETECTION = "OBJECT_DETECTION"
     SEGMENTATION = "SEGMENTATION"
 
+
+class AnnotationStage(Enum):
+    ANNOTATE = "ANNOTATE"
+    REVIEW = "REVIEW"
+    CORRECTION = "CORRECTION"
 
 @dataclass
 class StatusData:
@@ -33,7 +39,6 @@ class StatusData:
     is_trash: bool
     annotation_mode: str
     speed_per_hour: float
-    processed_percent: float
     img_id: int
     annotation_hours: float
     number_of_processed: int
@@ -43,44 +48,35 @@ class StatusData:
 
 class LabelingApp:
 
-    def __init__(self, img_dir: str, export_path: str, annotation_mode: AnnotationMode, review_mode: bool = False):    
+    def __init__(self, img_dir: str, export_path: str, annotation_mode: AnnotationMode, annotation_stage: AnnotationStage):    
         
         self.img_names = sorted(os.listdir(img_dir))
         for img_name in self.img_names: # Check that images from the directory are in the the database
             img_object = LabeledImage.get(name=img_name)
-            assert img_object is not None, f"{img_name} is not found in the database"
+            if img_object is None:
+                raise MessageBoxException(f"{img_name} is not found in the database") 
 
         self.tick_time = time.time()
         self.max_action_time_sec = 10
-
         self.img_dir = img_dir
         self.export_path = export_path if export_path is not None else "result.json"
-
         self.img_id = 0 
         self.duration_hours = 0
         self.processed_img_ids: set = set()
         self.load_state()
-
         self.orig_image: np.ndarray = None
         self.canvas: np.ndarray = None
         self.is_trash = False
         self.figures: List = list()
-
         self.hide_figures = False
-
         self.selected_figure_id = None
-
         self.mode = Mode.IDLE
-
         self.active_label: Label = Label.first()
-
-        self.annotation_mode: AnnotationMode = annotation_mode # TODO: Get annotation mode from the database
-        self.review_mode: bool = review_mode # TODO: If review mode - user can not edit figures and only adds the points to the images. This points cannot be edited in non-review mode. User only can hide them.
-
+        self.annotation_mode: AnnotationMode = annotation_mode
+        self.annotation_stage: AnnotationStage = annotation_stage
         self.cursor_x, self.cursor_y = 0, 0
-
         self.scale_factor = 1
-
+        self.image_changed = False
         self.load_image()
 
     @property
@@ -93,7 +89,6 @@ class LabelingApp:
             annotation_mode=self.annotation_mode.name,
             speed_per_hour=round(number_of_processed / (self.duration_hours + 1e-7), 2),
             img_id=self.img_id,
-            processed_percent=round(number_of_processed / (len(self.img_names) + 1e-7) * 100, 2),
             annotation_hours=round(self.duration_hours, 2),
             number_of_processed=number_of_processed,
             number_of_images=len(self.img_names),
@@ -119,7 +114,7 @@ class LabelingApp:
             for figure_id, figure in enumerate(self.figures):
                 self.canvas = self.draw_figure(self.canvas, figure, highlight=figure_id==self.selected_figure_id)
 
-        if self.annotation_mode == AnnotationMode.BBOXES:
+        if self.annotation_mode == AnnotationMode.OBJECT_DETECTION:
             h, w, c = self.canvas.shape
 
             # Draw vertical and horizontal lines (black and white)
@@ -155,6 +150,8 @@ class LabelingApp:
         processed_img_ids = Value.get_value("processed_img_ids")
         self.processed_img_ids = set(json.loads(processed_img_ids)) if processed_img_ids is not None else self.processed_img_ids
 
+        self.image_changed = False
+
     def forward(self):
         self.save_image()
         self.processed_img_ids.add(self.img_id)
@@ -174,13 +171,22 @@ class LabelingApp:
         self.save_state()
 
     def complete_project(self):
+        """
+        {
+            "labels": [{"name": "", "color": "yellow", "hotkey": "1"}], 
+            "images": {"img_name.jpg": {"bboxes": [], "masks": []}}},
+        }
+        """
 
         self.save_image()
 
-        result = dict()
+        result = {
+            "labels": ..., # TODO
+            "images": dict()
+        }
         for image_name in tqdm(self.img_names, desc=f"Exporting data to {self.export_path}"):
             image = LabeledImage.get(name=image_name)
-            result[image.name] = {
+            result["images"][image.name] = {
                 "trash": image.trash, 
                 "bboxes": [{"x1": bbox.x1, "y1": bbox.y1, "x2": bbox.x2, "y2": bbox.y2, "label": bbox.label} for bbox in image.bboxes],
                 # "masks": [{"rle": mask.rle,  "label": mask.label} for mask in image.masks]
@@ -200,6 +206,7 @@ class LabelingApp:
         image.save()
         self.is_trash = image.trash
         self.update_canvas()
+        self.image_changed = True
 
     def switch_hiding_figures(self):
         if self.hide_figures:
@@ -213,6 +220,7 @@ class LabelingApp:
             prev_image = LabeledImage.get(name=self.img_names[self.img_id - 1])
             self.figures = [figure.copy() for figure in self.get_image_figures(prev_image)]
         self.update_canvas()
+        self.image_changed = True
 
     def change_label(self, label_hotkey: int):
         label = Label.get_by_hotkey(label_hotkey)
@@ -221,21 +229,19 @@ class LabelingApp:
             
             if self.selected_figure_id is not None:
                 self.figures[self.selected_figure_id].label = self.active_label.name
-                self.figures[self.selected_figure_id].save()
                 self.update_canvas()
+        self.image_changed = True
 
     def remove_selected_figure(self):
         if self.selected_figure_id is not None:
             self.figures.pop(self.selected_figure_id)
             self.selected_figure_id = self.get_selected_figure_id(self.cursor_x, self.cursor_y)
             self.update_canvas()
-
+        self.image_changed = True
 
     @staticmethod
     def get_image_figures(image: LabeledImage) -> List:
         raise NotImplementedError
-
-
 
     def handle_left_mouse_press(self, x: int, y: int):
         pass
@@ -260,9 +266,9 @@ class LabelingApp:
 
 class BboxLabelingApp(LabelingApp):
 
-    def __init__(self, img_dir: str, export_path: str, annotation_mode: AnnotationMode, review_mode: bool = False):
+    def __init__(self, img_dir: str, export_path: str, annotation_mode: AnnotationMode, annotation_stage: AnnotationStage):
         self.start_point: Optional[Tuple[int, int]] = None
-        super().__init__(img_dir, export_path, annotation_mode, review_mode)
+        super().__init__(img_dir, export_path, annotation_mode, annotation_stage)
         self.figures: List[BBox] = list()
         self.load_image()
 
@@ -317,25 +323,29 @@ class BboxLabelingApp(LabelingApp):
             y2 = max(self.start_point[1], y)
             bbox = BBox(x1, y1, x2, y2, self.active_label.name)
             self.figures.append(bbox)
+        self.image_changed = True
 
     def release_bbox(self):
         if self.selected_figure_id is not None:
             self.figures[self.selected_figure_id].active_point_id = None 
             self.selected_figure_id = None
+        self.image_changed = True
 
     def move_selected_bbox(self, x, y):
         if self.selected_figure_id is not None:
             self.figures[self.selected_figure_id].move_active_point(x, y)
+        self.image_changed = True
 
     @staticmethod
     def get_image_figures(image: LabeledImage) -> List[BBox]:
         return image.bboxes
 
     def save_image(self): 
-        image = LabeledImage.get(name=self.img_names[self.img_id])
-        image.bboxes = self.figures 
-        image.trash = self.is_trash
-        image.save()
+        if self.image_changed:
+            image = LabeledImage.get(name=self.img_names[self.img_id])
+            image.bboxes = self.figures 
+            image.trash = self.is_trash
+            image.save()
 
     
     def handle_mouse_move(self, x: int, y: int):
@@ -376,12 +386,12 @@ class BboxLabelingApp(LabelingApp):
 
 
 
-def get_labeling_app(img_dir: str, export_path: str, review_mode: bool, annotation_mode: AnnotationMode) -> Optional[LabelingApp]:
-    if annotation_mode == AnnotationMode.BBOXES:
+def get_labeling_app(img_dir: str, export_path: str, annotation_mode: AnnotationMode, annotation_stage: AnnotationStage) -> Optional[LabelingApp]:
+    if annotation_mode == AnnotationMode.OBJECT_DETECTION:
         labeling_app = BboxLabelingApp(
             img_dir=img_dir, 
             export_path=export_path, 
-            review_mode=review_mode, 
-            annotation_mode=annotation_mode
+            annotation_mode=annotation_mode,
+            annotation_stage=annotation_stage
         )
     return labeling_app

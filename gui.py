@@ -35,6 +35,7 @@ class MainWindow(tk.Tk):
         # Ensure the StatusBar takes minimal vertical space
         self.container.grid_rowconfigure(1, weight=0, minsize=40)
 
+
 class CanvasView(tk.Canvas):
     def __init__(self, parent, app: LabelingApp):
         super().__init__(parent, bg="black")
@@ -50,6 +51,8 @@ class CanvasView(tk.Canvas):
         self.panning = False
 
         self.update_frame = True
+
+        self.last_key_press_time = None
 
         self.bind("<Button-1>", self.scale_event_wrapper(self.handle_left_mouse_press))
         self.bind("<Button-3>", self.handle_right_mouse_press)
@@ -137,6 +140,17 @@ class CanvasView(tk.Canvas):
         self.fit_image()
 
     def handle_key_press(self, event: tk.Event):
+        # TODO: Add a key for changing annotation mode (annotation, review, correction). In correction mode user see only images with review tags. If there is a review.json
+        # TODO: Add a hotkey to move to the 0 image
+        # TODO: Add a hotkey to update review labels and figures
+
+        # Prevent too frequent key press
+        current_time = time.time()
+        if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= 0.1:
+            self.last_key_press_time = current_time
+        else:
+            return
+
         if event.char.isdigit(): 
             number = int(event.char)
             self.app.change_label(number)
@@ -265,6 +279,7 @@ class CanvasView(tk.Canvas):
         return cropped
 
 
+# TODO: Add mode (annotation, review, correction)
 class StatusBar(tk.Frame):
     def __init__(self, parent, app, **kw):
         super().__init__(parent, **kw)
@@ -360,8 +375,10 @@ class StatusBar(tk.Frame):
 
         self.img_id_label.config(text=f"Img id: {status_data.img_id}")
         self.speed_label.config(text=f"Speed: {status_data.speed_per_hour} img/hour")
-        self.processed_label.config(text=f"Processed: {status_data.processed_percent} % ({status_data.number_of_processed}/{status_data.number_of_images})")
-        self.progress_bar["value"] = status_data.processed_percent
+
+        position_percent = int((status_data.img_id + 1) / status_data.number_of_images * 100)
+        self.processed_label.config(text=f"Position: {position_percent} % ({status_data.img_id + 1}/{status_data.number_of_images})")
+        self.progress_bar["value"] = position_percent
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
         
         # Schedule the next update
