@@ -2,8 +2,10 @@
 
 import os
 from typing import Dict, List
+
+from tqdm import tqdm
 from models import Label, LabeledImage, BBox, ReviewLabel, Value
-from utils import open_json
+from utils import open_json, save_json
 
 
 def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, overwrite: bool = False):
@@ -86,4 +88,26 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
                         text=review_label_dict["text"],
                     )
                     image.review_labels.append(rl)
-                img.save()
+                image.save()
+
+
+def export_project(figures_ann_path: str, review_ann_path: str):
+    figures_dict = {
+        "labels": [{"name": l.name, "color": l.color, "hotkey": l.hotkey} for l in Label.all()], 
+        "images": dict()
+    }
+    for limage in tqdm(LabeledImage.all(), desc=f"Exporting figures"):
+        figures_dict["images"][limage.name] = {
+            "trash": limage.trash, 
+            "bboxes": [{"x1": bbox.x1, "y1": bbox.y1, "x2": bbox.x2, "y2": bbox.y2, "label": bbox.label} for bbox in limage.bboxes],
+            # "masks": [{"rle": mask.rle,  "label": mask.label} for mask in image.masks]
+        }
+    save_json(figures_dict, figures_ann_path) 
+
+    review_label_dict = dict()
+    for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): # TODO: Check that work correctly and not too long
+        review_label_dict[limage.name] = [
+            {"text": rlabel.text, "x": rlabel.x, "y": rlabel.x}
+            for rlabel in limage.review_labels
+        ]
+    save_json(review_label_dict, review_ann_path) 

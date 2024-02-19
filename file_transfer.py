@@ -4,6 +4,7 @@ from subprocess import Popen, PIPE, STDOUT
 import os
 import threading
 from tkinter import ttk
+from config import address
 
 from exceptions import MessageBoxException
 
@@ -83,7 +84,7 @@ class FileTransferClient:
         self.rsync_process.wait()
         self.gui_close_event.set()
         
-    def execute_with_gui(self, command, ignore_errors: bool = False):
+    def execute_with_gui(self, command, ignore_errors: bool = False, show_progressbar = True):
         self.gui_close_event.clear()
         
         rsync_thread = threading.Thread(target=self.run_command, args=(command,), daemon=True)
@@ -92,7 +93,8 @@ class FileTransferClient:
         read_output_thread = threading.Thread(target=self.read_rsync_output, daemon=True)
         read_output_thread.start()
 
-        self.setup_gui()
+        if show_progressbar:
+            self.setup_gui()
 
         read_output_thread.join()
         rsync_thread.join()
@@ -100,17 +102,23 @@ class FileTransferClient:
         if self.rsync_process.returncode != 0 and self.rsync_process.returncode != 20: # 20 - Received SIGUSR1 or SIGINT
             if ignore_errors:
                 return
-            raise MessageBoxException(f"SCP failed with error: {self.error_line}")
+            raise MessageBoxException(f"File transfer failed with error: {self.error_line}")
         
-    def download(self, local_path: str, remote_path: str, skip_unavailable: bool = False):
+    def download(self, local_path: str, remote_path: str, skip_unavailable: bool = False, show_progressbar: bool = True):
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
         command = ["rsync", "-azh", "--info=progress2", f"{self.address}:{remote_path}", local_path]
-        self.execute_with_gui(command, ignore_errors=skip_unavailable)
+        self.execute_with_gui(command, ignore_errors=skip_unavailable, show_progressbar=show_progressbar)
         if not os.path.isfile(local_path) and not os.path.isdir(local_path):
             if skip_unavailable:
                 return
             raise MessageBoxException(f"The object {remote_path} is not downloaded")
 
-    def upload(self, remote_path: str, local_path: str):
+    def upload(self, remote_path: str, local_path: str, show_progressbar: bool = True):
         command = ["rsync", "-azh", "--info=progress2", local_path, f"{self.address}:{remote_path}"]
-        self.execute_with_gui(command)
+        self.execute_with_gui(command, show_progressbar=show_progressbar)
+
+
+if __name__ == "__main__":
+    ftc = FileTransferClient(address)
+    ftc.download(remote_path="/media/data3/vv/supervisely_projects/dataset_tube-tube_keypoints_2024-02-13-19-17-20_fe854c08/img", local_path="/media/vova/data/viz/tem12")
+    

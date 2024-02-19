@@ -78,6 +78,7 @@ class LabelingApp:
         self.scale_factor = 1
         self.image_changed = False
         self.load_image()
+        self.ready_for_export = False
 
     @property
     def status_data(self):
@@ -170,32 +171,6 @@ class LabelingApp:
         self.hide_figures = False
         self.save_state()
 
-    def complete_project(self):
-        """
-        {
-            "labels": [{"name": "", "color": "yellow", "hotkey": "1"}], 
-            "images": {"img_name.jpg": {"bboxes": [], "masks": []}}},
-        }
-        """
-
-        self.save_image()
-
-        result = {
-            "labels": ..., # TODO
-            "images": dict()
-        }
-        for image_name in tqdm(self.img_names, desc=f"Exporting data to {self.export_path}"):
-            image = LabeledImage.get(name=image_name)
-            result["images"][image.name] = {
-                "trash": image.trash, 
-                "bboxes": [{"x1": bbox.x1, "y1": bbox.y1, "x2": bbox.x2, "y2": bbox.y2, "label": bbox.label} for bbox in image.bboxes],
-                # "masks": [{"rle": mask.rle,  "label": mask.label} for mask in image.masks]
-            }
-
-        save_json(result, self.export_path) 
-
-        # TODO: Send json to eg-ml via api (via ssh for now) and mark project as sent for review via api 
-        ...
 
     def toggle_image_trash_tag(self):
         image = LabeledImage.get(name=self.img_names[self.img_id])
@@ -287,7 +262,7 @@ class BboxLabelingApp(LabelingApp):
 
         for point in figure.points:
             if point.close_to(self.cursor_x, self.cursor_y):
-                circle_radius = max(1, int(4 / ((self.scale_factor + 1e-7) ** (1/3))))
+                circle_radius = max(1, int(7 / ((self.scale_factor + 1e-7) ** (1/3))))
                 cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)
                 cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), 2)
 

@@ -7,6 +7,8 @@ import tkinter as tk
 from labeling import LabelingApp
 from tkinter import ttk
 from tkinter import font
+import tkinter as tk
+from tkinter import messagebox
 
 
 class MainWindow(tk.Tk):
@@ -28,6 +30,7 @@ class MainWindow(tk.Tk):
         # Initialize CanvasView and StatusBar within the container
         self.canvas_view = CanvasView(self.container, app)
         self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
+        self.canvas_view.set_close_callback(self.destroy)
 
         self.status_bar = StatusBar(self.container, app)
         self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
@@ -77,6 +80,16 @@ class CanvasView(tk.Canvas):
         self.app.update_canvas()
 
         self.bind("<Configure>", self.on_resize)
+
+        self.close_callback = None
+
+    def set_close_callback(self, callback):
+        self.close_callback = callback
+
+    def close(self):
+        self.destroy()
+        if self.close_callback:
+            self.close_callback()
 
     def handle_right_mouse_motion(self, event: tk.Event):
         if self.panning:
@@ -171,10 +184,12 @@ class CanvasView(tk.Canvas):
             self.app.backward()
             self.fit_image()
         elif event.char == "e":
-            # TODO: Ask: are you sure you want to complete the project?
-            self.app.complete_project()
-            print("Annotation completed")
-            # TODO: Exit application
+            agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
+            if agree:
+                self.app.save_image()
+                self.app.save_state()
+                self.app.ready_for_export = True
+                self.close()
         self.app.update_time_counter()
         self.update_frame = True
         
@@ -383,3 +398,31 @@ class StatusBar(tk.Frame):
         
         # Schedule the next update
         self.after(30, self.update_status)
+
+def get_waiting_window(text: str):
+    root = tk.Tk()
+    root.title("Waiting")
+
+    # Set window size
+    window_width = 300
+    window_height = 100
+
+    # Get screen dimensions
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+
+    # Calculate x and y coordinates for the Tk root window
+    x = (screen_width/2) - (window_width/2)
+    y = (screen_height/2) - (window_height/2)
+
+    # Set the dimensions of the window and where it is placed
+    root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
+
+    # Create a label with text "Waiting" that is centered
+    label = tk.Label(root, text=text)
+    label.pack(expand=True)
+
+    # Start the tkinter main event loop in a non-blocking way
+    root.update_idletasks()
+    root.update()
+    return root

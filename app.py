@@ -1,8 +1,9 @@
 import os
-from api_requests import get_project_ids, get_project_data
+import time
+from api_requests import complete_task, get_project_ids, get_project_data
 from exceptions import MessageBoxException
-from gui import MainWindow
-from import_annotations import import_project
+from gui import MainWindow, get_waiting_window
+from import_annotations import export_project, import_project
 from labeling import AnnotationStage, LabelingApp, get_labeling_app
 from models import configure_database
 from path_manager import PathManager
@@ -10,6 +11,7 @@ from file_transfer import FileTransferClient
 from utils import open_json
 from config import address
 import tkinter as tk
+from tkinter import messagebox
 
 
 class Application:
@@ -74,12 +76,14 @@ def start():
         ftc.download(
             local_path=pm.figures_ann_path, 
             remote_path=figures_ann_path,
+            show_progressbar=False
         )
     if annotation_stage == AnnotationStage.CORRECTION or annotation_stage == AnnotationStage.REVIEW:
         ftc.download(
             local_path=pm.review_ann_path, 
             remote_path=review_ann_path,
-            skip_unavailable=True
+            skip_unavailable=True,
+            show_progressbar=False
         )
 
     img_ann_number = len(open_json(pm.figures_ann_path)["images"])
@@ -115,6 +119,33 @@ def start():
     )
     app = Application(labeling_app=labeling_app)
     app.run()
+
+    if labeling_app.ready_for_export:
+
+        root = get_waiting_window(text="Uploading completed project...")
+
+        export_project(
+            figures_ann_path=pm.figures_ann_path,
+            review_ann_path=pm.review_ann_path,
+        )
+
+        if annotation_stage in [AnnotationStage.ANNOTATE, AnnotationStage.CORRECTION]:
+            ftc.upload(
+                local_path=pm.figures_ann_path, 
+                remote_path=figures_ann_path,
+                show_progressbar=False
+            )
+        elif annotation_stage == AnnotationStage.REVIEW:
+            ftc.upload(
+                local_path=pm.review_ann_path, 
+                remote_path=review_ann_path,
+                show_progressbar=False
+            )
+        complete_task(project_id=project_id, duration_hours=labeling_app.duration_hours)
+
+        messagebox.showinfo("Success", "Task completed")
+        root.destroy()
+
 
 
 if __name__ == "__main__":

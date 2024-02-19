@@ -27,7 +27,7 @@ class Point:
         self.x = x
         self.y = y
 
-    def close_to(self, x, y, distance=6) -> bool:
+    def close_to(self, x, y, distance=8) -> bool:
         return abs(self.x - x) <= distance and abs(self.y - y) <= distance
     
 
@@ -132,6 +132,11 @@ class ReviewLabel(Base):
         self.x = x
         self.y = y
         self.text = text
+
+    @classmethod
+    def all(cls) -> List["ReviewLabel"]:
+        session = get_session()
+        return list(session.query(cls).order_by(asc(cls.name)))
     
     def save(self):
         session = get_session()
@@ -238,6 +243,11 @@ class LabeledImage(Base):
         session = get_session()
         return session.query(cls).filter(cls.name == name).first()
 
+    @classmethod
+    def all(cls) -> List["LabeledImage"]:
+        session = get_session()
+        return list(session.query(cls).order_by(asc(cls.name)))
+    
     def __init__(self, name):
         self.name = name
 
