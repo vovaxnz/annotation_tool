@@ -3,9 +3,9 @@ import time
 from api_requests import complete_task, get_project_ids, get_project_data
 from exceptions import MessageBoxException
 from gui import MainWindow, get_waiting_window
-from import_annotations import export_project, import_project
+from import_annotations import export_figures, export_review, import_project
 from labeling import AnnotationStage, LabelingApp, get_labeling_app
-from models import configure_database
+from models import Value, configure_database
 from path_manager import PathManager
 from file_transfer import FileTransferClient
 from utils import open_json
@@ -78,11 +78,10 @@ def start():
             remote_path=figures_ann_path,
             show_progressbar=False
         )
-    if annotation_stage == AnnotationStage.CORRECTION or annotation_stage == AnnotationStage.REVIEW:
+    if annotation_stage in [AnnotationStage.CORRECTION, AnnotationStage.REVIEW] and not os.path.isfile(pm.review_ann_path):
         ftc.download(
             local_path=pm.review_ann_path, 
             remote_path=review_ann_path,
-            skip_unavailable=True,
             show_progressbar=False
         )
 
@@ -113,7 +112,6 @@ def start():
                 
     labeling_app: LabelingApp = get_labeling_app(
         img_dir=pm.images_path, 
-        export_path=pm.figures_ann_path,
         annotation_stage=annotation_stage, 
         annotation_mode=annotation_mode
     )
@@ -124,25 +122,22 @@ def start():
 
         root = get_waiting_window(text="Uploading completed project...")
 
-        export_project(
-            figures_ann_path=pm.figures_ann_path,
-            review_ann_path=pm.review_ann_path,
-        )
-
         if annotation_stage in [AnnotationStage.ANNOTATE, AnnotationStage.CORRECTION]:
+            export_figures(figures_ann_path=pm.figures_ann_path)
             ftc.upload(
                 local_path=pm.figures_ann_path, 
                 remote_path=figures_ann_path,
                 show_progressbar=False
             )
-        elif annotation_stage == AnnotationStage.REVIEW:
+        elif annotation_stage is AnnotationStage.REVIEW:
+            export_review(review_ann_path=pm.review_ann_path)
             ftc.upload(
                 local_path=pm.review_ann_path, 
                 remote_path=review_ann_path,
                 show_progressbar=False
             )
         complete_task(project_id=project_id, duration_hours=labeling_app.duration_hours)
-
+        Value.update_value("img_id", 0, overwrite=False)
         messagebox.showinfo("Success", "Task completed")
         root.destroy()
 

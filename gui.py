@@ -100,9 +100,7 @@ class CanvasView(tk.Canvas):
             delta_y = (self.click_win_y - win_cursor_y) / self.scale_factor
             self.y0 = self.start_y0 + delta_y 
             
-            # Restrict x0y0 to be no less than 0 and no more than 2/3 of image
-            # win_w=self.winfo_width()
-            # win_h=self.winfo_height()
+
             self.x0 = max(0, self.x0)
             self.y0 = max(0, self.y0)
             self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
@@ -114,7 +112,6 @@ class CanvasView(tk.Canvas):
 
     def handle_right_mouse_press(self, event: tk.Event):
 
-        self.app.handle_right_mouse_press(*self.xy_screen_to_image(event.x, event.y))
         self.update_frame = True
         self.app.update_time_counter()
 
@@ -127,8 +124,6 @@ class CanvasView(tk.Canvas):
         self.update_frame = True
         self.app.update_time_counter()
 
-
-
     def handle_mouse_move(self, event: tk.Event):
         self.app.handle_mouse_move(event.x, event.y)
         self.update_frame = True
@@ -139,7 +134,6 @@ class CanvasView(tk.Canvas):
         self.app.update_time_counter()
 
     def handle_right_mouse_release(self, event: tk.Event):
-        self.app.handle_right_mouse_release(event.x, event.y)
         self.update_frame = True
         self.app.update_time_counter()
         self.panning = False
@@ -167,23 +161,25 @@ class CanvasView(tk.Canvas):
         if event.char.isdigit(): 
             number = int(event.char)
             self.app.change_label(number)
-        elif event.char == "d":
+        elif event.char.lower() == "d":
             self.app.remove_selected_figure()
-        elif event.char == "c":
+        elif event.char.lower() == "c":
             self.app.copy_figures_from_previous_image()
-        elif event.char == "f":
+        elif event.char.lower() == "f":
             self.fit_image()
-        elif event.char == "t":
+        elif event.char.lower() == "t":
             self.app.toggle_image_trash_tag()
-        elif event.char == "h":
-            self.app.switch_hiding_figures()
-        elif event.char == "w":
+        elif event.char.lower() == "h":
+            self.app.switch_hiding_main_figures()
+        elif event.char.lower() == "j":
+            self.app.switch_hiding_secondary_figures()
+        elif event.char.lower() == "w":
             self.app.forward()
             self.fit_image()
-        elif event.char == "q":
+        elif event.char.lower() == "q":
             self.app.backward()
             self.fit_image()
-        elif event.char == "e":
+        elif event.char.lower() == "p":
             agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
             if agree:
                 self.app.save_image()
@@ -281,7 +277,6 @@ class CanvasView(tk.Canvas):
         h_lim = int(win_h / scale + y0)
         w_lim = int(win_w / scale + x0)
 
-
         cropped = img[int(y0):h_lim, int(x0):w_lim]
 
         h, w, c = cropped.shape
@@ -377,15 +372,21 @@ class StatusBar(tk.Frame):
     def update_status(self):
         status_data = self.app.status_data 
         
+        # TODO: Show annotation stage
+
         # Update labels
-        self.mode_label.config(text=f"Mode: {status_data.annotation_mode}")
+        self.mode_label.config(text=f"Mode: {status_data.annotation_mode}: {status_data.annotation_stage}")
         self.class_label.config(text=f"Class: {status_data.selected_class}", bg=status_data.class_color)
         trash_text = "Trash" if status_data.is_trash else "not Trash"
         trash_color = "red" if status_data.is_trash else self.trash_label.master.cget('bg')
         self.trash_label.config(text=trash_text, bg=trash_color)
 
-        hidden_text = "All Hidden" if status_data.figures_hidden else "All Visible"
-        hidden_color = "blue" if status_data.figures_hidden else self.hidden_label.master.cget('bg')
+        hidden_text = "All Visible"
+        hidden_text = "Secondary Hidden" if status_data.secondary_figures_hidden else hidden_text
+        hidden_text = "Figures Hidden" if status_data.figures_hidden else hidden_text
+        hidden_text = "All Hidden" if status_data.secondary_figures_hidden and status_data.figures_hidden else hidden_text
+        
+        hidden_color = self.hidden_label.master.cget('bg') if hidden_text == "All Visible" else "blue"
         self.hidden_label.config(text=hidden_text, bg=hidden_color)
 
         self.img_id_label.config(text=f"Img id: {status_data.img_id}")

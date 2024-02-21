@@ -99,7 +99,7 @@ class FileTransferClient:
         read_output_thread.join()
         rsync_thread.join()
         
-        if self.rsync_process.returncode != 0 and self.rsync_process.returncode != 20: # 20 - Received SIGUSR1 or SIGINT
+        if self.rsync_process.returncode not in [0, 20]: # 20 - Received SIGUSR1 or SIGINT
             if ignore_errors:
                 return
             raise MessageBoxException(f"File transfer failed with error: {self.error_line}")

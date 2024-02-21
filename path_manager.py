@@ -29,7 +29,7 @@ class PathManager():
     
     @property
     def review_ann_path(self):
-        return os.path.join(self.project_path, f"review_labels.json")
+        return os.path.join(self.project_path, f"review.json")
     
     @property
     def images_path(self):

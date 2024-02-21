@@ -116,6 +116,51 @@ class Label(Base):
         return cls.all()[0]
 
 
+class IssueName(Base):
+    __tablename__ = 'issue_name'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True)
+    color = Column(String)
+    hotkey = Column(String, unique=True)
+
+    def __init__(self, name: str, color: str, hotkey: str):
+        self.name = name
+        self.color = color
+        self.hotkey = hotkey
+
+    @property
+    def color_bgr(self) -> Tuple[int, int, int]:
+        try:
+            color = getattr(ColorBGR, self.color)
+        except AttributeError:
+            color = ColorBGR.white
+        return color
+    
+    @classmethod
+    def get_by_name(cls, name):
+        session = get_session()
+        return session.query(cls).filter(cls.name == name).first()
+    
+    @classmethod
+    def get_by_hotkey(cls, hotkey):
+        session = get_session()
+        return session.query(cls).filter(cls.hotkey == hotkey).first()
+    
+    def save(self):
+        session = get_session()
+        session.add(self)
+        session.commit()
+
+    @classmethod
+    def all(cls) -> List["Label"]:
+        session = get_session()
+        return list(session.query(cls).order_by(asc(cls.hotkey)))
+
+    @classmethod
+    def first(cls) -> "Label":        
+        return cls.all()[0]
+
 
 class ReviewLabel(Base):
     __tablename__ = 'review_label'
@@ -148,6 +193,13 @@ class ReviewLabel(Base):
         session.delete(self)
         session.commit()
 
+
+    def copy(self) -> "ReviewLabel":
+        return ReviewLabel(
+            x=self.x,
+            y=self.y,
+            text=self.text,
+        )
 
 class BBox(Base):
     __tablename__ = 'bbox'
@@ -233,6 +285,7 @@ class LabeledImage(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
     trash = Column(Boolean, default=False)
+    reviewed = Column(Boolean, default=False)
 
     bboxes = relationship("BBox", back_populates="image")
     review_labels = relationship("ReviewLabel", back_populates="image")

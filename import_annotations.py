@@ -4,7 +4,7 @@ import os
 from typing import Dict, List
 
 from tqdm import tqdm
-from models import Label, LabeledImage, BBox, ReviewLabel, Value
+from models import IssueName, Label, LabeledImage, BBox, ReviewLabel, Value
 from utils import open_json, save_json
 
 
@@ -12,8 +12,8 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
     """
     review_ann format:
     {
-        "img_name.jpg": [{"text": "...", "x": ..., "y": ...}], 
-        ...
+        "labels": [{"name": "", "color": "yellow", "hotkey": "1"}], 
+        "images": {"img_name.jpg": [{"text": "...", "x": ..., "y": ...}, ...]},
     }
     figures_ann format:
     {
@@ -25,9 +25,9 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
     # Set current image id to 0
     Value.update_value("img_id", 0, overwrite=False)
 
-    # Figures
     figures_data = open_json(figures_ann_path)
 
+    # Labels
     for label_dict in figures_data["labels"]:
         label = Label.get_by_name(name=label_dict["name"])
         if label is None:
@@ -41,6 +41,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
             label.hotkey = label_dict["hotkey"]
         label.save()
 
+    # Figures
     limages = list()
     for img_name in os.listdir(img_dir): 
         img_info = figures_data["images"].get(img_name)
@@ -73,25 +74,48 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
         limages.append(img)
     LabeledImage.save_batch(limages)
 
-    # Review labels
+    # review_ann format:
+    # {
+    #     "issues": [{"name": "", "color": "yellow", "hotkey": "1"}], 
+    #     "images": {"img_name.jpg": [{"text": "...", "x": ..., "y": ...}, ...]},
+    # }
     if os.path.isfile(review_ann_path):
-        review_labels = open_json(review_ann_path)
+        review_data = open_json(review_ann_path)
+        
+        # Issue names
+        for issue_dict in review_data["issues"]:
+            issue = IssueName.get_by_name(name=issue_dict["name"])
+            if issue is None:
+                issue = IssueName(
+                    name=issue_dict["name"],
+                    color=issue_dict["color"],
+                    hotkey=issue_dict["hotkey"]
+                )
+            else:
+                issue.color = issue_dict["color"]
+                issue.hotkey = issue_dict["hotkey"]
+            issue.save()
+        
+        # Review labels
+        limages = list()
         for img_name in os.listdir(img_dir):
             image = LabeledImage.get(name=img_name)
-            image.clear_review_labels()
-            review_labels_for_image = review_labels.get(image.name)
-            if review_labels_for_image is not None:
-                for review_label_dict in review_labels_for_image:
+            if image.reviewed:
+                continue
+            review_data_for_image = review_data["images"].get(image.name)
+            if review_data_for_image is not None:
+                for review_label_dict in review_data_for_image:
                     rl = ReviewLabel(
                         x=review_label_dict["x"],
                         y=review_label_dict["y"],
                         text=review_label_dict["text"],
                     )
                     image.review_labels.append(rl)
-                image.save()
+                limages.append(image)
+        LabeledImage.save_batch(limages)
 
 
-def export_project(figures_ann_path: str, review_ann_path: str):
+def export_figures(figures_ann_path: str):
     figures_dict = {
         "labels": [{"name": l.name, "color": l.color, "hotkey": l.hotkey} for l in Label.all()], 
         "images": dict()
@@ -104,10 +128,16 @@ def export_project(figures_ann_path: str, review_ann_path: str):
         }
     save_json(figures_dict, figures_ann_path) 
 
-    review_label_dict = dict()
-    for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): # TODO: Check that work correctly and not too long
-        review_label_dict[limage.name] = [
-            {"text": rlabel.text, "x": rlabel.x, "y": rlabel.x}
-            for rlabel in limage.review_labels
-        ]
+
+def export_review(review_ann_path):
+    review_label_dict = {
+        "issues": [{"name": issue.name, "color": issue.color, "hotkey": issue.hotkey} for issue in IssueName.all()], 
+        "images": dict()
+    }
+    for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): # TODO: Check that it works correctly and not too long
+        if len(limage.review_labels) > 0:
+            review_label_dict["images"][limage.name] = [
+                {"text": rlabel.text, "x": rlabel.x, "y": rlabel.x}
+                for rlabel in limage.review_labels
+            ]
     save_json(review_label_dict, review_ann_path) 
