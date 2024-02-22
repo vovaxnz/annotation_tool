@@ -4,17 +4,17 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
+from import_annotations import overwrite_annotations
 from labeling import LabelingApp
 from tkinter import ttk
 from tkinter import font
-import tkinter as tk
 from tkinter import messagebox
 
 
 class MainWindow(tk.Tk):
     def __init__(self, app: LabelingApp):
         super().__init__()
-        self.title("Annotation Tool")
+        self.title(f"Labeling Project {app.project_id}")
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         self.geometry(f"{screen_width}x{screen_height}+0+0")
@@ -147,17 +147,13 @@ class CanvasView(tk.Canvas):
         self.fit_image()
 
     def handle_key_press(self, event: tk.Event):
-        # TODO: Add a key for changing annotation mode (annotation, review, correction). In correction mode user see only images with review tags. If there is a review.json
-        # TODO: Add a hotkey to move to the 0 image
-        # TODO: Add a hotkey to update review labels and figures
 
-        # Prevent too frequent key press
         current_time = time.time()
         if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= 0.1:
-            self.last_key_press_time = current_time
+            self.last_key_press_time = current_time # Prevent too frequent key press
         else:
             return
-
+        
         if event.char.isdigit(): 
             number = int(event.char)
             self.app.change_label(number)
@@ -172,20 +168,32 @@ class CanvasView(tk.Canvas):
         elif event.char.lower() == "h":
             self.app.switch_hiding_main_figures()
         elif event.char.lower() == "j":
-            self.app.switch_hiding_secondary_figures()
+            self.app.switch_hiding_secondary_figures() 
+        elif event.char.lower() == "m":
+            self.app.switch_object_names_visibility() 
+        elif event.char.lower() == "b":
+            self.app.go_to_first_image() # TODO: To menu bar
         elif event.char.lower() == "w":
             self.app.forward()
             self.fit_image()
         elif event.char.lower() == "q":
             self.app.backward()
             self.fit_image()
-        elif event.char.lower() == "p":
+        elif event.char.lower() == "p": # TODO: To menu bar
             agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
             if agree:
                 self.app.save_image()
                 self.app.save_state()
                 self.app.ready_for_export = True
                 self.close()
+        elif event.char.lower() == "n": # TODO: To menu bar
+            agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
+            if agree:
+                root = get_loading_window(text="Downloading and overwriting annotations...")
+                overwrite_annotations(self.app.project_id)
+                self.app.load_image()
+                root.destroy()
+                messagebox.showinfo("Success", "The annotations have been overwritten")
         self.app.update_time_counter()
         self.update_frame = True
         
@@ -400,9 +408,9 @@ class StatusBar(tk.Frame):
         # Schedule the next update
         self.after(30, self.update_status)
 
-def get_waiting_window(text: str):
+def get_loading_window(text: str):
     root = tk.Tk()
-    root.title("Waiting")
+    root.title("Loading")
 
     # Set window size
     window_width = 300
@@ -427,3 +435,51 @@ def get_waiting_window(text: str):
     root.update_idletasks()
     root.update()
     return root
+
+
+class ProjectSelector:
+    def __init__(self, project_ids):
+        self.project_ids = project_ids
+        self.selected_project_id = None
+
+    def select(self):
+        self.root = tk.Tk()
+        self.root.title("Select Project")
+
+        # Set window size
+        window_width = 300
+        window_height = 150
+
+        # Get screen dimensions
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        # Calculate x and y coordinates for the Tk root window
+        x = (screen_width/2) - (window_width/2)
+        y = (screen_height/2) - (window_height/2)
+
+        # Set the dimensions of the window and where it is placed
+        self.root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
+
+        if not self.project_ids:
+            self._display_no_projects_message()
+        else:
+            self._create_project_buttons()
+
+        self.root.mainloop()
+        return self.selected_project_id
+
+    def _create_project_buttons(self):
+        for id in self.project_ids:
+            button = tk.Button(self.root, text=str(id), command=lambda id=id: self._select_project(id))
+            button.pack(pady=5, padx=10, fill=tk.X)
+
+    def _display_no_projects_message(self):
+        label = tk.Label(self.root, text="You don't have any projects")
+        label.pack(pady=10)
+        ok_button = tk.Button(self.root, text="OK", command=self.root.destroy)
+        ok_button.pack(pady=5)
+
+    def _select_project(self, id):
+        self.selected_project_id = id
+        self.root.destroy()

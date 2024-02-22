@@ -10,7 +10,7 @@ from exceptions import MessageBoxException
 
 
 class FileTransferClient:
-    def __init__(self, address):
+    def __init__(self):
         self.address = address
         self.error_line = ""
         self.last_line = ""
@@ -27,20 +27,47 @@ class FileTransferClient:
         self.root = tk.Tk()
         self.root.title("File Transfer Progress")
         
-        self.progress = ttk.Progressbar(self.root, orient="horizontal", length=400, mode="determinate")
-        self.progress.grid(row=0, column=0, columnspan=3, pady=20, padx=10)
-        
-        self.percentage_label = tk.Label(self.root, text="Starting...")
-        self.percentage_label.grid(row=1, column=0, columnspan=3)
-        
-        self.size_label = tk.Label(self.root, text="0M")
-        self.size_label.grid(row=2, column=0)
-        
-        self.speed_label = tk.Label(self.root, text="0MB/s")
-        self.speed_label.grid(row=2, column=1)
 
+        # Set window size
+        window_width = 450
+        window_height = 100
+
+        # Get screen dimensions
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+
+        # Calculate x and y coordinates for the Tk root window
+        x = (screen_width/2) - (window_width/2)
+        y = (screen_height/2) - (window_height/2)
+
+        # Set the dimensions of the window and where it is placed
+        self.root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
+
+        self.progress = ttk.Progressbar(self.root, orient="horizontal", length=400, mode="determinate")
+        self.percentage_label = tk.Label(self.root, text="Starting...")
+        self.size_label = tk.Label(self.root, text="0M")
+        self.speed_label = tk.Label(self.root, text="0MB/s")
         self.remaining_time_label = tk.Label(self.root, text="Remaining time ...")
-        self.remaining_time_label.grid(row=2, column=2)
+
+        # Configure the grid to be responsive
+        self.root.grid_columnconfigure(0, weight=1)  # Make the column expandable
+        self.root.grid_rowconfigure(0, weight=1)  # Make the first row expandable
+        self.root.grid_rowconfigure(1, weight=1)  # Make the second row expandable
+        self.root.grid_rowconfigure(2, weight=1)  # Make the third row expandable
+        
+        # Configure the grid to be responsive
+        self.root.grid_columnconfigure(0, weight=1)  # Make the first column expandable
+        self.root.grid_columnconfigure(1, weight=1)  # Make the second column expandable
+        self.root.grid_columnconfigure(2, weight=1)  # Make the third column expandable
+
+        # Adjust the progress bar
+        self.progress.grid(row=0, column=0, columnspan=3, pady=20, padx=10, sticky="nsew")
+
+        # Adjust the labels with 'sticky="nsew"' to center them
+        self.percentage_label.grid(row=1, column=0, columnspan=3, sticky="nsew")
+        self.size_label.grid(row=2, column=0, sticky="nsew")
+        self.speed_label.grid(row=2, column=1, sticky="nsew")
+        self.remaining_time_label.grid(row=2, column=2, sticky="nsew")
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_window_close)
         self.root.after(100, self.update_progress_bar)
@@ -119,6 +146,6 @@ class FileTransferClient:
 
 
 if __name__ == "__main__":
-    ftc = FileTransferClient(address)
+    ftc = FileTransferClient()
     ftc.download(remote_path="/media/data3/vv/supervisely_projects/dataset_tube-tube_keypoints_2024-02-13-19-17-20_fe854c08/img", local_path="/media/vova/data/viz/tem12")
     

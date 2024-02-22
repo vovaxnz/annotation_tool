@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from exceptions import MessageBoxException
 
-load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(os.path.realpath(__file__)), ".env"))
 
 api_token = os.getenv("TOKEN")
 address = os.getenv("ADDRESS")
@@ -12,6 +12,7 @@ api_url = os.getenv("API_URL")
 if api_token is None: raise MessageBoxException("Specify TOKEN in .env file")
 if address is None: raise MessageBoxException("Specify ADDRESS in .env file")
 if api_token is None: raise MessageBoxException("Specify DATA_DIR in .env file")
+if api_url is None: raise MessageBoxException("Specify API_URL in .env file")
 
 class ColorBGR:
     red = (0, 0, 255)

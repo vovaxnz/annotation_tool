@@ -10,10 +10,9 @@ import numpy as np
 import cv2
 from enum import Enum, auto
 
-from tqdm import tqdm
 from exceptions import MessageBoxException
 from models import IssueName, Label, LabeledImage, BBox, Point, ReviewLabel, Value
-from utils import open_json, save_json
+from config import address
 
 
 class Mode(Enum):
@@ -59,7 +58,7 @@ class Visualizable(ABC):
 
 class LabelingApp(Visualizable, ABC):
 
-    def __init__(self, img_dir: str, annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, secondary_visualizer: Visualizable = None):
+    def __init__(self, img_dir: str, annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, secondary_visualizer: Visualizable = None):
         self.secondary_visualizer = secondary_visualizer 
         
         self.img_names = sorted(os.listdir(img_dir)) 
@@ -71,7 +70,8 @@ class LabelingApp(Visualizable, ABC):
             img_object = LabeledImage.get(name=img_name)
             if img_object is None:
                 raise MessageBoxException(f"{img_name} is not found in the database") 
-
+        
+        self.project_id = project_id
         self.tick_time = time.time()
         self.show_label_names = False
         self.max_action_time_sec = 10
@@ -204,29 +204,31 @@ class LabelingApp(Visualizable, ABC):
         self.load_image()
         self.save_state()
 
+    def go_to_first_image(self):
+        self.save_image()
+        self.processed_img_ids.add(self.img_id)
+        self.img_id = 0
+        self.load_image()
+        self.save_state()
+
     def toggle_image_trash_tag(self):
         image = LabeledImage.get(name=self.img_names[self.img_id])
-        if image.trash:
-            image.trash = False
-        else:
-            image.trash = True
+        image.trash = not image.trash
         image.save()
         self.is_trash = image.trash
         self.update_canvas()
         self.image_changed = True
 
+    def switch_object_names_visibility(self):
+        self.show_label_names = not self.show_label_names
+        self.update_canvas()
+
     def switch_hiding_main_figures(self):
-        if self.hide_main_figures:
-            self.hide_main_figures = False
-        else:
-            self.hide_main_figures = True
+        self.hide_main_figures = not self.hide_main_figures
         self.update_canvas()
 
     def switch_hiding_secondary_figures(self):
-        if self.hide_secondary_figures:
-            self.hide_secondary_figures = False
-        else:
-            self.hide_secondary_figures = True
+        self.hide_secondary_figures = not self.hide_secondary_figures
         self.update_orig_image()
         self.update_canvas()
 
@@ -279,9 +281,9 @@ class LabelingApp(Visualizable, ABC):
 
 class BboxLabelingApp(LabelingApp):
 
-    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, secondary_visualizer: Visualizable = None):
+    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, secondary_visualizer: Visualizable = None):
         self.start_point: Optional[Tuple[int, int]] = None
-        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, secondary_visualizer=secondary_visualizer)
+        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, project_id=project_id, secondary_visualizer=secondary_visualizer)
         self.load_image()
 
 
@@ -426,8 +428,8 @@ class BboxLabelingApp(LabelingApp):
 
 class ReviewLabelingApp(LabelingApp):
 
-    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, secondary_visualizer: Visualizable = None):
-        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, secondary_visualizer=secondary_visualizer)
+    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, secondary_visualizer: Visualizable = None):
+        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, project_id=project_id, secondary_visualizer=secondary_visualizer)
         self.load_image()
         self.active_label: Label = IssueName.first()
 
@@ -574,13 +576,14 @@ class ReviewLabelingApp(LabelingApp):
 
 
 
-def get_labeling_app(img_dir: str, annotation_mode: AnnotationMode, annotation_stage: AnnotationStage) -> Optional[LabelingApp]:
+def get_labeling_app(img_dir: str, annotation_mode: AnnotationMode, annotation_stage: AnnotationStage, project_id: int) -> Optional[LabelingApp]:
 
     if annotation_stage is AnnotationStage.CORRECTION:
         review_labeling_app = ReviewLabelingApp(
             img_dir=img_dir,
             annotation_stage=annotation_stage,
             annotation_mode=annotation_mode,
+            project_id=project_id
         )
     else:
         review_labeling_app = None
@@ -592,6 +595,7 @@ def get_labeling_app(img_dir: str, annotation_mode: AnnotationMode, annotation_s
             annotation_stage=annotation_stage,
             annotation_mode=annotation_mode,
             secondary_visualizer=review_labeling_app,
+            project_id=project_id
         )
 
     if annotation_stage is AnnotationStage.REVIEW:
@@ -600,7 +604,8 @@ def get_labeling_app(img_dir: str, annotation_mode: AnnotationMode, annotation_s
             img_dir=img_dir,
             annotation_stage=annotation_stage,
             annotation_mode=annotation_mode,
-            secondary_visualizer=labeling_app
+            secondary_visualizer=labeling_app,
+            project_id=project_id
         )
     
     return labeling_app

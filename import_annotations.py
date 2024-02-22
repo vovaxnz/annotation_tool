@@ -4,7 +4,10 @@ import os
 from typing import Dict, List
 
 from tqdm import tqdm
+from api_requests import get_project_data
+from file_transfer import FileTransferClient
 from models import IssueName, Label, LabeledImage, BBox, ReviewLabel, Value
+from path_manager import PathManager
 from utils import open_json, save_json
 
 
@@ -141,3 +144,28 @@ def export_review(review_ann_path):
                 for rlabel in limage.review_labels
             ]
     save_json(review_label_dict, review_ann_path) 
+
+
+def overwrite_annotations(project_id):
+
+    annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path = get_project_data(project_id)
+    pm = PathManager(project_id)
+    ftc = FileTransferClient()
+
+    ftc.download(
+        local_path=pm.figures_ann_path, 
+        remote_path=figures_ann_path,
+        show_progressbar=False
+    )
+    ftc.download(
+        local_path=pm.review_ann_path, 
+        remote_path=review_ann_path,
+        show_progressbar=False
+    )
+
+    import_project(
+        figures_ann_path=pm.figures_ann_path,
+        review_ann_path=pm.review_ann_path,
+        img_dir=pm.images_path,
+        overwrite=True,
+    )
