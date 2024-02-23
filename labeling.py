@@ -251,6 +251,8 @@ class LabelingApp(Visualizable, ABC):
 
     def remove_selected_figure(self):
         if self.selected_figure_id is not None:
+            figure = self.figures[self.selected_figure_id]
+            figure.delete()
             self.figures.pop(self.selected_figure_id)
             self.selected_figure_id = self.get_selected_figure_id(self.cursor_x, self.cursor_y)
             self.update_canvas()
@@ -290,39 +292,43 @@ class BboxLabelingApp(LabelingApp):
     def draw_figure(self, canvas: np.ndarray, figure: BBox, highlight: bool = False) -> np.ndarray:
         """Drawing the bbox on the canvas"""
 
-        line_width = max(1, int(4 / ((self.scale_factor + 1e-7) ** (1/3))))
+        line_width = max(1, int(5 / ((self.scale_factor + 1e-7) ** (1/3))))
 
         if highlight:
-            line_width += 1
+            if self.scale_factor < 3:
+                line_width += 2
+            else:
+                line_width += 1
 
         label = Label.get_by_name(figure.label)
 
         for layer_id in range(line_width):
             canvas = cv2.rectangle(canvas, (int(figure.x1 - layer_id), int(figure.y1 - layer_id)), (int(figure.x2 + layer_id), int(figure.y2 + layer_id)), label.color_bgr, 1)
-            if self.show_label_names:
-                textSize = cv2.getTextSize(label.name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-                padding = 5
-                rect_x1 = figure.x1
-                rect_y2 = figure.y1
-                rect_h = textSize[1] + padding * 2
-                rect_w = textSize[0] + padding * 2
-                rect_x2 = rect_x1 + rect_w
-                rect_y1 = rect_y2 - rect_h
-                if rect_y1 < 0:
-                    rect_y1 = figure.y2
-                    rect_y2 = rect_y1 + rect_h
-                text_x = rect_x1 + padding
-                text_y = rect_y2 - padding
-                cv2.rectangle(canvas, (rect_x1, rect_y1), (rect_x2, rect_y2), label.color_bgr, -1)
-                if sum(label.color_bgr) / 3 > 120:
-                    text_color = (0, 0, 0)
-                else:
-                    text_color = (255, 255, 255)
-                cv2.putText(canvas, label.name, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
+        
+        if self.show_label_names:
+            textSize = cv2.getTextSize(label.name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+            padding = 5
+            rect_x1 = figure.x1
+            rect_y2 = figure.y1
+            rect_h = textSize[1] + padding * 2
+            rect_w = textSize[0] + padding * 2
+            rect_x2 = rect_x1 + rect_w
+            rect_y1 = rect_y2 - rect_h
+            if rect_y1 < 0:
+                rect_y1 = figure.y2
+                rect_y2 = rect_y1 + rect_h
+            text_x = rect_x1 + padding
+            text_y = rect_y2 - padding
+            cv2.rectangle(canvas, (rect_x1, rect_y1), (rect_x2, rect_y2), label.color_bgr, -1)
+            if sum(label.color_bgr) / 3 > 120:
+                text_color = (0, 0, 0)
+            else:
+                text_color = (255, 255, 255)
+            cv2.putText(canvas, label.name, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1, cv2.LINE_AA)
 
         for point in figure.points:
             if point.close_to(self.cursor_x, self.cursor_y):
-                circle_radius = max(1, int(7 / ((self.scale_factor + 1e-7) ** (1/3))))
+                circle_radius = max(1, int(10 / ((self.scale_factor + 1e-7) ** (1/3))))
                 cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)
                 cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), 2)
 

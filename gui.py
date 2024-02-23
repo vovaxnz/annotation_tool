@@ -46,9 +46,9 @@ class MainWindow(tk.Tk):
 
         # Create a Project menu and add it to the menu bar
         file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Go to first image", command=self.canvas_view.go_to_first_image)
+        file_menu.add_command(label="Go to the first image", command=self.canvas_view.go_to_first_image)
+        file_menu.add_command(label="Complete the project", command=self.canvas_view.complete_project)
         file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
-        file_menu.add_command(label="Complete project", command=self.canvas_view.complete_project)
         menu_bar.add_cascade(label="Project", menu=file_menu)
 
         # Create a Help menu and add it to the menu bar

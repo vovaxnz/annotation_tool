@@ -140,7 +140,7 @@ def export_review(review_ann_path):
     for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): 
         if len(limage.review_labels) > 0:
             review_label_dict["images"][limage.name] = [
-                {"text": rlabel.text, "x": rlabel.x, "y": rlabel.x}
+                {"text": rlabel.text, "x": rlabel.x, "y": rlabel.y}
                 for rlabel in limage.review_labels
             ]
     save_json(review_label_dict, review_ann_path) 

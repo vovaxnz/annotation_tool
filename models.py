@@ -1,5 +1,5 @@
 from abc import ABC
-from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey
+from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple
 from typing import Dict, List, Tuple
@@ -183,15 +183,22 @@ class ReviewLabel(Base):
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
+    @property
+    def state(self):
+        return inspect(self)
+    
     def save(self):
         session = get_session()
         session.add(self)
         session.commit()
 
     def delete(self):
+        if not self.state.persistent:
+            return 
         session = get_session()
         session.delete(self)
         session.commit()
+        print("deleted")
 
 
     def copy(self) -> "ReviewLabel":
@@ -227,12 +234,18 @@ class BBox(Base):
         """BBox has no attribute .active_point_id after being retreived from DB, so we add it here"""
         self.active_point_id = None
 
+    @property
+    def state(self):
+        return inspect(self)
+
     def save(self):
         session = get_session()
         session.add(self)
         session.commit()
 
     def delete(self):
+        if not self.state.persistent:
+            return 
         session = get_session()
         session.delete(self)
         session.commit()
@@ -273,7 +286,7 @@ class BBox(Base):
     def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
         """Returns id of point of near bbox"""
         for i, point in enumerate(self.points):
-            if point.close_to(x, y):
+            if point.close_to(x, y, distance=10):
                 return i
 
     def contains_point(self, point: Point) -> bool:
