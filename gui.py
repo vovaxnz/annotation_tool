@@ -9,6 +9,9 @@ from labeling import LabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
+from jinja2 import Environment, FileSystemLoader
+import tkinterweb
+from models import IssueName, Label
 
 
 class MainWindow(tk.Tk):
@@ -37,6 +40,68 @@ class MainWindow(tk.Tk):
 
         # Ensure the StatusBar takes minimal vertical space
         self.container.grid_rowconfigure(1, weight=0, minsize=40)
+
+        # Create a menu bar
+        menu_bar = tk.Menu(self)
+
+        # Create a Project menu and add it to the menu bar
+        file_menu = tk.Menu(menu_bar, tearoff=0)
+        file_menu.add_command(label="Go to first image", command=self.canvas_view.go_to_first_image)
+        file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
+        file_menu.add_command(label="Complete project", command=self.canvas_view.complete_project)
+        menu_bar.add_cascade(label="Project", menu=file_menu)
+
+        # Create a Help menu and add it to the menu bar
+        help_menu = tk.Menu(menu_bar, tearoff=0)
+        help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
+        help_menu.add_command(label="Classes", command=self.show_classes)
+        help_menu.add_command(label="Review Labels", command=self.show_review_labels)
+        menu_bar.add_cascade(label="Help", menu=help_menu)
+
+        # Attach the menu bar to the window
+        self.config(menu=menu_bar)
+
+    def _show_html_window(self, title, html_content):
+        window = tk.Toplevel(self)
+        window.title(title)
+
+        html_frame = tkinterweb.HtmlFrame(window, messages_enabled=False)
+        html_frame.load_html(html_content)
+        html_frame.pack(fill="both", expand=True)
+
+        window.update_idletasks()
+        window.update()
+
+    def show_hotkeys(self):
+        with open("./templates/hotkeys.html", 'r', encoding='utf-8') as file:
+            html_content = file.read()
+        self._show_html_window(title="Hotkeys", html_content=html_content)
+
+    def show_classes(self):
+        data = [
+            {
+                "name": l.name,
+                "color": l.color,
+                "hotkey": l.hotkey,
+            } for l in Label.all()
+        ]
+        env = Environment(loader=FileSystemLoader('./templates'))
+        template = env.get_template('classes.html')
+        html_content = template.render(data=data)
+        self._show_html_window(title="Classes", html_content=html_content)
+
+    def show_review_labels(self):
+        data = [
+            {
+                "name": l.name,
+                "color": l.color,
+                "hotkey": l.hotkey,
+            } for l in IssueName.all()
+        ]
+        env = Environment(loader=FileSystemLoader('./templates'))
+        template = env.get_template('classes.html')
+        html_content = template.render(data=data)
+        self._show_html_window(title="Classes", html_content=html_content)
 
 
 class CanvasView(tk.Canvas):
@@ -67,7 +132,6 @@ class CanvasView(tk.Canvas):
 
         self.bind("<ButtonRelease-1>", self.scale_event_wrapper(self.handle_left_mouse_release))
         self.bind("<ButtonRelease-3>", self.scale_event_wrapper(self.handle_right_mouse_release))
-
 
         self.focus_set() # Set focus to the canvas to receive keyboard events 
 
@@ -169,34 +233,40 @@ class CanvasView(tk.Canvas):
             self.app.switch_hiding_main_figures()
         elif event.char.lower() == "j":
             self.app.switch_hiding_secondary_figures() 
-        elif event.char.lower() == "m":
+        elif event.char.lower() == "n":
             self.app.switch_object_names_visibility() 
-        elif event.char.lower() == "b":
-            self.app.go_to_first_image() # TODO: To menu bar
         elif event.char.lower() == "w":
             self.app.forward()
             self.fit_image()
         elif event.char.lower() == "q":
             self.app.backward()
             self.fit_image()
-        elif event.char.lower() == "p": # TODO: To menu bar
-            agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
-            if agree:
-                self.app.save_image()
-                self.app.save_state()
-                self.app.ready_for_export = True
-                self.close()
-        elif event.char.lower() == "n": # TODO: To menu bar
-            agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
-            if agree:
-                root = get_loading_window(text="Downloading and overwriting annotations...")
-                overwrite_annotations(self.app.project_id)
-                self.app.load_image()
-                root.destroy()
-                messagebox.showinfo("Success", "The annotations have been overwritten")
         self.app.update_time_counter()
         self.update_frame = True
         
+    def go_to_first_image(self):
+        self.app.go_to_first_image()
+        self.update_frame = True
+
+    def overwrite_annotations(self):
+        agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
+        if agree:
+            root = get_loading_window(text="Downloading and overwriting annotations...")
+            overwrite_annotations(self.app.project_id)
+            self.app.load_image()
+            root.destroy()
+            self.update_frame = True
+            self.update_canvas()
+            messagebox.showinfo("Success", "The annotations have been overwritten")
+
+    def complete_project(self):
+        agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
+        if agree:
+            self.app.save_image()
+            self.app.save_state()
+            self.app.ready_for_export = True
+            self.close()
+
 
     def fit_image(self):
         """Fits image inside the canvas and re-calculates scale_factor"""
@@ -297,7 +367,7 @@ class CanvasView(tk.Canvas):
         return cropped
 
 
-# TODO: Add mode (annotation, review, correction)
+
 class StatusBar(tk.Frame):
     def __init__(self, parent, app, **kw):
         super().__init__(parent, **kw)
@@ -380,8 +450,6 @@ class StatusBar(tk.Frame):
     def update_status(self):
         status_data = self.app.status_data 
         
-        # TODO: Show annotation stage
-
         # Update labels
         self.mode_label.config(text=f"Mode: {status_data.annotation_mode}: {status_data.annotation_stage}")
         self.class_label.config(text=f"Class: {status_data.selected_class}", bg=status_data.class_color)

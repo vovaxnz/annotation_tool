@@ -19,7 +19,7 @@ def encode_rle(mask):
     return encoded_str
 
 
-def decode_rle(encoded_str, shape=(1920, 1080)): # TODO: Use height, width
+def decode_rle(encoded_str, width, height): 
     # Split the encoded string into pairs of values and counts
     pairs = encoded_str.split(',')
     # Separate values and their counts
@@ -37,4 +37,4 @@ def decode_rle(encoded_str, shape=(1920, 1080)): # TODO: Use height, width
         start_idx += count
     
     # Reshape the flat mask to the original image shape
-    return flat_mask.reshape(shape)
+    return flat_mask.reshape((width, height))

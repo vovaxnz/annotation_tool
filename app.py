@@ -49,13 +49,13 @@ def start():
             show_progressbar=False
         )
 
-    loading_window.destroy()
     img_ann_number = len(open_json(pm.figures_ann_path)["images"])
     if os.path.isdir(pm.images_path):
         img_number = len(os.listdir(pm.images_path))
     else:
         img_number = 0
 
+    loading_window.destroy()
     if not os.path.isdir(pm.images_path) or img_number != img_ann_number:
         ftc.download(
             local_path=pm.images_path, 
@@ -65,7 +65,7 @@ def start():
     if img_number != img_ann_number:
         raise MessageBoxException(f"The project {project_id} has a different number of images and annotations. Re-lauch application to download again or, if that doesn't help, ask to fix the project")
 
-    loading_window = get_loading_window(text="Importing project...")
+    loading_window = get_loading_window(text="Loading project...")
     configure_database(pm.db_path)
     import_project(
         figures_ann_path=pm.figures_ann_path,
@@ -103,8 +103,8 @@ def start():
             )
         complete_task(project_id=project_id, duration_hours=labeling_app.duration_hours)
         Value.update_value("img_id", 0, overwrite=False)
-        loading_window.destroy()
         messagebox.showinfo("Success", "Task completed")
+        loading_window.destroy()
 
 
 

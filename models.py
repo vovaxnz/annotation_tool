@@ -210,7 +210,7 @@ class BBox(Base):
     y1 = Column(Integer)
     x2 = Column(Integer)
     y2 = Column(Integer)
-    label = Column(String) # TODO: Relationship with Label
+    label = Column(String)
 
     image = relationship("LabeledImage", back_populates="bboxes")
 
@@ -289,7 +289,7 @@ class LabeledImage(Base):
 
     bboxes = relationship("BBox", back_populates="image")
     review_labels = relationship("ReviewLabel", back_populates="image")
-    # masks = relationship("Mask", back_populates="image")  # TODO: Add relationship with a mask
+    # masks = relationship("Mask", back_populates="image") 
 
     @classmethod
     def get(cls, name):

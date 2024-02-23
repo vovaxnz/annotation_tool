@@ -137,7 +137,7 @@ def export_review(review_ann_path):
         "issues": [{"name": issue.name, "color": issue.color, "hotkey": issue.hotkey} for issue in IssueName.all()], 
         "images": dict()
     }
-    for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): # TODO: Check that it works correctly and not too long
+    for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): 
         if len(limage.review_labels) > 0:
             review_label_dict["images"][limage.name] = [
                 {"text": rlabel.text, "x": rlabel.x, "y": rlabel.x}
