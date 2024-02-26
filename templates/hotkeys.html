@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Table Styling Adjustments</title>
 <style>
+  body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f0f0f0;
+      color: #333;
+  }
+  .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
   table {
     border-collapse: collapse;
     border: 1px solid #ccc;
@@ -17,11 +29,14 @@
   th {
     background-color: #f2f2f2; 
   }
+  h2 {
+      color: #007BFF;
+  }
 </style>
 </head>
 <body>
 
-
+<div class="container">
 <h2>Hotkeys</h2>
 
 <table>
@@ -54,11 +69,11 @@
     <td style="font-size: 16px;">Fit the image into the window</td>
   </tr>
   <tr>
-    <td>H</td>
+    <td>E</td>
     <td style="font-size: 16px;">Hide/Show main figures. The main figures are those that can be edited. For example, if you are correcting a reviewed image, the bounding boxes are the main figures and the review labels are the secondary figures. If you are reviewing a project, the review labels are the main figures and the bounding boxes are the secondary figures.</td>
   </tr>
   <tr>
-    <td>J</td>
+    <td>R</td>
     <td style="font-size: 16px;">Hide/Show secondary figures</td>
   </tr>
   <tr>
@@ -66,6 +81,6 @@
     <td style="font-size: 16px;">Hide/Show figures class names</td>
   </tr>
 </table>
-
+</div>
 </body>
 </html>

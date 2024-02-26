@@ -9,10 +9,13 @@ address = os.getenv("ADDRESS")
 data_dir = os.getenv("DATA_DIR")
 api_url = os.getenv("API_URL")
 
-if api_token is None: raise MessageBoxException("Specify TOKEN in .env file")
-if address is None: raise MessageBoxException("Specify ADDRESS in .env file")
-if api_token is None: raise MessageBoxException("Specify DATA_DIR in .env file")
-if api_url is None: raise MessageBoxException("Specify API_URL in .env file")
+if api_token in [None, ""]: raise MessageBoxException("Specify TOKEN in .env file")
+if address in [None, ""]: raise MessageBoxException("Specify ADDRESS in .env file")
+if api_token in [None, ""]: raise MessageBoxException("Specify DATA_DIR in .env file")
+if api_url in [None, ""]: raise MessageBoxException("Specify API_URL in .env file")
+
+
+templates_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "templates")
 
 class ColorBGR:
     red = (0, 0, 255)

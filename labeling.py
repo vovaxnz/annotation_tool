@@ -406,11 +406,6 @@ class BboxLabelingApp(LabelingApp):
         if self.mode == Mode.MOVING:
             self.release_bbox()
             self.mode = Mode.IDLE
-        elif self.mode == Mode.CREATE:
-            if abs(self.start_point[0] - x) > 5 and abs(self.start_point[1] - y) > 5:
-                self.add_bbox(x, y)
-            self.start_point = None
-            self.mode = Mode.IDLE
         self.selected_figure_id = self.get_selected_figure_id(x, y)
         self.update_canvas()
 
@@ -425,6 +420,15 @@ class BboxLabelingApp(LabelingApp):
             else:
                 self.start_point = (x, y)
                 self.mode = Mode.CREATE
+        
+        elif self.mode == Mode.CREATE:
+            if abs(self.start_point[0] - x) > 5 and abs(self.start_point[1] - y) > 5:
+                self.add_bbox(x, y)
+            self.start_point = None
+            self.mode = Mode.IDLE
+            self.selected_figure_id = self.get_selected_figure_id(x, y)
+            
+        self.update_canvas()
 
     def handle_mouse_hover(self, x: int, y: int):
         self.selected_figure_id = self.get_selected_figure_id(x, y)

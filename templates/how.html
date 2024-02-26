@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructions Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #007BFF;
+        }
+        p {
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Instructions for using the Annotation Tool</h2>
+        <p>
+        1. At the beginning you need to select the project id you want to work on. Application will download images and annotations from the server, if not already downloaded, and the project will open in the appropriate mode (annotation/review/correction) depending on task status on eg-ml.
+        </p>
+        <p>
+        2. You can close the application at any time, the figures will be saved and the next time you open this project - it will open in the same place. 
+        </p>
+        <p>
+        3. Work duration calculated when you are working. Application counts time intervals between key pressews and mouse clicks, but no more than 10 seconds. 
+        </p>
+        <p>
+        4. After you processed all images, press <strong>Project &gt; Complete the project</strong>. It will send annotated data to the server and updates task status on eg-ml
+        </p>
+        <p>
+        5. The actions while annotation are performed using hotkeys. See the <strong>Help &gt; Hotkeys</strong> menu to see the classes
+        </p>
+        
+        <p>
+            6. In rare cases when you need to download annotations from the server and overwrite your annotations with them, click <strong>Project &gt; Download and overwrite annotations</strong>.
+        </p>
+        <p>
+            7. Pay attention to the <strong>Mode</strong> section on the left side of the status bar. It shows which task you have to do.
+        </p>
+        <p>
+            8. Press <strong>T</strong> if you want to mark image as a trash. After that the <strong>Trash</strong> section on the status bar become red. Press <strong>T</strong> again to remove trash tag from the image.
+        </p>
+        <p>
+          9. You can rename figures by placing the cursor over them and pressing the class hotkey. See the <strong>Help &gt; Classes</strong> menu to see the classes, their colors, and hotkeys
+        </p>
+        <p>
+          10. If you want to create a figure of specific class, first press a hotkey of this class and then start creating the figure.
+        </p>
+        <p>
+          11. In review mode you can do the same with review labels as you do with figures, using their point.
+        </p>
+        <p>
+          12. Don't forget that you can hide main and secondary figures using hotkeys while annotating or reviewing images. The <strong>Visibility</strong> section of the status bar can show 4 values:
+      </p>
+      <ul>
+          <li><strong>All Visible</strong>: when both main and secondary figures are visible</li>
+          <li><strong>Figures hidden</strong>: when main figures are hidden and secondary visible</li>
+          <li><strong>Secondary hidden</strong>: when main figures are visible and secondary are hidden</li>
+          <li><strong>All hidden</strong>: when both main and secondary figures are hidden.</li>
+      </ul>
+      
+    </div>
+</body>
+</html>

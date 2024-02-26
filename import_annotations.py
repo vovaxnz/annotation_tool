@@ -105,6 +105,8 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
             image = LabeledImage.get(name=img_name)
             if image.reviewed:
                 continue
+            if len(image.review_labels) > 0:
+                continue
             review_data_for_image = review_data["images"].get(image.name)
             if review_data_for_image is not None:
                 for review_label_dict in review_data_for_image:

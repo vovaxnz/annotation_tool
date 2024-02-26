@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Tuple
 import cv2
@@ -12,6 +13,7 @@ from tkinter import messagebox
 from jinja2 import Environment, FileSystemLoader
 import tkinterweb
 from models import IssueName, Label
+from config import templates_path
 
 
 class MainWindow(tk.Tk):
@@ -53,6 +55,7 @@ class MainWindow(tk.Tk):
 
         # Create a Help menu and add it to the menu bar
         help_menu = tk.Menu(menu_bar, tearoff=0)
+        help_menu.add_command(label="How to use this tool?", command=self.show_how)
         help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
         help_menu.add_command(label="Classes", command=self.show_classes)
         help_menu.add_command(label="Review Labels", command=self.show_review_labels)
@@ -60,6 +63,14 @@ class MainWindow(tk.Tk):
 
         # Attach the menu bar to the window
         self.config(menu=menu_bar)
+
+        
+        self.protocol("WM_DELETE_WINDOW", self.on_window_close)
+
+    def on_window_close(self):
+        self.canvas_view.app.save_image()
+        self.canvas_view.app.save_state()
+        self.destroy()
 
     def _show_html_window(self, title, html_content):
         window = tk.Toplevel(self)
@@ -73,9 +84,16 @@ class MainWindow(tk.Tk):
         window.update()
 
     def show_hotkeys(self):
-        with open("./templates/hotkeys.html", 'r', encoding='utf-8') as file:
+        template_path = os.path.join(templates_path, "hotkeys.html")
+        with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
         self._show_html_window(title="Hotkeys", html_content=html_content)
+
+    def show_how(self):
+        template_path = os.path.join(templates_path, "how.html")
+        with open(template_path, 'r', encoding='utf-8') as file:
+            html_content = file.read()
+        self._show_html_window(title="How to use this tool?", html_content=html_content)
 
     def show_classes(self):
         data = [
@@ -85,7 +103,8 @@ class MainWindow(tk.Tk):
                 "hotkey": l.hotkey,
             } for l in Label.all()
         ]
-        env = Environment(loader=FileSystemLoader('./templates'))
+        
+        env = Environment(loader=FileSystemLoader(templates_path))
         template = env.get_template('classes.html')
         html_content = template.render(data=data)
         self._show_html_window(title="Classes", html_content=html_content)
@@ -98,7 +117,7 @@ class MainWindow(tk.Tk):
                 "hotkey": l.hotkey,
             } for l in IssueName.all()
         ]
-        env = Environment(loader=FileSystemLoader('./templates'))
+        env = Environment(loader=FileSystemLoader(templates_path))
         template = env.get_template('classes.html')
         html_content = template.render(data=data)
         self._show_html_window(title="Classes", html_content=html_content)
@@ -229,9 +248,9 @@ class CanvasView(tk.Canvas):
             self.fit_image()
         elif event.char.lower() == "t":
             self.app.toggle_image_trash_tag()
-        elif event.char.lower() == "h":
+        elif event.char.lower() == "e":
             self.app.switch_hiding_main_figures()
-        elif event.char.lower() == "j":
+        elif event.char.lower() == "r":
             self.app.switch_hiding_secondary_figures() 
         elif event.char.lower() == "n":
             self.app.switch_object_names_visibility() 
@@ -323,6 +342,7 @@ class CanvasView(tk.Canvas):
     def update_canvas(self):
         if self.update_frame:
 
+
             # Convert the OpenCV image to a format suitable for Tkinter
             cv_image = cv2.cvtColor(self.app.canvas, cv2.COLOR_BGR2RGB)
             cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
@@ -340,7 +360,7 @@ class CanvasView(tk.Canvas):
 
             self.update_frame = False
 
-        self.after(30, self.update_canvas)
+        self.after(5, self.update_canvas)
         
     def xy_screen_to_image(self, x, y) -> Tuple[int, int]: 
         """Transforms coordinates on the window to the coordinates on the image"""
@@ -512,11 +532,11 @@ class ProjectSelector:
 
     def select(self):
         self.root = tk.Tk()
-        self.root.title("Select Project")
+        self.root.title("Start")
 
         # Set window size
         window_width = 300
-        window_height = 150
+        window_height = 200
 
         # Get screen dimensions
         screen_width = self.root.winfo_screenwidth()
@@ -528,6 +548,9 @@ class ProjectSelector:
 
         # Set the dimensions of the window and where it is placed
         self.root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
+
+        self.text = tk.Label(self.root, text="Select project id")
+        self.text.pack(pady=10)
 
         if not self.project_ids:
             self._display_no_projects_message()
