@@ -1,6 +1,6 @@
 # Install 
 
-Run `sh install.sh` and follow instructions
+Run `bash install.sh` and follow instructions
 
 # Usage
 

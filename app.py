@@ -24,7 +24,9 @@ class Application:
 
 
 def start():
+    loading_window = get_loading_window(text="Getting your active projects...")
     available_project_ids = get_project_ids()
+    loading_window.destroy()
     ps = ProjectSelector(available_project_ids)
     project_id: int = ps.select()
     if project_id is None: 

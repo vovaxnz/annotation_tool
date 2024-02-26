@@ -3,7 +3,20 @@
 # Causes the script to exit if any command exits with a non-zero status
 set -e
 
-sudo apt install rsync python3-tk -y
+# Select non-conda python interpeter
+PYTHON_INTERPRETER=$(type -a python3 | grep -v 'conda' | head -n 1 | awk '{print $NF}')
+
+# Install venv
+PYTHON_VERSION=$($PYTHON_INTERPRETER --version | grep -oP 'Python \K\d+\.\d+')
+VENV_PACKAGE_NAME="python${PYTHON_VERSION}-venv"
+echo $VENV_PACKAGE_NAME
+sudo apt install -y "$VENV_PACKAGE_NAME"
+
+sudo apt install rsync python3-tk  -y
+
+# Create and activate venv
+python3 -m venv venv
+source venv/bin/activate
 
 pip install -r requirements.txt
 
