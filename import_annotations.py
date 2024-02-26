@@ -21,7 +21,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
     figures_ann format:
     {
         "labels": [{"name": "", "color": "yellow", "hotkey": "1"}], 
-        "images": {"img_name.jpg": {"bboxes": [], "masks": []}}},
+        "images": {"img_name.jpg": {"trash": false, "bboxes": [], "masks": []}}},
     }
     """
     
@@ -49,9 +49,11 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
     for img_name in os.listdir(img_dir): 
         img_info = figures_data["images"].get(img_name)
         if img_info is not None:
+            trash_tag = img_info.get("trash", False)
             bboxes = img_info.get("bboxes", list())
             # masks = img_info.get("masks", list())
         else:
+            trash_tag = False
             bboxes = list()
             # masks = list()
 
@@ -74,6 +76,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
                 label=bbox["label"],
             )
             img.bboxes.append(rect)
+        img.trash = trash_tag
         limages.append(img)
     LabeledImage.save_batch(limages)
 

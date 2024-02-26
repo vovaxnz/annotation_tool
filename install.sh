@@ -28,7 +28,8 @@ read _
 
 # Create desktop shortcut
 CURRENT_DIR=$(pwd)
-DESKTOP_FILE="$HOME/Desktop/Labeling.desktop"
+DESKTOP_PATH=$(xdg-user-dir DESKTOP)
+DESKTOP_FILE="$DESKTOP_PATH/Labeling.desktop"
 cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
 Version=1.0
