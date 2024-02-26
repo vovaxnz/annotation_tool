@@ -21,7 +21,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Specify .env values
-cp .env.example .env
+if [ ! -f .env ]; then
+  cp .env.example .env
+fi
 chmod 600 .env
 echo "\nOpen $(realpath .env) file, enter your data into it, save and press ENTER to continue"
 read _
