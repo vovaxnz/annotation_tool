@@ -1,3 +1,8 @@
+#!/bin/bash 
+
+# Causes the script to exit if any command exits with a non-zero status
+set -e
+
 sudo apt install rsync python3-tk -y
 
 pip install -r requirements.txt
@@ -15,7 +20,7 @@ cat > "$DESKTOP_FILE" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Labeling
+Name=EG Labeling
 Exec=bash -c 'PYTHONPATH=$CURRENT_DIR $(which python3) $CURRENT_DIR/app.py'
 Icon=$CURRENT_DIR/icon.png
 Terminal=false
@@ -26,4 +31,4 @@ chmod +x "$DESKTOP_FILE"
 echo "Go to the Desktop, right click on the Labeling.desktop file and click Allow Launching and press ENTER to continue"
 read _
 
-echo "Congratulations, now if the steps have been completed successfully, you can use the annotation tool!"
+echo "Congratulations, now you can use the annotation tool!"
