@@ -3,7 +3,6 @@
 import os
 from typing import Dict, List
 
-from tqdm import tqdm
 from api_requests import get_project_data
 from file_transfer import FileTransferClient
 from models import IssueName, Label, LabeledImage, BBox, ReviewLabel, Value
@@ -128,7 +127,8 @@ def export_figures(figures_ann_path: str):
         "labels": [{"name": l.name, "color": l.color, "hotkey": l.hotkey} for l in Label.all()], 
         "images": dict()
     }
-    for limage in tqdm(LabeledImage.all(), desc=f"Exporting figures"):
+    print("Exporting figures...")
+    for limage in LabeledImage.all():
         figures_dict["images"][limage.name] = {
             "trash": limage.trash, 
             "bboxes": [{"x1": bbox.x1, "y1": bbox.y1, "x2": bbox.x2, "y2": bbox.y2, "label": bbox.label} for bbox in limage.bboxes],
@@ -142,7 +142,8 @@ def export_review(review_ann_path):
         "issues": [{"name": issue.name, "color": issue.color, "hotkey": issue.hotkey} for issue in IssueName.all()], 
         "images": dict()
     }
-    for limage in tqdm(LabeledImage.all(), desc=f"Exporting review labels"): 
+    print("Exporting review labels...")
+    for limage in LabeledImage.all(): 
         if len(limage.review_labels) > 0:
             review_label_dict["images"][limage.name] = [
                 {"text": rlabel.text, "x": rlabel.x, "y": rlabel.y}

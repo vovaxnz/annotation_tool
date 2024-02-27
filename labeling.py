@@ -32,6 +32,7 @@ class AnnotationStage(Enum):
     ANNOTATE = "ANNOTATE"
     REVIEW = "REVIEW"
     CORRECTION = "CORRECTION"
+    DONE = "DONE"
 
 @dataclass
 class StatusData:
