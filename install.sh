@@ -14,6 +14,12 @@ sudo apt install -y "$VENV_PACKAGE_NAME"
 
 sudo apt install rsync python3-tk  -y
 
+# Copy and install font
+mkdir -p ~/.fonts
+cp UbuntuCondensed-Regular.ttf ~/.fonts/
+fc-cache -f -v
+
+
 # Create and activate venv
 python3 -m venv venv
 source venv/bin/activate
