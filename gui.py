@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
 from import_annotations import overwrite_annotations
-from labeling import LabelingApp
+from labeling_app.labeling import LabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
@@ -536,7 +536,7 @@ class ProjectSelector:
 
         # Set window size
         window_width = 300
-        window_height = 200
+        window_height = 500
 
         # Get screen dimensions
         screen_width = self.root.winfo_screenwidth()

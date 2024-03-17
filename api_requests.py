@@ -1,8 +1,7 @@
 from typing import List, Tuple
 import requests
-from config import api_token, api_url
+from config import AnnotationStage, AnnotationMode, api_token, api_url
 from exceptions import MessageBoxException
-from labeling import AnnotationMode, AnnotationStage
 
 
 def get_project_ids() -> List[int]:

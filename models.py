@@ -1,4 +1,5 @@
 from abc import ABC
+import json
 from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple
@@ -23,12 +24,16 @@ def get_session():
 
 class Point:
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, label: str = None):
         self.x = x
         self.y = y
+        self.label = label
 
     def close_to(self, x, y, distance=8) -> bool:
         return abs(self.x - x) <= distance and abs(self.y - y) <= distance
+    
+    def serialize(self) -> Dict:
+        return {"x": self.x, "y": self.y, "label": self.label}
     
 
 class Value(Base):
@@ -56,6 +61,7 @@ class Value(Base):
     
     @classmethod
     def get_value(cls, name) -> Optional[str]:
+        print("get value", name)
         row = cls.get(name=name)
         if row is not None:
             return row.value
@@ -65,6 +71,7 @@ class Value(Base):
         self.value = value
 
     def save(self):
+        print("save value", self.name)
         session = get_session()
         session.add(self)
         session.commit()
@@ -77,37 +84,39 @@ class Label(Base):
     name = Column(String, unique=True)
     color = Column(String)
     hotkey = Column(String, unique=True)
+    type = Column(String) # bbox, kgroup, keypoint, mask
 
-    def __init__(self, name: str, color: str, hotkey: str):
+    def __init__(self, name: str, color: str, hotkey: str, type: str):
         self.name = name
         self.color = color
         self.hotkey = hotkey
+        self.type = type
 
     @property
     def color_bgr(self) -> Tuple[int, int, int]:
-        try:
-            color = getattr(ColorBGR, self.color)
-        except AttributeError:
-            color = ColorBGR.white
-        return color
+        return getattr(ColorBGR, self.color, ColorBGR.white)
     
     @classmethod
     def get_by_name(cls, name):
+        print("get label")
         session = get_session()
         return session.query(cls).filter(cls.name == name).first()
     
     @classmethod
     def get_by_hotkey(cls, hotkey):
+        print("get label")
         session = get_session()
         return session.query(cls).filter(cls.hotkey == hotkey).first()
     
     def save(self):
+        print("save label")
         session = get_session()
         session.add(self)
         session.commit()
 
     @classmethod
     def all(cls) -> List["Label"]:
+        print("get all labels")
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.hotkey)))
 
@@ -139,21 +148,25 @@ class IssueName(Base):
     
     @classmethod
     def get_by_name(cls, name):
+        print("get issue")   
         session = get_session()
         return session.query(cls).filter(cls.name == name).first()
     
     @classmethod
     def get_by_hotkey(cls, hotkey):
+        print("get issue")   
         session = get_session()
         return session.query(cls).filter(cls.hotkey == hotkey).first()
     
     def save(self):
+        print("save issue")   
         session = get_session()
         session.add(self)
         session.commit()
 
     @classmethod
     def all(cls) -> List["Label"]:
+        print("get issue")   
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.hotkey)))
 
@@ -180,6 +193,7 @@ class ReviewLabel(Base):
 
     @classmethod
     def all(cls) -> List["ReviewLabel"]:
+        print("get review label")   
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
@@ -188,7 +202,60 @@ class ReviewLabel(Base):
         return inspect(self)
     
     def save(self):
+        print("save review label")   
         session = get_session()
+        session.add(self)
+        session.commit()
+
+    def delete(self):
+        print("delete review label")   
+        if not self.state.persistent:
+            return 
+        session = get_session()
+        session.delete(self)
+        session.commit()
+
+
+    def copy(self) -> "ReviewLabel":
+        return ReviewLabel(
+            x=self.x,
+            y=self.y,
+            text=self.text,
+        )
+
+
+class KeypointGroup(Base):
+    __tablename__ = 'keypoint_group'
+
+    id = Column(Integer, primary_key=True)
+    image_id = Column(Integer, ForeignKey('image.id'))
+    label = Column(String)
+    keypoints_data = Column(String) # "[{"x": ..., "y": ..., "label": ...}, ...]"
+
+    image = relationship("LabeledImage", back_populates="kgroups")
+    
+    def __init__(self, label: str, keypoint_data: str):
+        self.label = label
+        self.keypoints_data = keypoint_data
+        self.active_point_id = None
+        self.keypoints: List[Point] = self.deserialize_keypoints(self.keypoints_data)
+
+    @reconstructor
+    def init_on_load(self):
+        self.active_point_id = None
+        self.keypoints: List[Point] = self.deserialize_keypoints(self.keypoints_data)
+
+    @property
+    def keypoints_as_dict(self) -> Dict[str, Point]:
+        return {kp.label: kp for kp in self.keypoints}
+    
+    @property
+    def state(self):
+        return inspect(self)
+
+    def save(self):
+        session = get_session()
+        self.keypoints_data = self.serialize_keypoints(self.keypoints)
         session.add(self)
         session.commit()
 
@@ -198,15 +265,41 @@ class ReviewLabel(Base):
         session = get_session()
         session.delete(self)
         session.commit()
-        print("deleted")
 
-
-    def copy(self) -> "ReviewLabel":
-        return ReviewLabel(
-            x=self.x,
-            y=self.y,
-            text=self.text,
+    def copy(self) -> "KeypointGroup":
+        return KeypointGroup(
+            label=self.label,
+            keypoints_data=self.serialize_keypoints(self.keypoints),
         )
+
+    def move_active_point(self, x, y):
+        """Move the active point of the bbox."""
+        if self.active_point_id is None:
+            return
+        self.keypoints[self.active_point_id].x = x
+        self.keypoints[self.active_point_id].y = y
+
+    def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
+        """Returns id of point of near bbox"""
+        for i, point in enumerate(self.keypoints):
+            if point.close_to(x, y, distance=10):
+                return i
+
+    @staticmethod
+    def serialize_keypoints(keypoints: List[Point]) -> str:
+        result = list()
+        for kp in keypoints:
+            result.append(kp.serialize())
+        return json.dumps(result)
+    
+    @staticmethod
+    def deserialize_keypoints(data: str) -> List[Point]:
+        kp_serialized = json.loads(data)
+        result = list()
+        for kp in kp_serialized:
+            result.append(Point(x=kp["x"], y=kp["y"], label=kp["label"]))
+        return result
+    
 
 class BBox(Base):
     __tablename__ = 'bbox'
@@ -239,11 +332,13 @@ class BBox(Base):
         return inspect(self)
 
     def save(self):
+        print("save bbox") 
         session = get_session()
         session.add(self)
         session.commit()
 
     def delete(self):
+        print("delete bbox") 
         if not self.state.persistent:
             return 
         session = get_session()
@@ -282,7 +377,6 @@ class BBox(Base):
         self.x2=max(x, opp_point.x)
         self.y2=max(y, opp_point.y)
 
-
     def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
         """Returns id of point of near bbox"""
         for i, point in enumerate(self.points):
@@ -291,6 +385,7 @@ class BBox(Base):
 
     def contains_point(self, point: Point) -> bool:
         return self.x1 <= point.x <= self.x2 and self.y1 <= point.y <= self.y2
+
 
 class LabeledImage(Base):
     __tablename__ = 'image'
@@ -301,16 +396,19 @@ class LabeledImage(Base):
     reviewed = Column(Boolean, default=False)
 
     bboxes = relationship("BBox", back_populates="image")
+    kgroups = relationship("KeypointGroup", back_populates="image")
     review_labels = relationship("ReviewLabel", back_populates="image")
     # masks = relationship("Mask", back_populates="image") 
 
     @classmethod
     def get(cls, name):
+        print("get image") 
         session = get_session()
         return session.query(cls).filter(cls.name == name).first()
 
     @classmethod
     def all(cls) -> List["LabeledImage"]:
+        print("get all images") 
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
@@ -318,23 +416,28 @@ class LabeledImage(Base):
         self.name = name
 
     def save(self):
+        print("save image") 
         session = get_session()
         session.add(self)
         session.commit()
     
     @classmethod
     def save_batch(cls, limages: List["LabeledImage"]):
+        print("get image batch") 
         session = get_session()
         for limage in limages:
             session.add(limage)
         session.commit()
 
     def delete(self):
+        print("delete image") 
         session = get_session()
         for bbox in self.bboxes:
             session.delete(bbox)
         for review_label in self.review_labels:
             session.delete(review_label)
+        for kgroup in self.kgroups:
+            session.delete(kgroup)
         # for mask in self.masks:
         #     session.delete(mask)
         session.delete(self)

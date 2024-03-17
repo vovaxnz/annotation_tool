@@ -1,10 +1,12 @@
 import os
 import time
 from api_requests import complete_task, get_project_ids, get_project_data
+from config import AnnotationStage
 from exceptions import MessageBoxException
 from gui import MainWindow, ProjectSelector, get_loading_window
 from import_annotations import export_figures, export_review, import_project
-from labeling import AnnotationStage, LabelingApp, get_labeling_app
+from labeling_app.factory import get_labeling_app
+from labeling_app.labeling import LabelingApp
 from models import Value, configure_database
 from path_manager import PathManager
 from file_transfer import FileTransferClient
