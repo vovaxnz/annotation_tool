@@ -1,4 +1,3 @@
-from enum import Enum
 import os
 from dotenv import load_dotenv
 from exceptions import MessageBoxException
@@ -38,17 +37,7 @@ class ColorBGR:
     color1 = (1, 1, 1)
 
 
-class AnnotationStage(Enum):
-    ANNOTATE = "ANNOTATE"
-    REVIEW = "REVIEW"
-    CORRECTION = "CORRECTION"
-    DONE = "DONE"
 
 
-class AnnotationMode(Enum):
-    OBJECT_DETECTION = "OBJECT_DETECTION"
-    SEGMENTATION = "SEGMENTATION"
-    KEYPOINTS = "KEYPOINTS"
-    REVIEW = "REVIEW"
 
 

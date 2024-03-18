@@ -1,11 +1,15 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 import json
+import cv2
+import numpy as np
 from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple
 from typing import Dict, List, Tuple
 
 from config import ColorBGR
+from drawing import draw_text_label
+from enums import FigureType
 
 Base = declarative_base()
 
@@ -83,8 +87,8 @@ class Label(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
     color = Column(String)
-    hotkey = Column(String, unique=True)
-    type = Column(String) # bbox, kgroup, keypoint, mask
+    hotkey = Column(String)
+    type = Column(String) # FigureType
 
     def __init__(self, name: str, color: str, hotkey: str, type: str):
         self.name = name
@@ -102,12 +106,6 @@ class Label(Base):
         session = get_session()
         return session.query(cls).filter(cls.name == name).first()
     
-    @classmethod
-    def get_by_hotkey(cls, hotkey):
-        print("get label")
-        session = get_session()
-        return session.query(cls).filter(cls.hotkey == hotkey).first()
-    
     def save(self):
         print("save label")
         session = get_session()
@@ -115,74 +113,62 @@ class Label(Base):
         session.commit()
 
     @classmethod
-    def all(cls) -> List["Label"]:
-        print("get all labels")
+    def get_review_labels(cls) -> List["Label"]:
         session = get_session()
-        return list(session.query(cls).order_by(asc(cls.hotkey)))
-
-    @classmethod
-    def first(cls) -> "Label":        
-        return cls.all()[0]
-
-
-class IssueName(Base):
-    __tablename__ = 'issue_name'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
-    color = Column(String)
-    hotkey = Column(String, unique=True)
-
-    def __init__(self, name: str, color: str, hotkey: str):
-        self.name = name
-        self.color = color
-        self.hotkey = hotkey
-
-    @property
-    def color_bgr(self) -> Tuple[int, int, int]:
-        try:
-            color = getattr(ColorBGR, self.color)
-        except AttributeError:
-            color = ColorBGR.white
-        return color
+        return session.query(cls).filter(cls.type == FigureType.REVIEW_LABEL.name).order_by(asc(cls.hotkey))
     
     @classmethod
-    def get_by_name(cls, name):
-        print("get issue")   
+    def get_figure_labels(cls) -> List["Label"]:
         session = get_session()
-        return session.query(cls).filter(cls.name == name).first()
-    
-    @classmethod
-    def get_by_hotkey(cls, hotkey):
-        print("get issue")   
-        session = get_session()
-        return session.query(cls).filter(cls.hotkey == hotkey).first()
-    
-    def save(self):
-        print("save issue")   
-        session = get_session()
-        session.add(self)
-        session.commit()
-
-    @classmethod
-    def all(cls) -> List["Label"]:
-        print("get issue")   
-        session = get_session()
-        return list(session.query(cls).order_by(asc(cls.hotkey)))
-
-    @classmethod
-    def first(cls) -> "Label":        
-        return cls.all()[0]
+        return session.query(cls).filter(cls.type != FigureType.REVIEW_LABEL.name).order_by(asc(cls.hotkey))
 
 
-class ReviewLabel(Base):
+class Figure(ABC):
+
+    def __init__(self):
+        self.active_point_id: int
+        self.point_number = 1
+        self.label: Label
+
+    @abstractmethod
+    def draw_figure(
+            self,
+            canvas: np.ndarray, 
+            elements_scale_factor: float, 
+            highlight: bool = False,
+            show_label_names: bool = False,
+        ) -> np.ndarray:
+        raise NotImplementedError
+
+
+    @abstractmethod
+    def find_nearest_point_index(self, x, y):
+        raise NotImplementedError
+
+    @abstractmethod
+    def move_active_point(self, x, y):
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_point(self, point_id):
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self):
+        raise NotImplementedError
+
+    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label_name: str, keypoint_info: Dict):
+        raise NotImplementedError
+
+
+class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
     __tablename__ = 'review_label'
 
     id = Column(Integer, primary_key=True)
     image_id = Column(Integer, ForeignKey('image.id'))
     x = Column(Integer)
     y = Column(Integer)
-    text = Column(String)
+    text = Column(String) # TODO: Rename to label
 
     image = relationship("LabeledImage", back_populates="review_labels")
 
@@ -190,6 +176,7 @@ class ReviewLabel(Base):
         self.x = x
         self.y = y
         self.text = text
+        self.point_number = 1
 
     @classmethod
     def all(cls) -> List["ReviewLabel"]:
@@ -207,6 +194,9 @@ class ReviewLabel(Base):
         session.add(self)
         session.commit()
 
+    def delete_point(self, point_id):
+        self.point_number = 0
+        
     def delete(self):
         print("delete review label")   
         if not self.state.persistent:
@@ -224,7 +214,7 @@ class ReviewLabel(Base):
         )
 
 
-class KeypointGroup(Base):
+class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figure
     __tablename__ = 'keypoint_group'
 
     id = Column(Integer, primary_key=True)
@@ -239,6 +229,7 @@ class KeypointGroup(Base):
         self.keypoints_data = keypoint_data
         self.active_point_id = None
         self.keypoints: List[Point] = self.deserialize_keypoints(self.keypoints_data)
+        self.point_number = len(self.keypoints)
 
     @reconstructor
     def init_on_load(self):
@@ -259,6 +250,11 @@ class KeypointGroup(Base):
         session.add(self)
         session.commit()
 
+    def delete_point(self, point_id):
+        self.keypoints.pop(point_id)
+        self.keypoints_data = self.figure_type.serialize_keypoints(self.keypoints)
+        self.point_number = len(self.keypoints)
+
     def delete(self):
         if not self.state.persistent:
             return 
@@ -278,12 +274,92 @@ class KeypointGroup(Base):
             return
         self.keypoints[self.active_point_id].x = x
         self.keypoints[self.active_point_id].y = y
+        self.keypoints_data = self.serialize_keypoints(self.keypoints)
 
     def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
         """Returns id of point of near bbox"""
         for i, point in enumerate(self.keypoints):
             if point.close_to(x, y, distance=10):
                 return i
+
+    def embed_to_bbox(start_point, end_point, label_name: str, min_movement_to_create: int = 5, keypoint_info: Dict = None) -> Optional[Figure]:
+        x, y = end_point
+        if abs(start_point[0] - x) > min_movement_to_create and abs(start_point[1] - y) > min_movement_to_create:
+            x1 = min(start_point[0], x)
+            y1 = min(start_point[1], y)
+            x2 = max(start_point[0], x)
+            y2 = max(start_point[1], y)
+
+            w = x2 - x1
+            h = y2 - y1
+
+            result_keypoints = list()
+            for kp_label in keypoint_info:
+                kp_x = keypoint_info[kp_label]["x"] * w + x1
+                kp_y = keypoint_info[kp_label]["y"] * h + y1
+                result_keypoints.append(Point(x=int(kp_x), y=int(kp_y), label=kp_label))
+
+            figure = KeypointGroup(
+                label=label_name,
+                keypoint_data=KeypointGroup.serialize_keypoints(result_keypoints)
+            )
+            return figure
+
+    def draw_figure(
+            self,
+            canvas: np.ndarray, 
+            elements_scale_factor: float, 
+            keypoint_connections: Dict,
+            keypoint_info: Dict,
+            highlight: bool = False,
+            show_label_names: bool = False,
+        ) -> np.ndarray:
+
+        line_width = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))
+
+        if highlight:
+            if elements_scale_factor < 3:
+                line_width += 2
+            else:
+                line_width += 1
+
+        kp_dict: Dict[str, Point] = self.keypoints_as_dict
+        
+        # Draw connections
+        for connection in keypoint_connections:
+            kp1 = kp_dict.get(connection["from"])
+            kp2 = kp_dict.get(connection["to"])
+            if kp1 is None or kp2 is None:
+                continue
+            color = getattr(ColorBGR, connection["color"], ColorBGR.white)
+            cv2.line(canvas, (kp1.x, kp1.y), (kp2.x, kp2.y), color, line_width)
+
+        # Draw kpoints
+        for i, kp in enumerate(self.keypoints):
+            highlight_keypoint = True if i == self.active_point_id else False
+
+            kp_color_name = keypoint_info[kp.label]["color"]
+            color_bgr=getattr(ColorBGR, kp_color_name, ColorBGR.white)
+
+            if show_label_names:
+                draw_text_label(
+                    canvas, 
+                    text=kp.label, 
+                    x=kp.x, 
+                    y=kp.y, 
+                    color_bgr=color_bgr, 
+                    padding = 5, 
+                    under_point = True
+                )
+            
+            circle_radius = max(1, int(5 / ((elements_scale_factor + 1e-7) ** (1/3))))
+            
+            if highlight_keypoint:
+                circle_radius += 1
+            
+            cv2.circle(canvas, (int(kp.x), int(kp.y)), circle_radius, color_bgr, -1)
+
+        return canvas
 
     @staticmethod
     def serialize_keypoints(keypoints: List[Point]) -> str:
@@ -301,7 +377,7 @@ class KeypointGroup(Base):
         return result
     
 
-class BBox(Base):
+class BBox(Base): # TODO: Find how to inherit this class from the Figure
     __tablename__ = 'bbox'
 
     id = Column(Integer, primary_key=True)
@@ -321,6 +397,7 @@ class BBox(Base):
         self.y2 = y2
         self.label = label
         self.active_point_id = None
+        self.point_number = 4
     
     @reconstructor
     def init_on_load(self):
@@ -336,6 +413,9 @@ class BBox(Base):
         session = get_session()
         session.add(self)
         session.commit()
+
+    def delete_point(self, point_id):
+        self.point_number = 0
 
     def delete(self):
         print("delete bbox") 
@@ -456,3 +536,11 @@ def configure_database(database_path):
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
     session_configured = True
+
+
+FigureTypes: Dict[FigureType, Figure] = {
+    FigureType.KGROUP: KeypointGroup,
+    FigureType.BBOX: BBox,
+    FigureType.REVIEW_LABEL: ReviewLabel
+    # FigureType.MASK: Mask
+}

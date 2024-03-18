@@ -6,7 +6,7 @@ from typing import Dict, List
 
 from api_requests import get_project_data
 from file_transfer import FileTransferClient
-from models import IssueName, KeypointGroup, Label, LabeledImage, BBox, ReviewLabel, Value
+from models import KeypointGroup, Label, LabeledImage, BBox, ReviewLabel, Value
 from path_manager import PathManager
 from utils import open_json, save_json
 
@@ -15,13 +15,18 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
     """
     review_ann format:
     {
-        "labels": [{"name": "", "color": "yellow", "hotkey": "1", "type": "bbox"}], 
+        "labels": [{"name": "Add object", "color": "yellow", "hotkey": "1", "type": "REVIEW_LABEL"},], 
         "images": {"img_name.jpg": [{"text": "...", "x": ..., "y": ...}, ...]},
     }
     figures_ann format:
     {
-        "labels": [{"name": "", "color": "yellow", "hotkey": "1", "type": "bbox"}], 
-        "images": {"img_name.jpg": {"trash": false, "bboxes": [], "masks": [], "kgroups": []}}},
+        "labels": [{"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX"},], 
+        "images": {"img_name.jpg": {
+            "trash": false, 
+            "bboxes": [], 
+            "masks": [], 
+            "kgroups": [],
+        }}},
         (Optional) "keypoint_connections": [{"from": "fl", "to": "bl", "color": "red"}, ...]
         (Optional) "keypoint_info": {"fl": {"x": 0, "y": 0, "color": "orange"}, ...} # 
     }
@@ -32,9 +37,10 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
     Value.update_value("img_id", 0, overwrite=False)
 
     figures_data = open_json(figures_ann_path)
+    review_data = open_json(review_ann_path)
 
     # Labels
-    for label_dict in figures_data["labels"]:
+    for label_dict in figures_data["labels"] + review_data["labels"]:
         label = Label.get_by_name(name=label_dict["name"])
         if label is None:
             label = Label(
@@ -48,7 +54,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
             label.hotkey = label_dict["hotkey"]
             label.type=label_dict["type"]
         label.save()
-
+ 
     # Keypoint Connections
     value = figures_data.get("keypoint_connections")
     if value is not None:
@@ -111,28 +117,9 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
 
     # Review labels
     if os.path.isfile(review_ann_path):
-        review_data = open_json(review_ann_path)
-        
-        # Issue names
-        for issue_dict in review_data["issues"]:
-            issue = IssueName.get_by_name(name=issue_dict["name"])
-            if issue is None:
-                issue = IssueName(
-                    name=issue_dict["name"],
-                    color=issue_dict["color"],
-                    hotkey=issue_dict["hotkey"]
-                )
-            else:
-                issue.color = issue_dict["color"]
-                issue.hotkey = issue_dict["hotkey"]
-            issue.save()
-        
-        # Review labels
         limages = list()
         for img_name in os.listdir(img_dir):
             image = LabeledImage.get(name=img_name)
-            if image.reviewed:
-                continue
             if len(image.review_labels) > 0:
                 continue
             review_data_for_image = review_data["images"].get(image.name)
@@ -150,7 +137,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
 
 def export_figures(figures_ann_path: str):
     figures_dict = {
-        "labels": [{"name": l.name, "color": l.color, "hotkey": l.hotkey, "type": l.type} for l in Label.all()], 
+        "labels": [{"name": l.name, "color": l.color, "hotkey": l.hotkey, "type": l.type} for l in Label.get_figure_labels()], 
         "images": dict()
     }
     print("Exporting figures...")
@@ -166,7 +153,7 @@ def export_figures(figures_ann_path: str):
 
 def export_review(review_ann_path):
     review_label_dict = {
-        "issues": [{"name": issue.name, "color": issue.color, "hotkey": issue.hotkey} for issue in IssueName.all()], 
+        "issues": [{"name": issue.name, "color": issue.color, "hotkey": issue.hotkey} for issue in Label.get_review_labels()], 
         "images": dict()
     }
     print("Exporting review labels...")

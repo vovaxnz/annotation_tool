@@ -1,5 +1,6 @@
-from config import AnnotationMode, AnnotationStage
-from labeling_app.labeling import LabelingApp, Mode, Visualizable
+from controller import Mode
+from enums import AnnotationMode, AnnotationStage
+from labeling import LabelingApp
 from models import BBox, Label, LabeledImage, Point
 
 
@@ -12,9 +13,9 @@ from typing import List, Optional, Tuple
 
 class BboxLabelingApp(LabelingApp):
 
-    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, secondary_visualizer: Visualizable = None):
+    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int):
         self.start_point: Optional[Tuple[int, int]] = None
-        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, project_id=project_id, secondary_visualizer=secondary_visualizer)
+        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, project_id=project_id)
         self.load_image()
 
 
@@ -127,12 +128,12 @@ class BboxLabelingApp(LabelingApp):
 
     def handle_mouse_move(self, x: int, y: int):
         self.cursor_x, self.cursor_y = x, y
-        if self.mode == Mode.MOVING:
+        if self.mode is Mode.MOVING:
             self.move_selected_bbox(x, y)
         self.update_canvas()
 
     def handle_left_mouse_release(self, x: int, y: int):
-        if self.mode == Mode.MOVING:
+        if self.mode is Mode.MOVING:
             self.release_bbox()
             self.mode = Mode.IDLE
         self.selected_figure_id = self.get_selected_figure_id(x, y)
@@ -140,7 +141,7 @@ class BboxLabelingApp(LabelingApp):
 
     def handle_left_mouse_press(self, x: int, y: int):
 
-        if self.mode == Mode.IDLE:
+        if self.mode is Mode.IDLE:
             rect_id, point_id = self.get_rect_point_id(x, y)
             if point_id is not None:
                 self.selected_figure_id = rect_id
@@ -150,7 +151,7 @@ class BboxLabelingApp(LabelingApp):
                 self.start_point = (x, y)
                 self.mode = Mode.CREATE
 
-        elif self.mode == Mode.CREATE:
+        elif self.mode is Mode.CREATE:
             if abs(self.start_point[0] - x) > self.min_movement_to_create and abs(self.start_point[1] - y) > self.min_movement_to_create:
                 self.add_bbox(x, y)
             self.start_point = None

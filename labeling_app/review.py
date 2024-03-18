@@ -1,5 +1,6 @@
-from config import AnnotationMode, AnnotationStage
-from labeling_app.labeling import LabelingApp, Mode, Visualizable
+from controller import Mode
+from enums import AnnotationMode, AnnotationStage
+from labeling import LabelingApp
 from models import IssueName, Label, LabeledImage, Point, ReviewLabel
 
 
@@ -12,8 +13,8 @@ from typing import List, Optional
 
 class ReviewLabelingApp(LabelingApp):
 
-    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, secondary_visualizer: Visualizable = None):
-        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, project_id=project_id, secondary_visualizer=secondary_visualizer)
+    def __init__(self, img_dir: str,  annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int):
+        super().__init__(img_dir=img_dir, annotation_stage=annotation_stage, annotation_mode=annotation_mode, project_id=project_id)
         self.load_image()
         self.active_label: Label = IssueName.first()
 
@@ -121,18 +122,18 @@ class ReviewLabelingApp(LabelingApp):
 
     def handle_mouse_move(self, x: int, y: int):
         self.cursor_x, self.cursor_y = x, y
-        if self.mode == Mode.MOVING:
+        if self.mode is Mode.MOVING:
             self.move_selected_point(x, y)
         self.update_canvas()
 
     def handle_left_mouse_release(self, x: int, y: int):
-        if self.mode == Mode.MOVING:
+        if self.mode is Mode.MOVING:
             self.mode = Mode.IDLE
         self.selected_figure_id = self.get_selected_figure_id(x, y)
         self.update_canvas()
 
     def handle_left_mouse_press(self, x: int, y: int):
-        if self.mode == Mode.IDLE:
+        if self.mode is Mode.IDLE:
             point_id = self.get_selected_figure_id(x, y)
             if point_id is not None:
                 self.selected_figure_id = point_id

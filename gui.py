@@ -6,13 +6,13 @@ import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
 from import_annotations import overwrite_annotations
-from labeling_app.labeling import LabelingApp
+from labeling import LabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
 from jinja2 import Environment, FileSystemLoader
 import tkinterweb
-from models import IssueName, Label
+from models import Label
 from config import templates_path
 
 
@@ -101,7 +101,7 @@ class MainWindow(tk.Tk):
                 "name": l.name,
                 "color": l.color,
                 "hotkey": l.hotkey,
-            } for l in Label.all()
+            } for l in Label.get_figure_labels()
         ]
         
         env = Environment(loader=FileSystemLoader(templates_path))
@@ -115,7 +115,7 @@ class MainWindow(tk.Tk):
                 "name": l.name,
                 "color": l.color,
                 "hotkey": l.hotkey,
-            } for l in IssueName.all()
+            } for l in Label.get_review_labels()
         ]
         env = Environment(loader=FileSystemLoader(templates_path))
         template = env.get_template('classes.html')
@@ -188,7 +188,6 @@ class CanvasView(tk.Canvas):
             self.y0 = max(0, self.y0)
             self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
             self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
-            self.app.update_canvas()
 
         self.scale_event_wrapper(self.handle_mouse_move)(event)
 
@@ -241,17 +240,15 @@ class CanvasView(tk.Canvas):
             number = int(event.char)
             self.app.change_label(number)
         elif event.char.lower() == "d":
-            self.app.remove_selected_figure()
-        elif event.char.lower() == "c":
-            self.app.copy_figures_from_previous_image()
+            self.app.delete_command()
         elif event.char.lower() == "f":
             self.fit_image()
         elif event.char.lower() == "t":
             self.app.toggle_image_trash_tag()
         elif event.char.lower() == "e":
-            self.app.switch_hiding_main_figures()
+            self.app.switch_hiding_figures()
         elif event.char.lower() == "r":
-            self.app.switch_hiding_secondary_figures() 
+            self.app.switch_hiding_review_labels() 
         elif event.char.lower() == "n":
             self.app.switch_object_names_visibility() 
         elif event.char.lower() == "w":
@@ -336,7 +333,6 @@ class CanvasView(tk.Canvas):
 
         self.app.cursor_x, self.app.cursor_y = self.xy_screen_to_image(event.x, event.y)
 
-        self.app.update_canvas()
         self.update_frame = True
 
     def update_canvas(self):
@@ -344,6 +340,7 @@ class CanvasView(tk.Canvas):
 
 
             # Convert the OpenCV image to a format suitable for Tkinter
+            self.app.update_canvas()
             cv_image = cv2.cvtColor(self.app.canvas, cv2.COLOR_BGR2RGB)
             cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
             pil_image = Image.fromarray(cv_image)
@@ -478,9 +475,8 @@ class StatusBar(tk.Frame):
         self.trash_label.config(text=trash_text, bg=trash_color)
 
         hidden_text = "All Visible"
-        hidden_text = "Secondary Hidden" if status_data.secondary_figures_hidden else hidden_text
-        hidden_text = "Figures Hidden" if status_data.figures_hidden else hidden_text
-        hidden_text = "All Hidden" if status_data.secondary_figures_hidden and status_data.figures_hidden else hidden_text
+        hidden_text = "Review Hidden" if status_data.review_labels_hidden else hidden_text
+        hidden_text = "All Hidden" if status_data.figures_hidden  else hidden_text
         
         hidden_color = self.hidden_label.master.cget('bg') if hidden_text == "All Visible" else "blue"
         self.hidden_label.config(text=hidden_text, bg=hidden_color)

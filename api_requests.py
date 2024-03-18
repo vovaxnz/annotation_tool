@@ -1,6 +1,7 @@
 from typing import List, Tuple
 import requests
-from config import AnnotationStage, AnnotationMode, api_token, api_url
+from config import api_token, api_url
+from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 
 
