@@ -5,6 +5,7 @@ import os
 from typing import Dict, List
 
 from api_requests import get_project_data
+from enums import FigureType
 from file_transfer import FileTransferClient
 from models import KeypointGroup, Label, LabeledImage, BBox, ReviewLabel, Value
 from path_manager import PathManager
@@ -128,7 +129,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
                     rl = ReviewLabel(
                         x=review_label_dict["x"],
                         y=review_label_dict["y"],
-                        text=review_label_dict["text"],
+                        label=review_label_dict["label"],
                     )
                     image.review_labels.append(rl)
                 limages.append(image)
@@ -153,14 +154,14 @@ def export_figures(figures_ann_path: str):
 
 def export_review(review_ann_path):
     review_label_dict = {
-        "issues": [{"name": issue.name, "color": issue.color, "hotkey": issue.hotkey} for issue in Label.get_review_labels()], 
+        "labels": [{"name": label.name, "color": label.color, "hotkey": label.hotkey, "type": FigureType.REVIEW_LABEL.name} for label in Label.get_review_labels()], 
         "images": dict()
     }
     print("Exporting review labels...")
     for limage in LabeledImage.all(): 
         if len(limage.review_labels) > 0:
             review_label_dict["images"][limage.name] = [
-                {"text": rlabel.text, "x": rlabel.x, "y": rlabel.y}
+                {"label": rlabel.label, "x": rlabel.x, "y": rlabel.y}
                 for rlabel in limage.review_labels
             ]
     save_json(review_label_dict, review_ann_path) 

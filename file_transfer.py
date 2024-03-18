@@ -104,7 +104,6 @@ class FileTransferClient:
             self.last_line = line
             if "rsync" in line:
                 self.error_line += line
-            print(line)
 
     def run_command(self, command):
         self.rsync_process = Popen(command, stdout=PIPE, stderr=STDOUT, bufsize=1, universal_newlines=True, text=True)

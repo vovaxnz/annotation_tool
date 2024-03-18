@@ -1,12 +1,11 @@
 import os
 import time
 from api_requests import complete_task, get_project_ids, get_project_data
-from config import AnnotationStage
+from enums import AnnotationStage
 from exceptions import MessageBoxException
 from gui import MainWindow, ProjectSelector, get_loading_window
 from import_annotations import export_figures, export_review, import_project
-from labeling_app.factory import get_labeling_app
-from labeling_app.labeling import LabelingApp
+from labeling import LabelingApp
 from models import Value, configure_database
 from path_manager import PathManager
 from file_transfer import FileTransferClient
@@ -76,10 +75,10 @@ def start():
         review_ann_path=pm.review_ann_path,
         img_dir=pm.images_path,
         overwrite=False,
-    )           
-    labeling_app: LabelingApp = get_labeling_app(
-        img_dir=pm.images_path, 
-        annotation_stage=annotation_stage, 
+    )   
+    labeling_app = LabelingApp(
+        img_dir=pm.images_path,
+        annotation_stage=annotation_stage,
         annotation_mode=annotation_mode,
         project_id=project_id
     )

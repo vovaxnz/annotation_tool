@@ -237,8 +237,7 @@ class CanvasView(tk.Canvas):
             return
         
         if event.char.isdigit(): 
-            number = int(event.char)
-            self.app.change_label(number)
+            self.app.change_label(event.char)
         elif event.char.lower() == "d":
             self.app.delete_command()
         elif event.char.lower() == "f":
@@ -293,6 +292,8 @@ class CanvasView(tk.Canvas):
         w_scale = win_w / img_w
 
         self.scale_factor = min(h_scale, w_scale)
+
+        self.app.scale_factor = self.scale_factor
         self.x0, self.y0 = 0, 0
         self.update_frame = True
 

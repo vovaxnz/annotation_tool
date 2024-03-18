@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import cv2
 
-from controller import ControllerByMode
+from controller import ControllerByMode, ObjectFigureController
 from enums import AnnotationMode, AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from models import Figure, Label, LabeledImage, ReviewLabel, Value
@@ -45,11 +45,14 @@ class LabelingApp(ABC):
             img_object = LabeledImage.get(name=img_name)
             if img_object is None:
                 raise MessageBoxException(f"{img_name} is not found in the database") 
-        
+            
+        keypoint_connections = Value.get_value("keypoint_connections")
+        self.keypoint_connections: List = json.loads(keypoint_connections) if keypoint_connections is not None else None
+        keypoint_info = Value.get_value("keypoint_info")
+        self.keypoint_info: Dict = json.loads(keypoint_info) if keypoint_info is not None else None
+
         self.figures: List[Figure] = list()
         self.review_labels: List[ReviewLabel] = list()
-        self.keypoint_connections: List = json.loads(Value.get_value("keypoint_connections"))
-        self.keypoint_info: Dict = json.loads(Value.get_value("keypoint_info")) 
         self.project_id = project_id
         self.tick_time = time.time()
         self.show_label_names = False
@@ -74,13 +77,18 @@ class LabelingApp(ABC):
             labels = Label.get_figure_labels()
 
         self.labels_by_hotkey: Dict[str, Label] = {label.hotkey: label for label in labels}
-        self.labels_by_name: Dict[str, Label] = {label.name: label for label in labels}
-        self.controller = ControllerByMode[annotation_mode](active_label=labels[0])
+        self.all_labels_by_name: Dict[str, Label] = {label.name: label for label in Label.all()}
+
+        if self.annotation_stage is AnnotationStage.REVIEW:
+            self.controller = ObjectFigureController(active_label=labels[0])
+        else:
+            self.controller = ControllerByMode[annotation_mode](active_label=labels[0])
+
         self.load_state()
         self.load_image()
 
     @property
-    def status_data(self):# +
+    def status_data(self):
         number_of_processed = len(self.processed_img_ids)
         active_label = self.controller.active_label
         return StatusData(
@@ -107,24 +115,28 @@ class LabelingApp(ABC):
     def update_canvas(self): 
         self.canvas = np.copy(self.orig_image)
         if not self.hide_figures:
-            if self.annotation_mode is AnnotationMode.REVIEW:
+            if self.annotation_stage is AnnotationStage.REVIEW:
                 # review_labels was edited and figures stored unchanged
-                figures = self.figures + self.controller.figures 
+                figures = self.figures 
+                review_labels = self.controller.figures 
             else:
                 # figures was edited and review_labels stored unchanged
-                figures = self.review_labels + self.controller.figures
+                figures = self.controller.figures
+                review_labels = self.review_labels 
 
-            for figure_id, figure in enumerate(figures):
-                if self.hide_review_labels and figure.label.type == FigureType.REVIEW_LABEL.name:
-                    continue # Don`t show review labels if they are hidden
+            if not self.hide_review_labels:
+                result_figures = figures + review_labels
+            else:
+                result_figures = figures
 
+            for figure_id, figure in enumerate(result_figures):
                 self.canvas = figure.draw_figure(
                     canvas=self.canvas, 
                     elements_scale_factor=self.scale_factor, 
                     keypoint_connections=self.keypoint_connections,
                     keypoint_info=self.keypoint_info,
-                    highlight=figure_id==self.controller.selected_figure_id,
                     show_label_names=self.show_label_names,
+                    label=self.all_labels_by_name[figure.label]
                 )
         
         # Draw vertical and horizontal lines (black and white). Show only for bboxes
@@ -137,8 +149,8 @@ class LabelingApp(ABC):
                 elements_scale_factor=self.scale_factor, 
                 keypoint_connections=self.keypoint_connections,
                 keypoint_info=self.keypoint_info,
-                highlight=False,
                 show_label_names=False,
+                label=self.all_labels_by_name[self.controller.preview_figure.label]
             )
 
     def load_image(self):
@@ -147,11 +159,9 @@ class LabelingApp(ABC):
         img_name = self.img_names[self.img_id]
         self.orig_image = cv2.imread(os.path.join(self.img_dir, img_name))
         self.labeled_image = LabeledImage.get(name=img_name)
-
         self.review_labels = list(self.labeled_image.review_labels)
         self.figures = list(self.labeled_image.bboxes + self.labeled_image.kgroups)
-
-        if self.annotation_mode is AnnotationMode.REVIEW:
+        if self.annotation_stage is AnnotationStage.REVIEW:
             self.controller.figures = self.review_labels # Can edit only review labels
         else:
             self.controller.figures = self.figures # Can edit only figures
@@ -161,25 +171,28 @@ class LabelingApp(ABC):
     def save_image(self):
         if self.image_changed:
 
-            bboxes = list()
-            kgroups = list()
-            review_labels = list()
 
-            for figure in self.controller.figures:
-                figure_type = self.labels_by_name[figure.label].type
-                if figure_type == FigureType.BBOX.name:
-                    bboxes.append(figure)
-                elif figure_type == FigureType.KGROUP.name:
-                    kgroups.append(figure)
-                elif figure_type == FigureType.REVIEW_LABEL.name:
-                    kgroups.append(figure)
-                else:
-                    raise RuntimeError(f"Unknown figure {figure_type}")
-                
-            self.labeled_image.kgroups = kgroups
-            self.labeled_image.bboxes = bboxes
-            self.labeled_image.review_labels = review_labels
-            self.labeled_image.trash = self.is_trash
+            if self.annotation_stage is AnnotationStage.REVIEW: 
+                # Update only review labels when review
+                review_labels = self.controller.figures
+                self.labeled_image.review_labels = review_labels
+            else:
+                # Update only figures without review labels when annotation
+                bboxes = list()
+                kgroups = list()
+                for figure in self.controller.figures:
+                    figure_type = self.all_labels_by_name[figure.label].type
+                    if figure_type == FigureType.BBOX.name:
+                        bboxes.append(figure)
+                    elif figure_type == FigureType.KGROUP.name:
+                        kgroups.append(figure)
+                    else:
+                        raise RuntimeError(f"Unknown figure type {figure_type}")
+                    
+                self.labeled_image.kgroups =  kgroups
+                self.labeled_image.bboxes = bboxes
+                self.labeled_image.trash = self.is_trash
+
             self.labeled_image.save()
 
     def save_state(self):  # TODO: Save values as a batch
@@ -231,6 +244,8 @@ class LabelingApp(ABC):
         self.save_state()
 
     def toggle_image_trash_tag(self):
+        if self.annotation_stage is AnnotationStage.REVIEW:
+            return
         self.labeled_image.trash = not self.labeled_image.trash
         self.labeled_image.save()
         self.is_trash = self.labeled_image.trash
