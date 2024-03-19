@@ -35,7 +35,7 @@ class StatusData:
 class LabelingApp(ABC):
 
     def __init__(self, img_dir: str, annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int):
-        
+    
         self.img_names = sorted(os.listdir(img_dir)) 
         
         if annotation_stage is AnnotationStage.CORRECTION:
@@ -139,9 +139,7 @@ class LabelingApp(ABC):
                     label=self.all_labels_by_name[figure.label]
                 )
         
-        # Draw vertical and horizontal lines (black and white). Show only for bboxes
-        if self.controller.active_label.type == FigureType.BBOX.name:
-            self.canvas = self.controller.draw_help_lines(self.canvas)
+        self.canvas = self.controller.draw_additional_elements(self.canvas)
 
         if self.controller.preview_figure is not None:
             self.canvas = self.controller.preview_figure.draw_figure(
@@ -160,17 +158,19 @@ class LabelingApp(ABC):
         self.orig_image = cv2.imread(os.path.join(self.img_dir, img_name))
         self.labeled_image = LabeledImage.get(name=img_name)
         self.review_labels = list(self.labeled_image.review_labels)
-        self.figures = list(self.labeled_image.bboxes + self.labeled_image.kgroups)
+        self.figures = list(self.labeled_image.bboxes + self.labeled_image.kgroups + self.labeled_image.masks)
         if self.annotation_stage is AnnotationStage.REVIEW:
             self.controller.figures = self.review_labels # Can edit only review labels
         else:
             self.controller.figures = self.figures # Can edit only figures
+
+        h, w, c = self.orig_image.shape
+        self.controller.img_height, self.controller.img_width = h, w
     
         self.is_trash = self.labeled_image.trash
 
     def save_image(self):
         if self.image_changed:
-
 
             if self.annotation_stage is AnnotationStage.REVIEW: 
                 # Update only review labels when review
@@ -180,17 +180,21 @@ class LabelingApp(ABC):
                 # Update only figures without review labels when annotation
                 bboxes = list()
                 kgroups = list()
+                masks = list()
                 for figure in self.controller.figures:
                     figure_type = self.all_labels_by_name[figure.label].type
                     if figure_type == FigureType.BBOX.name:
                         bboxes.append(figure)
                     elif figure_type == FigureType.KGROUP.name:
                         kgroups.append(figure)
+                    elif figure_type == FigureType.MASK.name:
+                        masks.append(figure)
                     else:
                         raise RuntimeError(f"Unknown figure type {figure_type}")
                     
                 self.labeled_image.kgroups =  kgroups
                 self.labeled_image.bboxes = bboxes
+                self.labeled_image.masks = masks
                 self.labeled_image.trash = self.is_trash
 
             self.labeled_image.save()
@@ -283,5 +287,9 @@ class LabelingApp(ABC):
 
     def handle_left_mouse_release(self, x: int, y: int):
         self.controller.handle_left_mouse_release(x, y)
-    
 
+    def handle_space(self, shift_pressed: bool):
+        self.controller.handle_space(shift_pressed=shift_pressed)
+
+    def handle_esc(self):
+        self.controller.handle_esc()

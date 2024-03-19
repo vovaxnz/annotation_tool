@@ -1,11 +1,13 @@
 
+from abc import ABC, abstractmethod
 from enum import Enum, auto
 import json
 
 import cv2
 import numpy as np
 from enums import AnnotationMode, FigureType
-from models import Figure, Label, Point, ReviewLabel, Value, FigureTypes
+from masks_encoding import get_empty_rle
+from models import Figure, Label, Mask, Point, ReviewLabel, Value, FigureTypes
 
 
 
@@ -19,6 +21,56 @@ class Mode(Enum):
     CREATE = auto()
 
 
+class FigureController(ABC):
+
+    def __init__(self, active_label: Label):
+        self.start_point: Optional[Tuple[int, int]] = None
+        self.preview_figure: Figure = None
+        self.selected_figure_id = None
+        self.mode = Mode.IDLE
+        self.active_label: Label = active_label
+        self.cursor_x, self.cursor_y = 0, 0
+        self.figures: List[Figure] = list()
+        self.img_height, self.img_width = None, None
+        
+
+    @abstractmethod
+    def handle_mouse_move(self, x: int, y: int):
+        raise NotImplementedError
+
+    @abstractmethod
+    def handle_left_mouse_release(self, x: int, y: int):
+        raise NotImplementedError
+
+    @abstractmethod
+    def handle_left_mouse_press(self, x: int, y: int):
+        raise NotImplementedError
+
+    @abstractmethod
+    def handle_mouse_hover(self, x: int, y: int):
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete_command(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def change_label(self, label: Label):
+        raise NotImplementedError
+
+    @abstractmethod
+    def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
+        raise NotImplementedError
+
+    @abstractmethod
+    def handle_space(self, shift_pressed: bool = False):
+        raise NotImplementedError
+
+    @abstractmethod
+    def handle_esc(self):
+        raise NotImplementedError
+
+
 class ObjectFigureController:
 
     def __init__(self, active_label: Label):
@@ -29,6 +81,7 @@ class ObjectFigureController:
         self.active_label: Label = active_label
         self.cursor_x, self.cursor_y = 0, 0
         self.figures: List[Figure] = list()
+        self.img_height, self.img_width = None, None
         
         keypoint_info = Value.get_value("keypoint_info")
         self.keypoint_info: Dict = json.loads(keypoint_info) if keypoint_info is not None else None # TODO: Refactor
@@ -69,7 +122,6 @@ class ObjectFigureController:
             )
         else:
             self.preview_figure = None
-
 
     def move_selected_figure(self, x, y):
         if self.selected_figure_id is not None:
@@ -131,17 +183,133 @@ class ObjectFigureController:
             if fig_label.type == label.type:
                 fig.label = self.active_label.name
 
-    def draw_help_lines(self, canvas: np.ndarray) -> np.ndarray:
-        h, w, c = canvas.shape
-        canvas = cv2.line(canvas, (int(self.cursor_x), 0), (int(self.cursor_x), h), (255, 255, 255), 1)
-        canvas = cv2.line(canvas, (int(self.cursor_x + 1), 0), (int(self.cursor_x + 1), h), (0, 0, 0), 1)
-        canvas = cv2.line(canvas, (0, int(self.cursor_y)), (w, int(self.cursor_y)), (255, 255, 255), 1)
-        canvas = cv2.line(canvas, (0, int(self.cursor_y + 1)), (w, int(self.cursor_y + 1)), (0, 0, 0), 1)
+    def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
+
+        # Draw vertical and horizontal lines (black and white). Show only for bboxes
+        if self.active_label.type == FigureType.BBOX.name:
+            h, w, c = canvas.shape
+            canvas = cv2.line(canvas, (int(self.cursor_x), 0), (int(self.cursor_x), h), (255, 255, 255), 1)
+            canvas = cv2.line(canvas, (int(self.cursor_x + 1), 0), (int(self.cursor_x + 1), h), (0, 0, 0), 1)
+            canvas = cv2.line(canvas, (0, int(self.cursor_y)), (w, int(self.cursor_y)), (255, 255, 255), 1)
+            canvas = cv2.line(canvas, (0, int(self.cursor_y + 1)), (w, int(self.cursor_y + 1)), (0, 0, 0), 1)
         return canvas
-    
+
+    def handle_space(self, shift_pressed: bool = False):
+        pass
+
+    def handle_esc(self):
+        pass
+
+class MaskFigureController():
+
+    def __init__(self, active_label: Label):
+        self.adding_mask = True
+        self.start_point: Optional[Tuple[int, int]] = None
+        self.preview_figure: Figure = None
+        self.selected_figure_id = None
+        self.mode = Mode.IDLE
+        self.active_label: Label = active_label
+        self.cursor_x, self.cursor_y = 0, 0
+        self.figures_dict = dict()
+        self.img_height, self.img_width = None, None
+
+    @property
+    def figures(self) -> List[Figure]:
+        result_list = list()
+        last_figure = None
+        for label_name in self.figures_dict.keys():
+            if label_name == self.active_label.name:
+                last_figure = self.figures_dict[label_name]
+            else:
+                result_list.append(self.figures_dict[label_name])
+        
+        if last_figure is not None:
+            result_list.append(last_figure)
+        
+        return result_list
+
+    @figures.setter
+    def figures(self, figures: List[Mask]):
+        self.figures_dict = {figure.label: figure for figure in figures}
+        if len(self.figures_dict) < len(figures):
+            raise RuntimeError(f"Number of masks {len(figures)} are larger than the number of classes {len(self.figures_dict)}. Annotations are incorrect. Ask to fix initial annotations")
+
+    def handle_mouse_move(self, x: int, y: int):
+        self.cursor_x, self.cursor_y = x, y
+
+    def handle_left_mouse_release(self, x: int, y: int):
+        if self.mode is Mode.MOVING:
+            self.mode = Mode.IDLE
+
+    def handle_left_mouse_press(self, x: int, y: int):
+        if self.mode is Mode.IDLE:
+            self.mode = Mode.CREATE
+            self.polygon = [(x, y), (x, y)]
+        elif self.mode is Mode.CREATE:
+            self.polygon.append((x, y))
+
+    def handle_mouse_hover(self, x: int, y: int):
+        if self.mode == Mode.CREATE:
+            self.polygon[-1] = (x, y)
+        self.cursor_x, self.cursor_y = x, y
+
+    def handle_space(self, shift_pressed: bool = False):
+        adding = not shift_pressed
+        if self.mode == Mode.CREATE:
+            figure = self.figures_dict.get(self.active_label.name)
+            if figure is None:
+                figure = Mask(
+                    label=self.active_label.name,
+                    rle=get_empty_rle(height=self.img_height, width=self.img_width),
+                    height=self.img_height,
+                    width=self.img_width,
+                )
+                self.figures_dict[self.active_label.name] = figure
+
+            # Define your polygon points
+            polygon = np.array(self.polygon, np.int32).reshape((-1, 1, 2))
+
+            # Use polygon points to remove/add part of class mask
+            figure.mask = cv2.fillPoly(figure.mask, [polygon], color=1 if adding else 0)
+
+            # Update figure rle
+            figure.encode_mask()
+
+            self.polygon = list()
+            self.mode = Mode.IDLE
+
+
+    def handle_esc(self):
+        if self.mode == Mode.CREATE:
+            self.polygon = list()
+            self.mode = Mode.IDLE
+
+    def delete_command(self):
+        # Delete class with active label (does not matter where is cursor)
+        self.figures_dict[self.active_label.name].delete()
+        self.figures_dict[self.active_label.name] = Mask(
+            label=self.active_label.name,
+            rle=get_empty_rle(height=self.img_height, width=self.img_width),
+            height=self.img_height,
+            width=self.img_width,
+        )
+
+    def change_label(self, label: Label):
+        self.active_label = label
+
+    def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
+        if self.mode is Mode.CREATE:
+            for i in range(len(self.polygon) - 1):
+                p1 = self.polygon[i]
+                p2 = self.polygon[i+1]
+                canvas = cv2.line(canvas, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (255, 255, 255), 1)
+                # TODO: Draw selected area
+            
+        return canvas
+        
 
 ControllerByMode = {
     AnnotationMode.OBJECT_DETECTION: ObjectFigureController,
     AnnotationMode.KEYPOINTS: ObjectFigureController,
-    # FigureType.MASK: MaskFigureController
+    AnnotationMode.MASKS: MaskFigureController
 }

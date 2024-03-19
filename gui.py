@@ -164,6 +164,9 @@ class CanvasView(tk.Canvas):
 
         self.bind("<Configure>", self.on_resize)
 
+        self.bind("<space>", self.handle_space)
+        self.bind("<Escape>", self.handle_esc)
+
         self.close_callback = None
 
     def set_close_callback(self, callback):
@@ -222,6 +225,15 @@ class CanvasView(tk.Canvas):
 
     def handle_mouse_hover(self, event: tk.Event):
         self.app.handle_mouse_hover(event.x, event.y)
+        self.update_frame = True
+
+    def handle_space(self, event: tk.Event):
+        shift_pressed = event.state & 0x0001
+        self.app.handle_space(shift_pressed=shift_pressed)
+        self.update_frame = True
+
+    def handle_esc(self, event: tk.Event):
+        self.app.handle_esc()
         self.update_frame = True
 
     def on_resize(self, event):
@@ -339,7 +351,6 @@ class CanvasView(tk.Canvas):
     def update_canvas(self):
         if self.update_frame:
 
-
             # Convert the OpenCV image to a format suitable for Tkinter
             self.app.update_canvas()
             cv_image = cv2.cvtColor(self.app.canvas, cv2.COLOR_BGR2RGB)
@@ -379,7 +390,6 @@ class CanvasView(tk.Canvas):
 
         w_scaled = int(w * scale)
         h_scaled = int(h * scale)
-
 
         cropped = cv2.resize(cropped, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
         return cropped

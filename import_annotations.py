@@ -7,29 +7,46 @@ from typing import Dict, List
 from api_requests import get_project_data
 from enums import FigureType
 from file_transfer import FileTransferClient
-from models import KeypointGroup, Label, LabeledImage, BBox, ReviewLabel, Value
+from models import KeypointGroup, Label, LabeledImage, BBox, Mask, ReviewLabel, Value
 from path_manager import PathManager
 from utils import open_json, save_json
 
 
-def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, overwrite: bool = False): # TODO: Maybe use strategy pattern or something like that (bboxes, keypoints, segmentation)?
+def import_project(
+        figures_ann_path: str, 
+        review_ann_path: str, 
+        meta_ann_path: str,
+        img_dir: str, 
+        overwrite: bool = False
+    ): # TODO: Maybe use strategy pattern or something like that (bboxes, keypoints, segmentation)?
     """
     review_ann format:
     {
-        "labels": [{"name": "Add object", "color": "yellow", "hotkey": "1", "type": "REVIEW_LABEL"},], 
-        "images": {"img_name.jpg": [{"text": "...", "x": ..., "y": ...}, ...]},
+        "img_name.jpg": [{"text": "...", "x": ..., "y": ...}, ...],
+        ...
     }
-    figures_ann format:
+
+    meta ann format:
     {
-        "labels": [{"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX"},], 
-        "images": {"img_name.jpg": {
-            "trash": false, 
-            "bboxes": [], 
-            "masks": [], 
-            "kgroups": [],
-        }}},
+        "review_labels": [
+            {"name": "Add object", "color": "yellow", "hotkey": "1", "type": "REVIEW_LABEL"}
+        ], 
+        "labels": [
+            {"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX"},
+        ], 
         (Optional) "keypoint_connections": [{"from": "fl", "to": "bl", "color": "red"}, ...]
         (Optional) "keypoint_info": {"fl": {"x": 0, "y": 0, "color": "orange"}, ...} # 
+
+    }
+
+    figures_ann format:
+    {
+        "img_name.jpg": {
+            "trash": false, 
+            "bboxes": [], 
+            "masks": {"rle": {"truck": "...", ...}, "height": ..., "width": ...}, 
+            "kgroups": [],
+        },
     }
 
     """
@@ -39,9 +56,10 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
 
     figures_data = open_json(figures_ann_path)
     review_data = open_json(review_ann_path)
+    meta_data = open_json(meta_ann_path)
 
     # Labels
-    for label_dict in figures_data["labels"] + review_data["labels"]:
+    for label_dict in meta_data["labels"] + meta_data["review_labels"]:
         label = Label.get_by_name(name=label_dict["name"])
         if label is None:
             label = Label(
@@ -57,30 +75,30 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
         label.save()
  
     # Keypoint Connections
-    value = figures_data.get("keypoint_connections")
+    value = meta_data.get("keypoint_connections")
     if value is not None:
         Value.update_value(name="keypoint_connections", value=json.dumps(value))
 
     # Keypoint Positions
-    value = figures_data.get("keypoint_info")
+    value = meta_data.get("keypoint_info")
     if value is not None:
         Value.update_value(name="keypoint_info", value=json.dumps(value))
 
     # Figures
     limages = list()
     for img_name in os.listdir(img_dir): 
-        img_info = figures_data["images"].get(img_name)
+        img_info = figures_data.get(img_name)
         if img_info is not None:
             trash_tag = img_info.get("trash", False)
             bboxes = img_info.get("bboxes", list())
             kgroups = img_info.get("kgroups", list())
-            # masks = img_info.get("masks", list())
+            masks = img_info.get("masks", dict())
         else:
             trash_tag = False
             bboxes = list()
             kgroups = list()
-            # masks = list()
-
+            masks = dict()
+        
         image = LabeledImage.get(name=img_name)
         if image is not None:
             if overwrite:
@@ -110,6 +128,16 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
             )
             img.kgroups.append(kgroup)
         
+        # Masks
+        for label_name, mask_data in masks.items():
+            mask = Mask(
+                label=label_name,
+                rle=mask_data["rle"],
+                height=mask_data["height"],
+                width=mask_data["width"],
+            )
+            img.masks.append(mask)
+        
         # Trash
         img.trash = trash_tag
 
@@ -123,7 +151,7 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
             image = LabeledImage.get(name=img_name)
             if len(image.review_labels) > 0:
                 continue
-            review_data_for_image = review_data["images"].get(image.name)
+            review_data_for_image = review_data.get(image.name)
             if review_data_for_image is not None:
                 for review_label_dict in review_data_for_image:
                     rl = ReviewLabel(
@@ -137,24 +165,20 @@ def import_project(figures_ann_path: str, review_ann_path: str, img_dir: str, ov
 
 
 def export_figures(figures_ann_path: str):
-    figures_dict = {
-        "labels": [{"name": l.name, "color": l.color, "hotkey": l.hotkey, "type": l.type} for l in Label.get_figure_labels()], 
-        "images": dict()
-    }
+    figures_dict = dict()
     print("Exporting figures...")
     for limage in LabeledImage.all():
-        figures_dict["images"][limage.name] = {
+        figures_dict[limage.name] = {
             "trash": limage.trash, 
             "bboxes": [{"x1": bbox.x1, "y1": bbox.y1, "x2": bbox.x2, "y2": bbox.y2, "label": bbox.label} for bbox in limage.bboxes],
             "kgroups": [{"points": json.loads(kgroup.serialize_keypoints(kgroup.keypoints)), "label": kgroup.label} for kgroup in limage.kgroups],
-            # "masks": [{"rle": mask.rle,  "label": mask.label} for mask in image.masks]
+            "masks": {mask.label: {"rle": mask.rle, "height": mask.height, "width": mask.width} for mask in limage.masks}
         }
     save_json(figures_dict, figures_ann_path) 
 
 
 def export_review(review_ann_path):
     review_label_dict = {
-        "labels": [{"name": label.name, "color": label.color, "hotkey": label.hotkey, "type": FigureType.REVIEW_LABEL.name} for label in Label.get_review_labels()], 
         "images": dict()
     }
     print("Exporting review labels...")
@@ -170,6 +194,7 @@ def export_review(review_ann_path):
 def overwrite_annotations(project_id):
 
     annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path = get_project_data(project_id)
+    
     pm = PathManager(project_id)
     ftc = FileTransferClient()
 

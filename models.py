@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple
 from config import ColorBGR
 from drawing import draw_text_label
 from enums import FigureType
+from masks_encoding import decode_rle, encode_rle
 
 Base = declarative_base()
 
@@ -164,11 +165,14 @@ class Figure(ABC):
     def delete(self):
         raise NotImplementedError
 
+    @abstractmethod
     def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label_name: str, keypoint_info: Dict):
         raise NotImplementedError
 
+    @abstractmethod
     def contains_point(point: Point) -> bool:
         raise NotImplementedError
+
 
 class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
     __tablename__ = 'review_label'
@@ -631,7 +635,6 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
 
         return canvas
 
-
     def embed_to_bbox(start_point, end_point, label_name: str, min_movement_to_create: int = 5, keypoint_info: Dict = None) -> Optional[Figure]:
         x, y = end_point
         if abs(start_point[0] - x) > min_movement_to_create and abs(start_point[1] - y) > min_movement_to_create:
@@ -642,6 +645,80 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
             figure = BBox(x1, y1, x2, y2, label=label_name)
             return figure
 
+
+class Mask(Base):
+    __tablename__ = 'mask'
+
+    id = Column(Integer, primary_key=True)
+    image_id = Column(Integer, ForeignKey('image.id'))
+    rle = Column(Integer)
+    label = Column(String)
+    height = Column(Integer)
+    width = Column(Integer)
+
+    image = relationship("LabeledImage", back_populates="masks")
+
+    def __init__(self, label: str, rle: str, height: int, width: int):
+        self.rle = rle
+        self.label = label
+        self.height = height
+        self.width = width
+        self.decode_rle()
+    
+    @reconstructor
+    def init_on_load(self):
+        self.decode_rle()
+        self.selected = False
+
+    def decode_rle(self):
+        self.mask = decode_rle(self.rle, height=self.height, width=self.width)
+
+    def encode_mask(self):
+        self.rle = encode_rle(self.mask)
+
+    @property
+    def state(self):
+        return inspect(self)
+
+    def save(self):
+        print("save mask") 
+        session = get_session()
+        session.add(self)
+        session.commit()
+
+    def delete_point(self, point_id):
+        pass
+
+    def delete(self):
+        print("delete mask") 
+        if not self.state.persistent:
+            return 
+        session = get_session()
+        session.delete(self)
+        session.commit()
+
+    def copy(self) -> "Mask":
+        return Mask(
+            label=self.label,
+            rle=self.rle,
+            height=self.height,
+            width=self.width
+        )
+
+    def draw_figure(
+            self,
+            canvas: np.ndarray, 
+            elements_scale_factor: float, 
+            label: Label, 
+            keypoint_connections: Dict,
+            keypoint_info: Dict,
+            show_label_names: bool = False,
+        ) -> np.ndarray:   
+        b2, g2, r2 = label.color_bgr
+        canvas_copy = np.copy(canvas)
+        canvas_copy[:, :, :3][self.mask > 0] = [b2, g2, r2]
+        canvas = cv2.addWeighted(canvas_copy, 0.6, canvas, 0.4, 0)
+        return canvas
 
 class LabeledImage(Base):
     __tablename__ = 'image'
@@ -654,7 +731,7 @@ class LabeledImage(Base):
     bboxes = relationship("BBox", back_populates="image")
     kgroups = relationship("KeypointGroup", back_populates="image")
     review_labels = relationship("ReviewLabel", back_populates="image")
-    # masks = relationship("Mask", back_populates="image") 
+    masks = relationship("Mask", back_populates="image") 
 
     @classmethod
     def get(cls, name):
@@ -694,8 +771,8 @@ class LabeledImage(Base):
             session.delete(review_label)
         for kgroup in self.kgroups:
             session.delete(kgroup)
-        # for mask in self.masks:
-        #     session.delete(mask)
+        for mask in self.masks:
+            session.delete(mask)
         session.delete(self)
         session.commit()
     
@@ -717,6 +794,6 @@ def configure_database(database_path):
 FigureTypes: Dict[FigureType, Figure] = {
     FigureType.KGROUP: KeypointGroup,
     FigureType.BBOX: BBox,
-    FigureType.REVIEW_LABEL: ReviewLabel
-    # FigureType.MASK: Mask
+    FigureType.REVIEW_LABEL: ReviewLabel,
+    FigureType.MASK: Mask
 }

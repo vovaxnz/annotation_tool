@@ -15,6 +15,7 @@ class AnnotationMode(Enum):
     SEGMENTATION = "SEGMENTATION"
     KEYPOINTS = "KEYPOINTS"
     REVIEW = "REVIEW"
+    MASKS = "MASKS"
 
 
 class FigureType(Enum):
