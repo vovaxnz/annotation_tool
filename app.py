@@ -34,7 +34,7 @@ def start():
         return
 
     loading_window = get_loading_window(text="Downloading annotations...")
-    annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path = get_project_data(project_id)
+    annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path, meta_ann_path = get_project_data(project_id)
     pm = PathManager(project_id)
     ftc = FileTransferClient()
     print(annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path)
