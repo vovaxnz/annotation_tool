@@ -167,7 +167,16 @@ class CanvasView(tk.Canvas):
         self.bind("<space>", self.handle_space)
         self.bind("<Escape>", self.handle_esc)
 
+        # Bindings for Shift press and release
+        self.bind("<Shift_L>", self.on_shift_press)
+        self.bind("<Shift_R>", self.on_shift_press)
+
+
         self.close_callback = None
+
+    def on_shift_press(self, event):
+        self.app.on_shift_press()
+        self.update_frame = True
 
     def set_close_callback(self, callback):
         self.close_callback = callback
@@ -228,8 +237,7 @@ class CanvasView(tk.Canvas):
         self.update_frame = True
 
     def handle_space(self, event: tk.Event):
-        shift_pressed = event.state & 0x0001
-        self.app.handle_space(shift_pressed=shift_pressed)
+        self.app.handle_space()
         self.update_frame = True
 
     def handle_esc(self, event: tk.Event):
@@ -252,6 +260,8 @@ class CanvasView(tk.Canvas):
             self.app.change_label(event.char)
         elif event.char.lower() == "d":
             self.app.delete_command()
+        elif event.char.lower() == "c":
+            self.app.copy_figures_from_previous_image()
         elif event.char.lower() == "f":
             self.fit_image()
         elif event.char.lower() == "t":

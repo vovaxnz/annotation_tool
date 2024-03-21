@@ -710,14 +710,14 @@ class Mask(Base):
             canvas: np.ndarray, 
             elements_scale_factor: float, 
             label: Label, 
-            keypoint_connections: Dict,
+            keypoint_connections: Dict, # TODO: Create a class for figure visualization instead of visualize them themselves
             keypoint_info: Dict,
             show_label_names: bool = False,
         ) -> np.ndarray:   
         b2, g2, r2 = label.color_bgr
         canvas_copy = np.copy(canvas)
         canvas_copy[:, :, :3][self.mask > 0] = [b2, g2, r2]
-        canvas = cv2.addWeighted(canvas_copy, 0.6, canvas, 0.4, 0)
+        canvas = cv2.addWeighted(canvas_copy, 0.4, canvas, 0.6, 0)
         return canvas
 
 class LabeledImage(Base):
@@ -725,8 +725,9 @@ class LabeledImage(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String, unique=True)
+    height = Column(Integer)
+    width = Column(Integer)
     trash = Column(Boolean, default=False)
-    reviewed = Column(Boolean, default=False)
 
     bboxes = relationship("BBox", back_populates="image")
     kgroups = relationship("KeypointGroup", back_populates="image")
@@ -745,8 +746,10 @@ class LabeledImage(Base):
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
-    def __init__(self, name):
+    def __init__(self, name, height, width):
         self.name = name
+        self.height = height
+        self.width = width
 
     def save(self):
         print("save image") 

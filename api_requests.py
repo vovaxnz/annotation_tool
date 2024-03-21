@@ -34,8 +34,9 @@ def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, 
     img_path = response_json["img_path"]
     review_ann_path = response_json["review_ann_path"]
     figures_ann_path = response_json["figures_ann_path"]
+    meta_ann_path = response_json["meta_ann_path"]
 
-    return annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path
+    return annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path, meta_ann_path
 
 
 def complete_task(project_id: int, duration_hours: float):
@@ -45,4 +46,8 @@ def complete_task(project_id: int, duration_hours: float):
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
-        raise MessageBoxException(response.json()["message"])
+        try: 
+            message = response.json()["message"]
+        except:
+            message = "Internal Server Error"
+        raise MessageBoxException(message)

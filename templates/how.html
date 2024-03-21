@@ -29,22 +29,22 @@
     <div class="container">
         <h2>Instructions for using the Annotation Tool</h2>
         <p>
-        1. At the beginning you need to select the project id you want to work on. Application will download images and annotations from the server, if not already downloaded, and the project will open in the appropriate mode (annotation/review/correction) depending on task status on the portal.
+        1. At the beginning you need to select the project id you want to work on. Application will download images and annotations from the server, if not already downloaded. Then the project will be opened in the appropriate mode (annotation/review/correction) depending on task status on the portal.
         </p>
         <p>
-        2. You can close the application at any time, the figures will be saved and the next time you open this project - it will open in the same place. 
+        2. You can close the application at any time, the figures will be saved and the next time you open this project - it will be opened at the same place. 
         </p>
         <p>
-        3. Work duration calculated when you are working. Application counts time intervals between key pressews and mouse clicks, but no more than 10 seconds. 
+        3. Work duration is calculated during you are working. Application counts time intervals between key presses and mouse clicks, but no more than 10 seconds. 
         </p>
         <p>
         4. After you processed all images, press <strong>Project &gt; Complete the project</strong>. It will send annotated data to the server and updates task status on the portal
         </p>
         <p>
-        5. The actions while annotation are performed using hotkeys. See the <strong>Help &gt; Hotkeys</strong> menu to see the classes
+        5. The actions while annotation are performed using hotkeys. You can see them in the <strong>Help</strong> menu
         </p>
         <p>
-            6. In rare cases when you need to download annotations from the server and overwrite your annotations with them, click <strong>Project &gt; Download and overwrite annotations</strong>.
+            6. If you need to download annotations from the server and overwrite your annotations with them, click <strong>Project &gt; Download and overwrite annotations</strong>.
         </p>
         <p>
             7. To go to the first image of the project click <strong>Project &gt; Go to the first image</strong>.
@@ -56,24 +56,25 @@
             9. Press <strong>T</strong> if you want to mark image as a trash. After that the <strong>Trash</strong> section on the status bar become red. Press <strong>T</strong> again to remove trash tag from the image.
         </p>
         <p>
-          10. You can rename figures by placing the cursor over them and pressing the class hotkey. See the <strong>Help &gt; Classes</strong> menu to see the classes, their colors, and hotkeys
+          10. You can rename BBoxes by placing the cursor over them and pressing the class hotkey. See the <strong>Help &gt; Classes</strong> menu to see the classes, their colors, and hotkeys. In keypoint and segmentation annotation modes you can not rename figures. 
         </p>
         <p>
           11. If you want to create a figure of specific class, first press a hotkey of this class and then start creating the figure.
         </p>
         <p>
-          12. In review mode you can do the same with review labels as you do with figures, using their point.
+          12. In review mode you can use point of review label to move or delete it (by pressing D). You also can rename the label by pressing another label hotkey while holding cursor over the label`s point.
         </p>
         <p>
-          13. Don't forget that you can hide main and secondary figures using hotkeys while annotating or reviewing images. The <strong>Visibility</strong> section of the status bar can show 4 values:
+          13. Don't forget that you can hide figures using hotkeys while annotating or reviewing images. 
       </p>
-      <ul>
-          <li><strong>All Visible</strong>: when both main and secondary figures are visible</li>
-          <li><strong>Figures hidden</strong>: when main figures are hidden and secondary visible</li>
-          <li><strong>Secondary hidden</strong>: when main figures are visible and secondary are hidden</li>
-          <li><strong>All hidden</strong>: when both main and secondary figures are hidden.</li>
-      </ul>
+      <p>
+        14. Don't forget that you can show or hide figures names using hotkeys while annotating or reviewing images. 
+    </p>
       
+    <h2>Segmentation mode guide</h2>
+    <p>https://docs.google.com/document/d/1DwXRi_SYmAl2jPBjSSe2j2319Yr4rkjTXUmDq6JOhxE/edit?usp=sharing</p>
+
+
     </div>
 </body>
 </html>

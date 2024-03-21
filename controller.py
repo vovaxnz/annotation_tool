@@ -5,6 +5,7 @@ import json
 
 import cv2
 import numpy as np
+from config import ColorBGR
 from enums import AnnotationMode, FigureType
 from masks_encoding import get_empty_rle
 from models import Figure, Label, Mask, Point, ReviewLabel, Value, FigureTypes
@@ -32,6 +33,7 @@ class FigureController(ABC):
         self.cursor_x, self.cursor_y = 0, 0
         self.figures: List[Figure] = list()
         self.img_height, self.img_width = None, None
+        self.shift_mode = False
         
 
     @abstractmethod
@@ -63,7 +65,7 @@ class FigureController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def handle_space(self, shift_pressed: bool = False):
+    def handle_space(self):
         raise NotImplementedError
 
     @abstractmethod
@@ -82,6 +84,7 @@ class ObjectFigureController:
         self.cursor_x, self.cursor_y = 0, 0
         self.figures: List[Figure] = list()
         self.img_height, self.img_width = None, None
+        self.shift_mode = False
         
         keypoint_info = Value.get_value("keypoint_info")
         self.keypoint_info: Dict = json.loads(keypoint_info) if keypoint_info is not None else None # TODO: Refactor
@@ -194,13 +197,13 @@ class ObjectFigureController:
             canvas = cv2.line(canvas, (0, int(self.cursor_y + 1)), (w, int(self.cursor_y + 1)), (0, 0, 0), 1)
         return canvas
 
-    def handle_space(self, shift_pressed: bool = False):
+    def handle_space(self):
         pass
 
     def handle_esc(self):
         pass
 
-class MaskFigureController():
+class MaskFigureController(FigureController):
 
     def __init__(self, active_label: Label):
         self.adding_mask = True
@@ -212,6 +215,7 @@ class MaskFigureController():
         self.cursor_x, self.cursor_y = 0, 0
         self.figures_dict = dict()
         self.img_height, self.img_width = None, None
+        self.shift_mode = False
 
     @property
     def figures(self) -> List[Figure]:
@@ -234,6 +238,10 @@ class MaskFigureController():
         if len(self.figures_dict) < len(figures):
             raise RuntimeError(f"Number of masks {len(figures)} are larger than the number of classes {len(self.figures_dict)}. Annotations are incorrect. Ask to fix initial annotations")
 
+    @property
+    def addition_mode(self) -> bool:
+        return not self.shift_mode
+
     def handle_mouse_move(self, x: int, y: int):
         self.cursor_x, self.cursor_y = x, y
 
@@ -246,38 +254,44 @@ class MaskFigureController():
             self.mode = Mode.CREATE
             self.polygon = [(x, y), (x, y)]
         elif self.mode is Mode.CREATE:
-            self.polygon.append((x, y))
+            if self.check_cursor_on_polygon_start():
+                self.edit_mask(adding=self.addition_mode)
+                self.polygon = list()
+                self.mode = Mode.IDLE
+            else:
+                self.polygon.append((x, y))
 
     def handle_mouse_hover(self, x: int, y: int):
         if self.mode == Mode.CREATE:
             self.polygon[-1] = (x, y)
         self.cursor_x, self.cursor_y = x, y
 
-    def handle_space(self, shift_pressed: bool = False):
-        adding = not shift_pressed
-        if self.mode == Mode.CREATE:
-            figure = self.figures_dict.get(self.active_label.name)
-            if figure is None:
-                figure = Mask(
-                    label=self.active_label.name,
-                    rle=get_empty_rle(height=self.img_height, width=self.img_width),
-                    height=self.img_height,
-                    width=self.img_width,
-                )
-                self.figures_dict[self.active_label.name] = figure
+    def edit_mask(self, adding: bool):
+        self.polygon[-1] = self.polygon[0]
+        figure = self.figures_dict.get(self.active_label.name)
+        if figure is None:
+            figure = Mask(
+                label=self.active_label.name,
+                rle=get_empty_rle(height=self.img_height, width=self.img_width),
+                height=self.img_height,
+                width=self.img_width,
+            )
+            self.figures_dict[self.active_label.name] = figure
 
-            # Define your polygon points
-            polygon = np.array(self.polygon, np.int32).reshape((-1, 1, 2))
+        # Define your polygon points
+        polygon = np.array(self.polygon, np.int32).reshape((-1, 1, 2))
 
-            # Use polygon points to remove/add part of class mask
-            figure.mask = cv2.fillPoly(figure.mask, [polygon], color=1 if adding else 0)
+        # Use polygon points to remove/add part of class mask
+        figure.mask = cv2.fillPoly(figure.mask, [polygon], color=1 if adding else 0)
 
-            # Update figure rle
-            figure.encode_mask()
+        # Update figure rle
+        figure.encode_mask()
 
+    def handle_space(self):
+        if self.mode is Mode.CREATE:
+            self.edit_mask(adding=self.addition_mode)
             self.polygon = list()
             self.mode = Mode.IDLE
-
 
     def handle_esc(self):
         if self.mode == Mode.CREATE:
@@ -297,13 +311,23 @@ class MaskFigureController():
     def change_label(self, label: Label):
         self.active_label = label
 
+    def check_cursor_on_polygon_start(self) -> bool:
+        return len(self.polygon) > 2 and Point(*self.polygon[0]).close_to(self.cursor_x, self.cursor_y, distance=8)
+
     def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
         if self.mode is Mode.CREATE:
             for i in range(len(self.polygon) - 1):
                 p1 = self.polygon[i]
                 p2 = self.polygon[i+1]
-                canvas = cv2.line(canvas, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), (255, 255, 255), 1)
-                # TODO: Draw selected area
+
+                if self.addition_mode:
+                    line_color = ColorBGR.white
+                else:
+                    line_color = ColorBGR.red
+                canvas = cv2.line(canvas, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), line_color, 1)
+
+            if self.check_cursor_on_polygon_start():
+                cv2.circle(canvas, self.polygon[0], 8, (255, 255, 255), 1)
             
         return canvas
         
@@ -311,5 +335,5 @@ class MaskFigureController():
 ControllerByMode = {
     AnnotationMode.OBJECT_DETECTION: ObjectFigureController,
     AnnotationMode.KEYPOINTS: ObjectFigureController,
-    AnnotationMode.MASKS: MaskFigureController
+    AnnotationMode.SEGMENTATION: MaskFigureController
 }

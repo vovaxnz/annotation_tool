@@ -28,6 +28,10 @@ class PathManager():
         return os.path.join(self.project_path, f"figures.json")
     
     @property
+    def meta_ann_path(self):
+        return os.path.join(self.project_path, f"meta.json")
+    
+    @property
     def review_ann_path(self):
         return os.path.join(self.project_path, f"review.json")
     

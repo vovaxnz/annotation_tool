@@ -39,20 +39,26 @@ def start():
     ftc = FileTransferClient()
     print(annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path)
 
+    if not os.path.isfile(pm.meta_ann_path):
+        ftc.download(
+            local_path=pm.meta_ann_path, 
+            remote_path=meta_ann_path,
+            show_progressbar=False
+        )
     if not os.path.isfile(pm.figures_ann_path):
         ftc.download(
             local_path=pm.figures_ann_path, 
             remote_path=figures_ann_path,
             show_progressbar=False
         )
-    if annotation_stage in [AnnotationStage.CORRECTION, AnnotationStage.REVIEW] and not os.path.isfile(pm.review_ann_path):
+    if annotation_stage is AnnotationStage.CORRECTION and not os.path.isfile(pm.review_ann_path):
         ftc.download(
             local_path=pm.review_ann_path, 
             remote_path=review_ann_path,
             show_progressbar=False
         )
 
-    img_ann_number = len(open_json(pm.figures_ann_path)["images"])
+    img_ann_number = len(open_json(pm.figures_ann_path))
     if os.path.isdir(pm.images_path):
         img_number = len(os.listdir(pm.images_path))
     else:
@@ -73,6 +79,7 @@ def start():
     import_project(
         figures_ann_path=pm.figures_ann_path,
         review_ann_path=pm.review_ann_path,
+        meta_ann_path=pm.meta_ann_path,
         img_dir=pm.images_path,
         overwrite=False,
     )   

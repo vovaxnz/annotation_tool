@@ -14,8 +14,6 @@ class AnnotationMode(Enum):
     OBJECT_DETECTION = "OBJECT_DETECTION"
     SEGMENTATION = "SEGMENTATION"
     KEYPOINTS = "KEYPOINTS"
-    REVIEW = "REVIEW"
-    MASKS = "MASKS"
 
 
 class FigureType(Enum):
