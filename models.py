@@ -86,26 +86,33 @@ class Label(Base):
     __tablename__ = 'label'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String, unique=True)
+    name = Column(String)
     color = Column(String)
     hotkey = Column(String)
     type = Column(String) # FigureType
+    attributes = Column(String, nullable=True) 
 
-    def __init__(self, name: str, color: str, hotkey: str, type: str):
+
+    def __init__(self, name: str, color: str, hotkey: str, type: str, attributes: str = None):
+        """
+        Args:
+            attributes (str): Any attributes in json format
+        """
         self.name = name
         self.color = color
         self.hotkey = hotkey
         self.type = type
+        self.attributes = attributes
 
     @property
     def color_bgr(self) -> Tuple[int, int, int]:
         return getattr(ColorBGR, self.color, ColorBGR.white)
     
     @classmethod
-    def get_by_name(cls, name):
+    def get(cls, name: str, figure_type: str):
         print("get label")
         session = get_session()
-        return session.query(cls).filter(cls.name == name).first()
+        return session.query(cls).filter(cls.name == name, cls.type == figure_type).first()
     
     def save(self):
         print("save label")
@@ -143,10 +150,13 @@ class Figure(ABC):
             canvas: np.ndarray, 
             elements_scale_factor: float, 
             label: Label, 
-            keypoint_connections: Dict,
-            keypoint_info: Dict,
             show_label_names: bool = False,
         ) -> np.ndarray:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def figure_type(self) -> str:
         raise NotImplementedError
 
     @abstractmethod
@@ -166,7 +176,7 @@ class Figure(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label_name: str, keypoint_info: Dict):
+    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "Figure" = None):
         raise NotImplementedError
 
     @abstractmethod
@@ -199,6 +209,10 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
         self.selected = False
         self.point_number = 1
 
+    @property
+    def figure_type(self) -> str:
+        return "REVIEW_LABEL"
+    
     @classmethod
     def all(cls) -> List["ReviewLabel"]:
         print("get review label")   
@@ -244,9 +258,9 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
     def contains_point(self, point: Point) -> bool:
         return False
     
-    def embed_to_bbox(start_point, end_point, label_name: str, min_movement_to_create: int = 5, keypoint_info: Dict = None) -> Optional[Figure]:
+    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "ReviewLabel" = None) -> Optional[Figure]:
         x, y = start_point
-        figure = ReviewLabel(x=x, y=y, label=label_name)
+        figure = ReviewLabel(x=x, y=y, label=label.name)
         return figure
 
     def draw_figure(
@@ -254,12 +268,10 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
             canvas: np.ndarray, 
             elements_scale_factor: float,
             label: Label, 
-            keypoint_connections: Dict,
-            keypoint_info: Dict,
             show_label_names: bool = True,
         ) -> np.ndarray:
 
-        circle_radius = max(1, int(7 / ((elements_scale_factor + 1e-7) ** (1/3))))
+        circle_radius = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))
 
         if self.selected:
             circle_radius += 3
@@ -342,9 +354,9 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
 
     image = relationship("LabeledImage", back_populates="kgroups")
     
-    def __init__(self, label: str, keypoint_data: str):
+    def __init__(self, label: str, keypoints_data: str):
         self.label = label
-        self.keypoints_data = keypoint_data
+        self.keypoints_data = keypoints_data
         self.active_point_id = None
         self.selected = False
         self.keypoints: List[Point] = self.deserialize_keypoints(self.keypoints_data)
@@ -356,6 +368,10 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
         self.selected = False
         self.keypoints: List[Point] = self.deserialize_keypoints(self.keypoints_data)
         self.point_number = len(self.keypoints)
+
+    @property
+    def figure_type(self) -> str:
+        return "KGROUP"
 
     @property
     def keypoints_as_dict(self) -> Dict[str, Point]:
@@ -401,7 +417,7 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
             if point.close_to(x, y, distance=10):
                 return i
 
-    def embed_to_bbox(start_point, end_point, label_name: str, min_movement_to_create: int = 5, keypoint_info: Dict = None) -> Optional[Figure]:
+    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "KeypointGroup" = None) -> Optional[Figure]:
         x, y = end_point
         if abs(start_point[0] - x) > min_movement_to_create and abs(start_point[1] - y) > min_movement_to_create:
             x1 = min(start_point[0], x)
@@ -412,16 +428,27 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
             w = x2 - x1
             h = y2 - y1
 
+            assert label.attributes is not None
+            keypoint_info = json.loads(label.attributes)["keypoint_info"]
+            
             result_keypoints = list()
             for kp_label in keypoint_info:
                 kp_x = keypoint_info[kp_label]["x"] * w + x1
                 kp_y = keypoint_info[kp_label]["y"] * h + y1
                 result_keypoints.append(Point(x=int(kp_x), y=int(kp_y), label=kp_label))
 
-            figure = KeypointGroup(
-                label=label_name,
-                keypoint_data=KeypointGroup.serialize_keypoints(result_keypoints)
-            )
+
+            keypoints_data = KeypointGroup.serialize_keypoints(result_keypoints)
+
+            if figure is None:
+                figure = KeypointGroup(
+                    label=label.name,
+                    keypoints_data=keypoints_data
+                )
+            else:
+                figure.label = label.name
+                figure.keypoints_data = keypoints_data
+                figure.keypoints = figure.deserialize_keypoints(figure.keypoints_data)
             return figure
 
     def draw_figure(
@@ -429,8 +456,6 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
             canvas: np.ndarray, 
             elements_scale_factor: float, 
             label: Label, 
-            keypoint_connections: Dict,
-            keypoint_info: Dict,
             show_label_names: bool = False,
         ) -> np.ndarray:
 
@@ -444,6 +469,11 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
 
         kp_dict: Dict[str, Point] = self.keypoints_as_dict
         
+
+        assert label.attributes is not None
+        keypoint_info = json.loads(label.attributes)["keypoint_info"]
+        keypoint_connections = json.loads(label.attributes)["keypoint_connections"]
+
         # Draw connections
         for connection in keypoint_connections:
             kp1 = kp_dict.get(connection["from"])
@@ -529,6 +559,10 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
         self.point_number = 4
 
     @property
+    def figure_type(self) -> str:
+        return "BBOX"
+    
+    @property
     def state(self):
         return inspect(self)
 
@@ -595,8 +629,6 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
             canvas: np.ndarray, 
             elements_scale_factor: float, 
             label: Label, 
-            keypoint_connections: Dict,
-            keypoint_info: Dict,
             show_label_names: bool = False,
         ) -> np.ndarray:
 
@@ -629,20 +661,27 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
 
         if self.active_point_id is not None:
             point = self.points[self.active_point_id]
-            circle_radius = max(1, int(10 / ((elements_scale_factor + 1e-7) ** (1/3))))
+            circle_radius = max(1, int(7 / ((elements_scale_factor + 1e-7) ** (1/3))))
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), 2)
 
         return canvas
 
-    def embed_to_bbox(start_point, end_point, label_name: str, min_movement_to_create: int = 5, keypoint_info: Dict = None) -> Optional[Figure]:
+    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "BBox" = None) -> Optional[Figure]:
         x, y = end_point
         if abs(start_point[0] - x) > min_movement_to_create and abs(start_point[1] - y) > min_movement_to_create:
             x1 = min(start_point[0], x)
             y1 = min(start_point[1], y)
             x2 = max(start_point[0], x)
             y2 = max(start_point[1], y)
-            figure = BBox(x1, y1, x2, y2, label=label_name)
+            if figure is None:
+                figure = BBox(x1, y1, x2, y2, label=label.name)
+            else:
+                figure.x1=x1
+                figure.y1=y1
+                figure.x2=x2
+                figure.y2=y2
+                figure.label=label.name
             return figure
 
 
@@ -670,6 +709,10 @@ class Mask(Base):
         self.decode_rle()
         self.selected = False
 
+    @property
+    def figure_type(self) -> str:
+        return "MASK"
+    
     def decode_rle(self):
         self.mask = decode_rle(self.rle, height=self.height, width=self.width)
 
@@ -710,8 +753,6 @@ class Mask(Base):
             canvas: np.ndarray, 
             elements_scale_factor: float, 
             label: Label, 
-            keypoint_connections: Dict, # TODO: Create a class for figure visualization instead of visualize them themselves
-            keypoint_info: Dict,
             show_label_names: bool = False,
         ) -> np.ndarray:   
         b2, g2, r2 = label.color_bgr
@@ -719,6 +760,7 @@ class Mask(Base):
         canvas_copy[:, :, :3][self.mask > 0] = [b2, g2, r2]
         canvas = cv2.addWeighted(canvas_copy, 0.4, canvas, 0.6, 0)
         return canvas
+
 
 class LabeledImage(Base):
     __tablename__ = 'image'

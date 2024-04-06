@@ -1,6 +1,7 @@
 
 from abc import ABC, abstractmethod
 from ast import Tuple
+from collections import defaultdict
 from dataclasses import dataclass
 import json
 import math
@@ -46,10 +47,6 @@ class LabelingApp(ABC):
             if img_object is None:
                 raise MessageBoxException(f"{img_name} is not found in the database") 
             
-        keypoint_connections = Value.get_value("keypoint_connections")
-        self.keypoint_connections: List = json.loads(keypoint_connections) if keypoint_connections is not None else None
-        keypoint_info = Value.get_value("keypoint_info")
-        self.keypoint_info: Dict = json.loads(keypoint_info) if keypoint_info is not None else None
 
         self.figures: List[Figure] = list()
         self.review_labels: List[ReviewLabel] = list()
@@ -78,7 +75,10 @@ class LabelingApp(ABC):
             labels = Label.get_figure_labels()
 
         self.labels_by_hotkey: Dict[str, Label] = {label.hotkey: label for label in labels}
-        self.all_labels_by_name: Dict[str, Label] = {label.name: label for label in Label.all()}
+        
+        self.labels: Dict[str, Dict[str, Label]] = defaultdict(dict)
+        for label in Label.all():
+            self.labels[label.type][label.name] = label
 
         if self.annotation_stage is AnnotationStage.REVIEW:
             self.controller = ObjectFigureController(active_label=labels[0])
@@ -93,7 +93,7 @@ class LabelingApp(ABC):
         number_of_processed = len(self.processed_img_ids)
         active_label = self.controller.active_label
         return StatusData(
-            selected_class=f"{active_label.name} [{active_label.hotkey}]",
+            selected_class=f"{active_label.name}: {active_label.type} [{active_label.hotkey}]",
             class_color=active_label.color,
             is_trash=self.is_trash,
             annotation_mode=self.annotation_mode.name,
@@ -134,22 +134,19 @@ class LabelingApp(ABC):
                 self.canvas = figure.draw_figure(
                     canvas=self.canvas, 
                     elements_scale_factor=self.scale_factor, 
-                    keypoint_connections=self.keypoint_connections,
-                    keypoint_info=self.keypoint_info,
                     show_label_names=self.show_label_names,
-                    label=self.all_labels_by_name[figure.label]
+                    label=self.labels[figure.figure_type][figure.label]
                 )
         
         self.canvas = self.controller.draw_additional_elements(self.canvas)
 
         if self.controller.preview_figure is not None:
+            figure = self.controller.preview_figure
             self.canvas = self.controller.preview_figure.draw_figure(
                 canvas=self.canvas, 
                 elements_scale_factor=self.scale_factor, 
-                keypoint_connections=self.keypoint_connections,
-                keypoint_info=self.keypoint_info,
                 show_label_names=False,
-                label=self.all_labels_by_name[self.controller.preview_figure.label]
+                label=self.labels[figure.figure_type][figure.label]
             )
 
     def load_image(self):
@@ -185,7 +182,7 @@ class LabelingApp(ABC):
                 kgroups = list()
                 masks = list()
                 for figure in self.controller.figures:
-                    figure_type = self.all_labels_by_name[figure.label].type
+                    figure_type = figure.figure_type
                     if figure_type == FigureType.BBOX.name:
                         bboxes.append(figure)
                     elif figure_type == FigureType.KGROUP.name:

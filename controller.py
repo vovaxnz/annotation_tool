@@ -86,9 +86,6 @@ class ObjectFigureController:
         self.img_height, self.img_width = None, None
         self.shift_mode = False
         
-        keypoint_info = Value.get_value("keypoint_info")
-        self.keypoint_info: Dict = json.loads(keypoint_info) if keypoint_info is not None else None # TODO: Refactor
-
     @property
     def current_figure_type(self) -> Figure:
         return FigureTypes[FigureType[self.active_label.type]]
@@ -120,8 +117,8 @@ class ObjectFigureController:
             self.preview_figure = figure_type.embed_to_bbox(
                 start_point=self.start_point, 
                 end_point=(x, y), 
-                label_name=self.active_label.name, 
-                keypoint_info=self.keypoint_info,
+                label=self.active_label, 
+                figure=self.preview_figure,
             )
         else:
             self.preview_figure = None
@@ -181,9 +178,8 @@ class ObjectFigureController:
     def change_label(self, label: Label):
         self.active_label = label
         if self.selected_figure_id is not None:
-            fig = self.figures[self.selected_figure_id]
-            fig_label = Label.get_by_name(name=fig.label)
-            if fig_label.type == label.type:
+            fig: Figure = self.figures[self.selected_figure_id]
+            if fig.figure_type == label.type:
                 fig.label = self.active_label.name
 
     def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
@@ -216,6 +212,7 @@ class MaskFigureController(FigureController):
         self.figures_dict = dict()
         self.img_height, self.img_width = None, None
         self.shift_mode = False
+        self.lock_distance = 4
 
     @property
     def figures(self) -> List[Figure]:
@@ -312,7 +309,7 @@ class MaskFigureController(FigureController):
         self.active_label = label
 
     def check_cursor_on_polygon_start(self) -> bool:
-        return len(self.polygon) > 2 and Point(*self.polygon[0]).close_to(self.cursor_x, self.cursor_y, distance=8)
+        return len(self.polygon) > 2 and Point(*self.polygon[0]).close_to(self.cursor_x, self.cursor_y, distance=self.lock_distance)
 
     def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
         if self.mode is Mode.CREATE:
@@ -327,7 +324,7 @@ class MaskFigureController(FigureController):
                 canvas = cv2.line(canvas, (int(p1[0]), int(p1[1])), (int(p2[0]), int(p2[1])), line_color, 1)
 
             if self.check_cursor_on_polygon_start():
-                cv2.circle(canvas, self.polygon[0], 8, (255, 255, 255), 1)
+                cv2.circle(canvas, self.polygon[0], self.lock_distance, (255, 255, 255), 1)
             
         return canvas
         

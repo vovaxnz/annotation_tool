@@ -1,7 +1,7 @@
 import os
 import time
 from api_requests import complete_task, get_project_ids, get_project_data
-from enums import AnnotationStage
+from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 from gui import MainWindow, ProjectSelector, get_loading_window
 from import_annotations import export_figures, export_review, import_project
@@ -11,7 +11,7 @@ from path_manager import PathManager
 from file_transfer import FileTransferClient
 from utils import open_json
 from tkinter import messagebox
-
+import shutil
 
 class Application:
     def __init__(self, labeling_app: LabelingApp):
@@ -113,9 +113,10 @@ def start():
             )
         complete_task(project_id=project_id, duration_hours=labeling_app.duration_hours)
         Value.update_value("img_id", 0, overwrite=False)
+        if os.path.isdir(pm.images_path):
+            shutil.rmtree(pm.images_path)
         messagebox.showinfo("Success", "Task completed")
         loading_window.destroy()
-
 
 
 if __name__ == "__main__":

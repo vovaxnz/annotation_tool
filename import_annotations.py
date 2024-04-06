@@ -5,7 +5,7 @@ import os
 from typing import Dict, List, Tuple
 
 from api_requests import get_project_data
-from enums import FigureType
+from enums import AnnotationStage, FigureType
 from file_transfer import FileTransferClient
 from models import KeypointGroup, Label, LabeledImage, BBox, Mask, ReviewLabel, Value
 from path_manager import PathManager
@@ -42,10 +42,8 @@ def import_project(
             {"name": "Add object", "color": "yellow", "hotkey": "1", "type": "REVIEW_LABEL"}
         ], 
         "labels": [
-            {"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX"},
+            {"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX", "attributes": "..."},
         ], 
-        (Optional) "keypoint_connections": [{"from": "fl", "to": "bl", "color": "red"}, ...]
-        (Optional) "keypoint_info": {"fl": {"x": 0, "y": 0, "color": "orange"}, ...} # 
     }
 
     figures_ann format:
@@ -67,30 +65,26 @@ def import_project(
 
     # Labels
     for label_dict in meta_data["labels"] + meta_data["review_labels"]:
-        label = Label.get_by_name(name=label_dict["name"])
+        label = Label.get(name=label_dict["name"], figure_type=label_dict["type"])
+
+        attributes = label_dict.get("attributes")
+        if attributes is not None:
+            attributes = json.dumps(attributes)
+
         if label is None:
             label = Label(
                 name=label_dict["name"],
                 color=label_dict["color"],
                 hotkey=label_dict["hotkey"],
-                type=label_dict["type"]
+                type=label_dict["type"],
+                attributes=attributes
             )
         else:
             label.color = label_dict["color"]
             label.hotkey = label_dict["hotkey"]
-            label.type=label_dict["type"]
+            label.attributes = attributes
         label.save()
  
-    # Keypoint Connections
-    value = meta_data.get("keypoint_connections")
-    if value is not None:
-        Value.update_value(name="keypoint_connections", value=json.dumps(value))
-
-    # Keypoint Positions
-    value = meta_data.get("keypoint_info")
-    if value is not None:
-        Value.update_value(name="keypoint_info", value=json.dumps(value))
-
     # Figures
     limages = list()
     for img_name in os.listdir(img_dir): 
@@ -134,7 +128,7 @@ def import_project(
         for kgroup_data in kgroups:
             kgroup = KeypointGroup(
                 label=kgroup_data["label"],
-                keypoint_data=json.dumps(kgroup_data["points"])
+                keypoints_data=json.dumps(kgroup_data["points"])
             )
             img.kgroups.append(kgroup)
         
@@ -214,11 +208,12 @@ def overwrite_annotations(project_id):
         remote_path=figures_ann_path,
         show_progressbar=False
     )
-    ftc.download(
-        local_path=pm.review_ann_path, 
-        remote_path=review_ann_path,
-        show_progressbar=False
-    )
+    if annotation_stage is AnnotationStage.CORRECTION:
+        ftc.download(
+            local_path=pm.review_ann_path, 
+            remote_path=review_ann_path,
+            show_progressbar=False
+        )
     ftc.download(
         local_path=pm.meta_ann_path, 
         remote_path=meta_ann_path,

@@ -251,7 +251,7 @@ class CanvasView(tk.Canvas):
     def handle_key_press(self, event: tk.Event):
 
         current_time = time.time()
-        if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= 0.1:
+        if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= 0.2:
             self.last_key_press_time = current_time # Prevent too frequent key press
         else:
             return
