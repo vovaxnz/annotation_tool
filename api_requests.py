@@ -12,7 +12,7 @@ def get_project_ids() -> List[int]:
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
-        raise MessageBoxException(response.json()["message"])
+        raise MessageBoxException(response)
     
     return response.json()["project_ids"]
 
@@ -25,7 +25,7 @@ def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, 
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
-        raise MessageBoxException(response.json()["message"])
+        raise MessageBoxException(response)
 
     response_json = response.json()
 
@@ -47,7 +47,7 @@ def complete_task(project_id: int, duration_hours: float):
 
     if response.status_code != 200:
         try: 
-            message = response.json()["message"]
+            message = response.json()
         except:
             message = "Internal Server Error"
         raise MessageBoxException(message)
