@@ -92,7 +92,7 @@ class ObjectFigureController:
 
     def get_selected_figure_id_and_point_id(self, x: int, y: int) -> Tuple[Optional[int], Optional[int]]:
         selected_figure_id, selected_point_id = None, None
-        for figure_id, figure in enumerate(self.figures):
+        for figure_id, figure in sorted(enumerate(self.figures), key=lambda x: x[1].surface, reverse=True):
             near_point_id = figure.find_nearest_point_index(x, y)
             contains_point = figure.contains_point(Point(x, y))
             if contains_point:

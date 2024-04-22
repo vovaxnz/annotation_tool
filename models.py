@@ -159,6 +159,10 @@ class Figure(ABC):
     def figure_type(self) -> str:
         raise NotImplementedError
 
+    @property
+    def surface(self) -> int:
+        raise NotImplementedError
+
     @abstractmethod
     def find_nearest_point_index(self, x, y):
         raise NotImplementedError
@@ -213,6 +217,10 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
     def figure_type(self) -> str:
         return "REVIEW_LABEL"
     
+    @property
+    def surface(self) -> int:
+        return 1
+
     @classmethod
     def all(cls) -> List["ReviewLabel"]:
         print("get review label")   
@@ -372,6 +380,10 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
     @property
     def figure_type(self) -> str:
         return "KGROUP"
+    
+    @property
+    def surface(self) -> int:
+        return 1
 
     @property
     def keypoints_as_dict(self) -> Dict[str, Point]:
@@ -563,6 +575,12 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
         return "BBOX"
     
     @property
+    def surface(self) -> int:
+        w = abs(self.x2 - self.x1)
+        h = abs(self.y2 - self.y1)
+        return w * h
+    
+    @property
     def state(self):
         return inspect(self)
 
@@ -712,6 +730,10 @@ class Mask(Base):
     @property
     def figure_type(self) -> str:
         return "MASK"
+    
+    @property
+    def surface(self) -> int:
+        return 1
     
     def decode_rle(self):
         self.mask = decode_rle(self.rle, height=self.height, width=self.width)
