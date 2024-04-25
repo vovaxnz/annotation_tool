@@ -17,7 +17,7 @@ def get_project_ids() -> List[int]:
     return response.json()["project_ids"]
 
 
-def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, str, str]:
+def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, str]:
     "annotation_stage, annotation_mode, img_path, ann_path"
     url = f'{api_url}/api/annotation/get_project_data/{project_id}/'
 
@@ -31,12 +31,9 @@ def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, 
 
     annotation_stage = getattr(AnnotationStage, response_json["annotation_stage"])
     annotation_mode = getattr(AnnotationMode, response_json["annotation_mode"])
-    img_path = response_json["img_path"]
-    review_ann_path = response_json["review_ann_path"]
-    figures_ann_path = response_json["figures_ann_path"]
-    meta_ann_path = response_json["meta_ann_path"]
+    project_uid = response_json["project_uid"]
 
-    return annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path, meta_ann_path
+    return annotation_stage, annotation_mode, project_uid
 
 
 def complete_task(project_id: int, duration_hours: float):

@@ -515,6 +515,7 @@ class StatusBar(tk.Frame):
         # Schedule the next update
         self.after(30, self.update_status)
 
+
 def get_loading_window(text: str):
     root = tk.Tk()
     root.title("Loading")

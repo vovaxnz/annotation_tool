@@ -38,3 +38,9 @@ class PathManager():
     @property
     def images_path(self):
         return os.path.join(self.project_path, f"images")
+    
+    @property
+    def archive_path(self):
+        return os.path.join(self.project_path, f"archive.zip")
+    
+    
