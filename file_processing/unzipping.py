@@ -27,13 +27,22 @@ class ArchiveUnzipper(ProcessingProgressBar):
             self.remaining_time = remaining_time
             self.processing_complete = processing_complete
 
-        with ThreadPoolExecutor() as executor:
-            future = executor.submit(unzip_archive, archive_path, output_dir, update_progress, lambda: self.terminate_processing)
+        executor = ThreadPoolExecutor()
+        future = executor.submit(unzip_archive, archive_path, output_dir, update_progress, lambda: self.terminate_processing)
+        self.check_download_completion(future, archive_path)
+
+        self.root.wait_window(self.root)
+
+    def check_download_completion(self, future, archive_path):
+        if future.done():
             try:
-                result = future.result()  # This will raise any exceptions caught by the thread
+                future.result()  # This will raise any exceptions caught by the thread
             except Exception as e:
                 raise MessageBoxException(f"The archive {archive_path} was not unzipped properly. Error: {traceback.format_exc()}")
-
+            time.sleep(0.5)
+            self.root.destroy()
+        else:
+            self.root.after(100, lambda: self.check_download_completion(future, archive_path))
 
 
 def unzip_archive(archive_path: str, output_dir: str, update_callback: Callable, should_terminate: Callable):

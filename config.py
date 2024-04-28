@@ -1,21 +1,62 @@
 import os
-from dotenv import load_dotenv
+from typing import Any, Dict
 from exceptions import MessageBoxException
-
-load_dotenv(os.path.join(os.path.dirname(os.path.realpath(__file__)), ".env"))
-
-api_token = os.getenv("TOKEN")
-address = os.getenv("ADDRESS")
-data_dir = os.getenv("DATA_DIR")
-api_url = os.getenv("API_URL")
-
-if api_token in [None, ""]: raise MessageBoxException("Specify TOKEN in .env file")
-if address in [None, ""]: raise MessageBoxException("Specify ADDRESS in .env file")
-if api_token in [None, ""]: raise MessageBoxException("Specify DATA_DIR in .env file")
-if api_url in [None, ""]: raise MessageBoxException("Specify API_URL in .env file")
+from utils import open_json, save_json
 
 
 templates_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "templates")
+
+class Settings:
+    def __init__(self):
+        self.json_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "settings.json")
+        self.data: Dict[str, Any] = {
+            "token": None,
+            "api_url": None,
+            "file_url": None,
+            "data_dir": None,
+        }
+        if not os.path.isfile(self.json_path):
+            self.save_settings()
+        self.load_settings()
+
+    def load_settings(self):
+        self.data = open_json(self.json_path)
+
+    def save_settings(self):
+        save_json(value=self.data, file_path=self.json_path)
+        os.chmod(self.json_path, 0o600)
+
+    def get_setting(self, name: str):
+        result = self.data.get(name)
+        if result is None:
+            self.load_settings()
+            if result is None:
+                raise MessageBoxException(f"Specify settings in Project > Settings")
+        return result
+
+    @property
+    def has_empty(self):
+        return any(value is None or value == "" for value in self.data.values())
+
+    @property
+    def token(self):
+        return self.get_setting("token")
+    
+    @property
+    def api_url(self):
+        return self.get_setting("api_url")
+    
+    @property
+    def file_url(self):
+        return self.get_setting("file_url")
+    
+    @property
+    def data_dir(self):
+        return self.get_setting("data_dir")
+
+
+settings = Settings()
+
 
 class ColorBGR:
     red = (0, 0, 255)

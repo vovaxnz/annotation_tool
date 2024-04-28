@@ -1,8 +1,23 @@
+import os
+from exceptions import MessageBoxException
 from gui import MainWindow
+from gui_utils import SettingsManager
 from trash.app import Application
+from config import settings
+
 
 class Application:
     def __init__(self):
+
+        if settings.has_empty:
+            SettingsManager(message="Please enter your settings")
+            try:
+                os.makedirs(settings.data_dir, exist_ok=True)
+            except:
+                data_dir = settings.data_dir
+                settings.data["data_dir"] = None
+                settings.save_settings()
+                raise MessageBoxException(f"Unable to create data_dir in '{data_dir}'")
         self.main_window = MainWindow()
 
     def initialize_gui(self):

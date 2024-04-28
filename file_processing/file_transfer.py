@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 import traceback
 from typing import Callable
-from config import file_server_url, api_token
+from config import settings
 import requests
 from exceptions import MessageBoxException
 from file_processing.progress_bar import ProcessingProgressBar
@@ -24,18 +24,26 @@ class FileTransferClient(ProcessingProgressBar):
             self.processing_complete = processing_complete
 
         self.gui_close_event.clear()
-        with ThreadPoolExecutor() as executor:
-            future = executor.submit(download_file, uid, file_name, save_path, update_progress, lambda: self.terminate_processing)
-            try:
-                result = future.result()  # This will raise any exceptions caught by the thread
-            except Exception as e:
-                raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {traceback.format_exc()}")
-            
-                
 
+        executor = ThreadPoolExecutor()
+        future = executor.submit(download_file, uid, file_name, save_path, update_progress, lambda: self.terminate_processing)
+        self.check_download_completion(future, uid, file_name)
+
+        self.root.wait_window(self.root)
+
+    def check_download_completion(self, future, uid, file_name):
+        if future.done():
+            try:
+                future.result()  # This will raise any exceptions caught by the thread
+            except Exception as e:
+                raise MessageBoxException(f"Unable to download file {uid}/{file_name}. Error: {traceback.format_exc()}")
+            time.sleep(0.5)
+            self.root.destroy()
+        else:
+            self.root.after(100, lambda: self.check_download_completion(future, uid, file_name))
 
 def download_file(uid, file_name, save_path, update_callback: Callable = None, should_terminate: Callable = None):
-    with requests.post(f"{file_server_url}/download/{uid}/{file_name}", headers={'Authorization': f'Bearer {api_token}'}, stream=True) as r:
+    with requests.post(f"{settings.file_url}/download/{uid}/{file_name}", headers={'Authorization': f'Bearer {settings.token}'}, stream=True) as r:
         if r.status_code != 200:
             raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {str(r.json())}")
         total_size_in_bytes = int(r.headers.get('content-length', 0))
@@ -66,8 +74,8 @@ def upload_file(uid, file_path):
     except IOError:
         return "Error: The file does not exist or cannot be accessed."
 
-    full_url = f"{file_server_url}/upload/{uid}"
-    response = requests.post(full_url, files=files, headers={'Authorization': f'Bearer {api_token}'})
+    full_url = f"{settings.file_url}/upload/{uid}"
+    response = requests.post(full_url, files=files, headers={'Authorization': f'Bearer {settings.token}'})
 
     # Close the file to prevent resource leakage
     files['file'].close()
@@ -75,19 +83,16 @@ def upload_file(uid, file_path):
     if response.status_code == 200:
         print(response.json())
     else:
-        # Server responded with an error
         try:
-            # Attempt to decode JSON error message
             print(response.json())
         except ValueError:
-            # Non-JSON response
             print(f"Error: Server responded with status code {response.status_code}")
 
 
 if __name__ == "__main__":
-    ftc = FileTransferClient()
-    ftc.download(
-        uid="a7db9516-fa4d-458e-a57e-e836f3d5b94c", 
+    ft = FileTransferClient()
+    ft.download(
+        uid="987cfc9c-1dfa-4547-b89f-8df9abed92d6", 
         file_name="archive.zip", 
         save_path="archive.zip", 
     )

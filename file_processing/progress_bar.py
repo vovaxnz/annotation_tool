@@ -5,11 +5,21 @@ from tkinter import ttk
 
 
 class ProcessingProgressBar:
-    def __init__(self, window_title: str, root: tk.Tk):
+    def __init__(self, window_title: str = None, root: tk.Tk = None):
+
+        if window_title is None:
+            window_title = "Loading"
+
+        if root is not None:
+            self.root = tk.Toplevel(root)
+        else:
+            self.root = tk.Tk()
+        
+        self.root.title(window_title)
+
         self.gui_close_event = threading.Event() # signal the GUI to close
         self.terminate_processing = False  # Flag to signal the processing thread to stop
         self.processing_complete = False  # Flag to signal that the processing has completed
-        self.window_title: str = window_title
 
         self.processed_percent = 0
         self.processed_gb = 0
@@ -26,8 +36,6 @@ class ProcessingProgressBar:
             else:
                 self.root.after(100, check_close)
         
-        self.root = tk.Toplevel(root)
-        self.root.title(self.window_title)
         
         # Set window size
         window_width = 450

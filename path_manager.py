@@ -1,6 +1,6 @@
 import os
 
-from config import data_dir
+from config import settings
 
 
 class PathManager():
@@ -12,11 +12,11 @@ class PathManager():
 
     @property
     def project_path(self):
-        return os.path.join(data_dir, "data", self.project_name)
+        return os.path.join(settings.data_dir, "data", self.project_name)
     
     @property
     def project_db_dir(self):
-        return os.path.join(data_dir, "db", "projects")
+        return os.path.join(settings.data_dir, "db", "projects")
 
     @property
     def db_path(self):

@@ -7,7 +7,7 @@ from PIL import Image, ImageTk
 import tkinter as tk
 from api_requests import ProjectData, get_projects_data
 from get_labeling_app import complete_annotation, get_labeling_app
-from gui_utils import get_loading_window
+from gui_utils import SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
 from labeling import LabelingApp
 from tkinter import ttk
@@ -118,7 +118,8 @@ class MainWindow(tk.Tk):
         self.title(f"Annotation tool")
 
     def open_settings(self):
-        print("settings")
+        SettingsManager(root=self)
+        
 
     def on_window_close(self):
         if self.canvas_view is not None:

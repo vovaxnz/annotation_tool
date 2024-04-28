@@ -26,13 +26,7 @@ source venv/bin/activate
 
 pip install -r requirements.txt
 
-# Specify .env values
-if [ ! -f .env ]; then
-  cp .env.example .env
-fi
-chmod 600 .env
-echo "\nOpen $(realpath .env) file, enter your data into it, save and press ENTER to continue"
-read _
+
 
 # Create desktop shortcut
 CURRENT_DIR=$(pwd)

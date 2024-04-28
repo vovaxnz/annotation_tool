@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 import requests
-from config import api_token, api_url
+from config import settings
 from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 
@@ -15,9 +15,9 @@ class ProjectData:
 
 
 def get_projects_data() -> List[ProjectData]: 
-    url = f'{api_url}/api/annotation/projects_data/'
+    url = f'{settings.api_url}/api/annotation/projects_data/'
 
-    data = {'user_token': api_token}
+    data = {'user_token': settings.token}
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
@@ -40,9 +40,9 @@ def get_projects_data() -> List[ProjectData]:
 
 def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, str]:
     "annotation_stage, annotation_mode, img_path, ann_path"
-    url = f'{api_url}/api/annotation/get_project_data/{project_id}/'
+    url = f'{settings.api_url}/api/annotation/get_project_data/{project_id}/'
 
-    data = {'user_token': api_token}
+    data = {'user_token': settings.token}
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
@@ -58,9 +58,9 @@ def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, 
 
 
 def complete_task(project_id: int, duration_hours: float):
-    url = f'{api_url}/api/annotation/complete_task/{project_id}/' # Change stage of annotation project
+    url = f'{settings.api_url}/api/annotation/complete_task/{project_id}/' # Change stage of annotation project
 
-    data = {'user_token': api_token, 'duration_hours': duration_hours}
+    data = {'user_token': settings.token, 'duration_hours': duration_hours}
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
