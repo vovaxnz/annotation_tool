@@ -35,7 +35,7 @@ class StatusData:
 
 class LabelingApp(ABC):
 
-    def __init__(self, img_dir: str, annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int):
+    def __init__(self, img_dir: str, annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, project_uid: str):
     
         self.img_names = sorted(os.listdir(img_dir)) 
         
@@ -51,6 +51,7 @@ class LabelingApp(ABC):
         self.figures: List[Figure] = list()
         self.review_labels: List[ReviewLabel] = list()
         self.project_id = project_id
+        self.project_uid = project_uid
         self.tick_time = time.time()
         self.show_label_names = False
         self.max_action_time_sec = 10

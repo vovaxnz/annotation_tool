@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Tuple
 import requests
 from config import api_token, api_url
@@ -5,16 +6,36 @@ from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 
 
-def get_project_ids() -> List[int]:
-    url = f'{api_url}/api/annotation/project_ids/'
+@dataclass
+class ProjectData:
+    id: int
+    uid: str
+    stage: AnnotationStage
+    mode: AnnotationMode
+
+
+def get_projects_data() -> List[ProjectData]: 
+    url = f'{api_url}/api/annotation/projects_data/'
 
     data = {'user_token': api_token}
     response = requests.post(url, json=data)
 
     if response.status_code != 200:
-        raise MessageBoxException(response)
+        raise MessageBoxException(f"Unable to get projects data. {response.status_code}")
     
-    return response.json()["project_ids"]
+    projects = response.json()["projects"]
+
+    result = list()
+    for project in projects:
+        result.append(
+            ProjectData(
+                id=project["id"],
+                uid=project["uid"],
+                stage=getattr(AnnotationStage, project["annotation_stage"]),
+                mode=getattr(AnnotationMode, project["annotation_mode"])
+            )
+        )
+    return result
 
 
 def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, str]:

@@ -1,6 +1,6 @@
+from concurrent.futures import ThreadPoolExecutor
 import time
-import os
-import threading
+import traceback
 from typing import Callable
 from config import file_server_url, api_token
 import requests
@@ -24,18 +24,20 @@ class FileTransferClient(ProcessingProgressBar):
             self.processing_complete = processing_complete
 
         self.gui_close_event.clear()
-        download_thread = threading.Thread(target=download_file, args=(uid, file_name, save_path, update_progress, lambda: self.terminate_processing))
-        download_thread.start()
-
-        download_thread.join()  # Wait for the download thread to finish
-        if not os.path.isfile(save_path):
-            raise MessageBoxException(f"Unable to download file {uid}:{file_name}")
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(download_file, uid, file_name, save_path, update_progress, lambda: self.terminate_processing)
+            try:
+                result = future.result()  # This will raise any exceptions caught by the thread
+            except Exception as e:
+                raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {traceback.format_exc()}")
+            
+                
 
 
 def download_file(uid, file_name, save_path, update_callback: Callable = None, should_terminate: Callable = None):
     with requests.post(f"{file_server_url}/download/{uid}/{file_name}", headers={'Authorization': f'Bearer {api_token}'}, stream=True) as r:
         if r.status_code != 200:
-            return
+            raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {str(r.json())}")
         total_size_in_bytes = int(r.headers.get('content-length', 0))
         downloaded_size = 0
         start_time = time.time()

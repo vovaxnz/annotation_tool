@@ -1,10 +1,13 @@
 import os
 import time
-from typing import Tuple
+from typing import List, Tuple
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
+from api_requests import ProjectData, get_projects_data
+from get_labeling_app import complete_annotation, get_labeling_app
+from gui_utils import get_loading_window
 from import_annotations import overwrite_annotations
 from labeling import LabelingApp
 from tkinter import ttk
@@ -17,9 +20,9 @@ from config import templates_path
 
 
 class MainWindow(tk.Tk):
-    def __init__(self, app: LabelingApp):
+    def __init__(self):
         super().__init__()
-        self.title(f"Labeling Project {app.project_id}")
+        self.title(f"Annotation tool")
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         self.geometry(f"{screen_width}x{screen_height}+0+0")
@@ -31,45 +34,96 @@ class MainWindow(tk.Tk):
         # Use grid layout within the container
         self.container.grid_rowconfigure(0, weight=1)  # CanvasView row, make it expandable
         self.container.grid_columnconfigure(0, weight=1)  # Single column for simplicity
+        self.container.grid_rowconfigure(1, weight=0, minsize=40) # container for StatusBar
 
-        # Initialize CanvasView and StatusBar within the container
-        self.canvas_view = CanvasView(self.container, app)
-        self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
-        self.canvas_view.set_close_callback(self.destroy)
-
-        self.status_bar = StatusBar(self.container, app)
-        self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
-
-        # Ensure the StatusBar takes minimal vertical space
-        self.container.grid_rowconfigure(1, weight=0, minsize=40)
-
+        self.canvas_view = None
+        self.status_bar = None
+        
         # Create a menu bar
-        menu_bar = tk.Menu(self)
+        self.menu_bar = tk.Menu(self)
 
-        # Create a Project menu and add it to the menu bar
-        file_menu = tk.Menu(menu_bar, tearoff=0)
-        file_menu.add_command(label="Go to the first image", command=self.canvas_view.go_to_first_image)
-        file_menu.add_command(label="Complete the project", command=self.canvas_view.complete_project)
-        file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
-        menu_bar.add_cascade(label="Project", menu=file_menu)
+        # Create a menu and add it to the menu bar
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
 
-        # Create a Help menu and add it to the menu bar
-        help_menu = tk.Menu(menu_bar, tearoff=0)
-        help_menu.add_command(label="How to use this tool?", command=self.show_how)
-        help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
-        help_menu.add_command(label="Classes", command=self.show_classes)
-        help_menu.add_command(label="Review Labels", command=self.show_review_labels)
-        menu_bar.add_cascade(label="Help", menu=help_menu)
-
+        self.menu_bar.add_cascade(label="Project", menu=self.file_menu)
+        self.menu_bar.add_cascade(label="Help", menu=self.help_menu)
+        self.update_menu(initial=True)
+        
         # Attach the menu bar to the window
-        self.config(menu=menu_bar)
-
+        self.config(menu=self.menu_bar)
         
         self.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
+    def update_menu(self, initial=False):
+        # Clear existing menu items
+        self.file_menu.delete(0, 'end')
+        self.help_menu.delete(0, 'end')
+
+        # Add basic menu items
+        self.file_menu.add_command(label="Open", command=self.open_project)
+        self.file_menu.add_command(label="Settings", command=self.open_settings)
+        self.help_menu.add_command(label="How to use this tool?", command=self.show_how)
+        self.help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
+        self.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
+        
+        # Add dynamic items only after initial setup
+        if not initial:
+            self.file_menu.add_command(label="Go to the first image", command=self.canvas_view.go_to_first_image)
+            self.file_menu.add_command(label="Complete the project", command=self.complete_project)
+            self.file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
+            self.help_menu.add_command(label="Classes", command=self.show_classes)
+
+    def set_canvas(self, labeling_app: LabelingApp): 
+        self.canvas_view = CanvasView(self.container, root=self, app=labeling_app)
+        self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
+        self.canvas_view.set_close_callback(self.destroy)
+
+        self.status_bar = StatusBar(self.container, labeling_app)
+        self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
+
+    def remove_canvas(self):
+        if self.canvas_view is not None:
+            self.canvas_view.app.save_image()
+            self.canvas_view.app.save_state()
+            self.canvas_view.destroy()
+            self.canvas_view = None
+
+        if self.status_bar is not None:
+            self.status_bar.destroy()
+            self.status_bar = None 
+
+    def open_project(self):
+        loading_window = get_loading_window(text="Getting your active projects...", root=self)
+        projects_data = get_projects_data()
+        loading_window.destroy()
+        ps = ProjectSelector(projects_data, root=self)
+        project_data: ProjectData = ps.select()
+        if project_data is not None: 
+            if self.canvas_view is not None:
+                self.remove_canvas()
+            labeling_app = get_labeling_app(project_data, root=self)
+            self.set_canvas(labeling_app)
+            self.title(f"Labeling Project {project_data.id}")
+            self.update_menu()
+
+    def complete_project(self):
+        agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
+        if agree:
+            self.canvas_view.app.save_image()
+            self.canvas_view.app.save_state()
+            self.canvas_view.app.ready_for_export = True
+            complete_annotation(self.canvas_view.app, root=self)
+        self.remove_canvas()
+        self.title(f"Annotation tool")
+
+    def open_settings(self):
+        print("settings")
+
     def on_window_close(self):
-        self.canvas_view.app.save_image()
-        self.canvas_view.app.save_state()
+        if self.canvas_view is not None:
+            self.canvas_view.app.save_image()
+            self.canvas_view.app.save_state()
         self.destroy()
 
     def _show_html_window(self, title, html_content):
@@ -124,10 +178,12 @@ class MainWindow(tk.Tk):
 
 
 class CanvasView(tk.Canvas):
-    def __init__(self, parent, app: LabelingApp):
+    def __init__(self, parent, root: tk.Tk, app: LabelingApp):
         super().__init__(parent, bg="black")
 
         self.app = app
+
+        self.parent=root
 
         self.scale_factor = 1.0
         self.x0, self.y0 = 0, 0
@@ -290,21 +346,13 @@ class CanvasView(tk.Canvas):
     def overwrite_annotations(self):
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
         if agree:
-            root = get_loading_window(text="Downloading and overwriting annotations...")
+            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
             overwrite_annotations(self.app.project_id)
             self.app.load_image()
             root.destroy()
             self.update_frame = True
             self.update_canvas()
             messagebox.showinfo("Success", "The annotations have been overwritten")
-
-    def complete_project(self):
-        agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
-        if agree:
-            self.app.save_image()
-            self.app.save_state()
-            self.app.ready_for_export = True
-            self.close()
 
 
     def fit_image(self):
@@ -407,7 +455,6 @@ class CanvasView(tk.Canvas):
         return cropped
 
 
-
 class StatusBar(tk.Frame):
     def __init__(self, parent, app, **kw):
         super().__init__(parent, **kw)
@@ -423,69 +470,63 @@ class StatusBar(tk.Frame):
         self.processed_label = tk.Label(self, bd=1)
         self.progress_bar = ttk.Progressbar(self, orient="horizontal", mode="determinate")
         self.duration_label = tk.Label(self, bd=1)
+        
+        # Initialize labels and separators
+        self.initialize_labels_and_separators()
 
-        # Place each label in the grid
-        self.mode_label.grid(row=0, column=0, sticky='ew')
+        # Bind the resize event
+        self.bind("<Configure>", self.on_resize)
+
+        self.update_status()
+
+    def initialize_labels_and_separators(self):
+        # Place each label and the progress bar in the grid
+        self.mode_label.grid(row=0, column=0, sticky='ew', padx=15)
         sep1 = ttk.Separator(self, orient='vertical')
         sep1.grid(row=0, column=1, sticky='ns')
         
-        self.class_label.grid(row=0, column=2, sticky='ew')
+        self.class_label.grid(row=0, column=2, sticky='ew', padx=15)
         sep2 = ttk.Separator(self, orient='vertical')
         sep2.grid(row=0, column=3, sticky='ns')
         
-        self.trash_label.grid(row=0, column=4, sticky='ew')
+        self.trash_label.grid(row=0, column=4, sticky='ew', padx=15)
         sep3 = ttk.Separator(self, orient='vertical')
         sep3.grid(row=0, column=5, sticky='ns')
-
-        self.hidden_label.grid(row=0, column=6, sticky='ew')
-        sep3 = ttk.Separator(self, orient='vertical')
-        sep3.grid(row=0, column=7, sticky='ns')
         
-        self.img_id_label.grid(row=0, column=8, sticky='ew')
+        self.hidden_label.grid(row=0, column=6, sticky='ew', padx=15)
         sep4 = ttk.Separator(self, orient='vertical')
-        sep4.grid(row=0, column=9, sticky='ns')
+        sep4.grid(row=0, column=7, sticky='ns')
         
-        self.processed_label.grid(row=0, column=10, sticky='ew')
+        self.img_id_label.grid(row=0, column=8, sticky='ew', padx=15)
+        sep5 = ttk.Separator(self, orient='vertical')
+        sep5.grid(row=0, column=9, sticky='ns')
+        
+        self.speed_label.grid(row=0, column=10, sticky='ew', padx=15)
         sep6 = ttk.Separator(self, orient='vertical')
         sep6.grid(row=0, column=11, sticky='ns')
         
-        self.progress_bar.grid(row=0, column=12, sticky='ew')
+        self.processed_label.grid(row=0, column=12, sticky='ew', padx=15)
         sep7 = ttk.Separator(self, orient='vertical')
         sep7.grid(row=0, column=13, sticky='ns')
         
-        self.speed_label.grid(row=0, column=14, sticky='ew')
-        sep5 = ttk.Separator(self, orient='vertical')
-        sep5.grid(row=0, column=15, sticky='ns')
-        
-        self.duration_label.grid(row=0, column=16, sticky='ew')
+        self.progress_bar.grid(row=0, column=14, sticky='ew', padx=15)
+        self.columnconfigure(14, weight=1)  # Make progress bar expand
         sep8 = ttk.Separator(self, orient='vertical')
-        sep8.grid(row=0, column=17, sticky='ns')
+        sep8.grid(row=0, column=15, sticky='ns')
 
-        # Ensure the progress bar expands to fill available space 
-        self.columnconfigure(12, weight=1)
+        self.duration_label.grid(row=0, column=16, sticky='ew', padx=15)
+        sep9 = ttk.Separator(self, orient='vertical')
+        sep9.grid(row=0, column=17, sticky='ns')
 
-        # Apply font settings to labels
-        label_font = font.Font(family="Ubuntu Condensed", size=15)
-        self.mode_label.config(font=label_font)
-        self.class_label.config(font=label_font)
-        self.trash_label.config(font=label_font)
-        self.hidden_label.config(font=label_font)
-        self.img_id_label.config(font=label_font)
-        self.speed_label.config(font=label_font)
-        self.processed_label.config(font=label_font)
-        self.duration_label.config(font=label_font)
-
-        # Set padding around labels to prevent overflow
-        for col in range(0, 17):
-            self.grid_columnconfigure(col, pad=30)
-
-        # Sef fixed size
-        self.grid_columnconfigure(2, minsize=150)  # For class_label
-        self.grid_columnconfigure(4, minsize=120)  # For trash_label
-        self.grid_columnconfigure(6, minsize=120)  # For hidden_label
-        self.grid_columnconfigure(8, minsize=120)  # For img_id_label
-
-        self.update_status()
+    def on_resize(self, event):
+        # Calculate an appropriate font size based on the current width
+        new_font_size = max(8, min(15, int(self.winfo_width() / 130))) 
+        label_font = font.Font(family="Ubuntu Condensed", size=new_font_size)
+        
+        # Set the new font to all labels and progress bar
+        for widget in [self.mode_label, self.class_label, self.trash_label, self.hidden_label,
+                       self.img_id_label, self.speed_label, self.processed_label, self.duration_label]:
+            widget.config(font=label_font)
 
     def update_status(self):
         status_data = self.app.status_data 
@@ -516,43 +557,15 @@ class StatusBar(tk.Frame):
         self.after(30, self.update_status)
 
 
-def get_loading_window(text: str):
-    root = tk.Tk()
-    root.title("Loading")
-
-    # Set window size
-    window_width = 300
-    window_height = 100
-
-    # Get screen dimensions
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-
-    # Calculate x and y coordinates for the Tk root window
-    x = (screen_width/2) - (window_width/2)
-    y = (screen_height/2) - (window_height/2)
-
-    # Set the dimensions of the window and where it is placed
-    root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
-
-    # Create a label with text "Waiting" that is centered
-    label = tk.Label(root, text=text)
-    label.pack(expand=True)
-
-    # Start the tkinter main event loop in a non-blocking way
-    root.update_idletasks()
-    root.update()
-    return root
-
-
 class ProjectSelector:
-    def __init__(self, project_ids):
-        self.project_ids = project_ids
-        self.selected_project_id = None
+    def __init__(self, projects: List[ProjectData], root: tk.Tk):
+        self.projects = projects
+        self.selected_project = None
+        self.parent = root
 
     def select(self):
-        self.root = tk.Tk()
-        self.root.title("Start")
+        self.root = tk.Toplevel(self.parent)
+        self.root.title("Select Project")
 
         # Set window size
         window_width = 300
@@ -563,34 +576,54 @@ class ProjectSelector:
         screen_height = self.root.winfo_screenheight()
 
         # Calculate x and y coordinates for the Tk root window
-        x = (screen_width/2) - (window_width/2)
-        y = (screen_height/2) - (window_height/2)
+        x = (screen_width / 2) - (window_width / 2)
+        y = (screen_height / 2) - (window_height / 2)
 
         # Set the dimensions of the window and where it is placed
         self.root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
 
-        self.text = tk.Label(self.root, text="Select project id")
+        self.text = tk.Label(self.root, text="Select project")
         self.text.pack(pady=10)
 
-        if not self.project_ids:
+        # Create a canvas and a scrollbar
+        self.canvas = tk.Canvas(self.root, width=280, height=450)  # Adjusted size to fit within the window
+        self.scrollbar = tk.Scrollbar(self.root, orient='vertical', command=self.canvas.yview)
+        self.canvas.config(yscrollcommand=self.scrollbar.set)
+
+        self.scroll_frame = tk.Frame(self.canvas)
+        self.scroll_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(
+                scrollregion=self.canvas.bbox("all")
+            )
+        )
+
+        self.canvas.create_window((0, 0), window=self.scroll_frame, anchor="nw")
+
+        if not self.projects:
             self._display_no_projects_message()
         else:
             self._create_project_buttons()
 
-        self.root.mainloop()
-        return self.selected_project_id
+        self.canvas.pack(side='left', fill='both', expand=True)
+        self.scrollbar.pack(side='right', fill='y')
+
+        self.root.wait_window(self.root)
+
+        return self.selected_project
 
     def _create_project_buttons(self):
-        for id in self.project_ids:
-            button = tk.Button(self.root, text=str(id), command=lambda id=id: self._select_project(id))
-            button.pack(pady=5, padx=10, fill=tk.X)
+        for project in self.projects:
+            text = f"{project.id} ({project.mode.name}: {project.stage.name})"
+            button = tk.Button(self.scroll_frame, text=text, command=lambda project=project: self._select_project(project))
+            button.pack(pady=5, padx=15, fill='x')
 
     def _display_no_projects_message(self):
-        label = tk.Label(self.root, text="You don't have any projects")
+        label = tk.Label(self.scroll_frame, text="You don't have any projects")
         label.pack(pady=10)
-        ok_button = tk.Button(self.root, text="OK", command=self.root.destroy)
+        ok_button = tk.Button(self.scroll_frame, text="OK", command=self.root.destroy)
         ok_button.pack(pady=5)
 
-    def _select_project(self, id):
-        self.selected_project_id = id
+    def _select_project(self, project):
+        self.selected_project = project
         self.root.destroy()

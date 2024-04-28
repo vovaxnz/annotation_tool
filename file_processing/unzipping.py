@@ -1,7 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
 import os
+import traceback
 from typing import Callable
 import zipfile
-import threading
 from tqdm import tqdm
 import time
 from exceptions import MessageBoxException
@@ -26,20 +27,19 @@ class ArchiveUnzipper(ProcessingProgressBar):
             self.remaining_time = remaining_time
             self.processing_complete = processing_complete
 
-        self.gui_close_event.clear()
-        unzip_thread = threading.Thread(target=unzip_archive, args=(archive_path, output_dir, update_progress, lambda: self.terminate_processing))
-        unzip_thread.start()
-        self.setup_gui()
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(unzip_archive, archive_path, output_dir, update_progress, lambda: self.terminate_processing)
+            try:
+                result = future.result()  # This will raise any exceptions caught by the thread
+            except Exception as e:
+                raise MessageBoxException(f"The archive {archive_path} was not unzipped properly. Error: {traceback.format_exc()}")
 
-        unzip_thread.join()  # Wait for the unzip thread to finish
-        if not self.processing_complete:
-            raise MessageBoxException(f"The archive {archive_path} was not unzipped properly.")
 
 
 def unzip_archive(archive_path: str, output_dir: str, update_callback: Callable, should_terminate: Callable):
     os.makedirs(output_dir, exist_ok=True)
     if not os.path.isfile(archive_path):
-        return
+        raise FileNotFoundError(f"Archive not found {archive_path}")
     with zipfile.ZipFile(archive_path, 'r') as zip_ref:
         file_names = zip_ref.namelist()
         total_size = sum(zip_ref.getinfo(name).file_size for name in file_names)

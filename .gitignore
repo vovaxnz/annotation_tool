@@ -3,3 +3,4 @@ data
 temp*.py
 venv
 .env
+trash

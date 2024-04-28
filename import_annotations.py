@@ -6,7 +6,8 @@ from typing import Dict, List, Tuple
 
 from api_requests import get_project_data
 from enums import AnnotationStage, FigureType
-from file_transfer import FileTransferClient
+from exceptions import MessageBoxException
+from file_processing.file_transfer import download_file
 from models import KeypointGroup, Label, LabeledImage, BBox, Mask, ReviewLabel, Value
 from path_manager import PathManager
 from utils import open_json, save_json
@@ -198,27 +199,32 @@ def export_review(review_ann_path):
 
 def overwrite_annotations(project_id):
 
-    annotation_stage, annotation_mode, img_path, figures_ann_path, review_ann_path, meta_ann_path = get_project_data(project_id)
+    annotation_stage, annotation_mode, project_uid = get_project_data(project_id)
     
     pm = PathManager(project_id)
-    ftc = FileTransferClient()
 
-    ftc.download(
-        local_path=pm.figures_ann_path, 
-        remote_path=figures_ann_path,
-        show_progressbar=False
+    download_file(
+        uid=project_uid, 
+        file_name=os.path.basename(pm.figures_ann_path), 
+        save_path=pm.figures_ann_path, 
     )
     if annotation_stage is AnnotationStage.CORRECTION:
-        ftc.download(
-            local_path=pm.review_ann_path, 
-            remote_path=review_ann_path,
-            show_progressbar=False
+        download_file(
+            uid=project_uid, 
+            file_name=os.path.basename(pm.review_ann_path), 
+            save_path=pm.review_ann_path, 
         )
-    ftc.download(
-        local_path=pm.meta_ann_path, 
-        remote_path=meta_ann_path,
-        show_progressbar=False
+    download_file(
+        uid=project_uid, 
+        file_name=os.path.basename(pm.meta_ann_path), 
+        save_path=pm.meta_ann_path, 
     )
+
+    img_ann_number = len(open_json(pm.figures_ann_path))
+    img_number = len(os.listdir(pm.images_path))
+    if img_number != img_ann_number:
+        raise MessageBoxException(f"The project {project_id} has a different number of images and annotations. Re-lauch application to download again or, if that doesn't help, ask to fix the project")
+
 
     import_project(
         figures_ann_path=pm.figures_ann_path,

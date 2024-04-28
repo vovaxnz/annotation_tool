@@ -8,20 +8,19 @@ class PathManager():
     def __init__(self, project_id: int):
         self.project_name = str(project_id).zfill(5)
         os.makedirs(self.project_path, exist_ok=True)
-        os.makedirs(self.annotation_home_path, exist_ok=True)
+        os.makedirs(self.project_db_dir, exist_ok=True)
 
     @property
     def project_path(self):
-        return os.path.join(data_dir, self.project_name)
+        return os.path.join(data_dir, "data", self.project_name)
     
     @property
-    def annotation_home_path(self):
-        return os.path.join(os.path.expanduser("~"), ".annotation")
+    def project_db_dir(self):
+        return os.path.join(data_dir, "db", "projects")
 
     @property
     def db_path(self):
-        # Store db in home because transactions are processed 10x faster on ssd.
-        return os.path.join("sqlite:////", self.annotation_home_path.lstrip("/"), f"{self.project_name}.sqlite")
+        return os.path.join("sqlite:////", self.project_db_dir.lstrip("/"), f"{self.project_name}.sqlite")
     
     @property
     def figures_ann_path(self):

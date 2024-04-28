@@ -5,20 +5,28 @@ from tkinter import ttk
 
 
 class ProcessingProgressBar:
-    def __init__(self, window_title: str):
+    def __init__(self, window_title: str, root: tk.Tk):
         self.gui_close_event = threading.Event() # signal the GUI to close
-        self.terminate_processing = False  # Flag to signal the download thread to stop
-        self.processing_complete = False  # Flag to signal that the download has completed
+        self.terminate_processing = False  # Flag to signal the processing thread to stop
+        self.processing_complete = False  # Flag to signal that the processing has completed
         self.window_title: str = window_title
 
-    def setup_gui(self):
+        self.processed_percent = 0
+        self.processed_gb = 0
+        self.speed = 0
+        self.remaining_time = 0
+        self.processing_complete = False
+
+        self.setup_gui(root=root)
+
+    def setup_gui(self, root: tk.Tk):
         def check_close():
             if self.gui_close_event.is_set():
                 self.root.destroy()
             else:
                 self.root.after(100, check_close)
         
-        self.root = tk.Tk()
+        self.root = tk.Toplevel(root)
         self.root.title(self.window_title)
         
         # Set window size
@@ -66,7 +74,6 @@ class ProcessingProgressBar:
         self.root.after(100, self.update_progress_bar)
         self.root.after(100, check_close)
 
-        self.root.mainloop()
 
     def on_window_close(self):
         self.terminate_processing = True  # Signal the download thread to stop
