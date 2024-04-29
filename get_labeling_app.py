@@ -21,21 +21,18 @@ def get_labeling_app(projects_data: ProjectData, root: tk.Tk) -> LabelingApp:
     annotation_stage, annotation_mode, project_uid, project_id = projects_data.stage, projects_data.mode, projects_data.uid, projects_data.id
     pm = PathManager(projects_data.id)
     if not os.path.isfile(pm.meta_ann_path):
-        print("downloading pm.meta_ann_path")
         download_file(
             uid=project_uid, 
             file_name=os.path.basename(pm.meta_ann_path), 
             save_path=pm.meta_ann_path, 
         )
     if not os.path.isfile(pm.figures_ann_path):
-        print("downloading pm.figures_ann_path")
         download_file(
             uid=project_uid, 
             file_name=os.path.basename(pm.figures_ann_path), 
             save_path=pm.figures_ann_path, 
         )
     if annotation_stage is AnnotationStage.CORRECTION and not os.path.isfile(pm.review_ann_path):
-        print("downloading pm.review_ann_path")
         download_file(
             uid=project_uid, 
             file_name=os.path.basename(pm.review_ann_path), 
@@ -51,7 +48,6 @@ def get_labeling_app(projects_data: ProjectData, root: tk.Tk) -> LabelingApp:
     loading_window.destroy()
     if not os.path.isdir(pm.images_path) or img_number != img_ann_number:
         ftc = FileTransferClient(window_title="Downloading progress", root=root)
-        print("starting download")
         ftc.download(
             uid=project_uid, 
             file_name=os.path.basename(pm.archive_path), 

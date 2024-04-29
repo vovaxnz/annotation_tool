@@ -66,7 +66,6 @@ class Value(Base):
     
     @classmethod
     def get_value(cls, name) -> Optional[str]:
-        print("get value", name)
         row = cls.get(name=name)
         if row is not None:
             return row.value
@@ -76,7 +75,6 @@ class Value(Base):
         self.value = value
 
     def save(self):
-        print("save value", self.name)
         session = get_session()
         session.add(self)
         session.commit()
@@ -110,12 +108,10 @@ class Label(Base):
     
     @classmethod
     def get(cls, name: str, figure_type: str):
-        print("get label")
         session = get_session()
         return session.query(cls).filter(cls.name == name, cls.type == figure_type).first()
     
     def save(self):
-        print("save label")
         session = get_session()
         session.add(self)
         session.commit()
@@ -226,8 +222,7 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
         return 1
 
     @classmethod
-    def all(cls) -> List["ReviewLabel"]:
-        print("get review label")   
+    def all(cls) -> List["ReviewLabel"]: 
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
@@ -236,7 +231,6 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
         return inspect(self)
     
     def save(self):
-        print("save review label")   
         session = get_session()
         session.add(self)
         session.commit()
@@ -245,7 +239,6 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
         self.point_number = 0
         
     def delete(self):
-        print("delete review label")   
         if not self.state.persistent:
             return 
         session = get_session()
@@ -596,7 +589,6 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
         return inspect(self)
 
     def save(self):
-        print("save bbox") 
         session = get_session()
         session.add(self)
         session.commit()
@@ -605,7 +597,6 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
         self.point_number = 0
 
     def delete(self):
-        print("delete bbox") 
         if not self.state.persistent:
             return 
         session = get_session()
@@ -760,7 +751,6 @@ class Mask(Base):
         return inspect(self)
 
     def save(self):
-        print("save mask") 
         session = get_session()
         session.add(self)
         session.commit()
@@ -769,7 +759,6 @@ class Mask(Base):
         pass
 
     def delete(self):
-        print("delete mask") 
         if not self.state.persistent:
             return 
         session = get_session()
@@ -817,13 +806,11 @@ class LabeledImage(Base):
 
     @classmethod
     def get(cls, name):
-        print("get image") 
         session = get_session()
         return session.query(cls).filter(cls.name == name).first()
 
     @classmethod
     def all(cls) -> List["LabeledImage"]:
-        print("get all images") 
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
@@ -833,21 +820,18 @@ class LabeledImage(Base):
         self.width = width
 
     def save(self):
-        print("save image") 
         session = get_session()
         session.add(self)
         session.commit()
     
     @classmethod
     def save_batch(cls, limages: List["LabeledImage"]):
-        print("get image batch") 
         session = get_session()
         for limage in limages:
             session.add(limage)
         session.commit()
 
     def delete(self):
-        print("delete image") 
         session = get_session()
         for bbox in self.bboxes:
             session.delete(bbox)

@@ -106,10 +106,8 @@ def import_project(
         image = LabeledImage.get(name=img_name)
         if image is not None:
             if overwrite:
-                print("LabeledImage", img_name, "is already in the database, overwriting")
                 image.delete()
             else:
-                print("LabeledImage", img_name, "is already in the database, skipping")
                 continue
 
         img = LabeledImage(name=img_name, height=height, width=width)

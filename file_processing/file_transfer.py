@@ -80,13 +80,12 @@ def upload_file(uid, file_path):
     # Close the file to prevent resource leakage
     files['file'].close()
 
-    if response.status_code == 200:
-        print(response.json())
-    else:
+    if response.status_code != 200:
         try:
-            print(response.json())
+            error_message = f"Status code: {response.status_code}, {response.json()}"
         except ValueError:
-            print(f"Error: Server responded with status code {response.status_code}")
+            error_message = f"Status code: {response.status_code}"
+        raise MessageBoxException(f"Error: Server responded with {error_message} while uploading {file_path}")
 
 
 if __name__ == "__main__":
