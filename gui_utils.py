@@ -73,3 +73,44 @@ class SettingsManager:
             settings.data[key] = entry.get()
         settings.save_settings()
         self.root.destroy()
+
+
+class ImageIdForm:
+    def __init__(self, root: tk.Tk = None, max_id: int = None):
+        self.root = tk.Toplevel(root)
+        self.root.title("Enter image ID")
+        self.max_id = max_id  # Store the maximum ID allowed
+        
+        ttk.Label(self.root, text="Image ID:").grid(row=0, column=0, padx=20, pady=10)
+
+        # Validation command setup
+        vcmd = (self.root.register(self.validate_input), '%P')  # %P passes the value of the entry if the edit is allowed
+
+        self.entry = ttk.Entry(self.root, width=40, validate='key', validatecommand=vcmd)
+        self.entry.grid(row=0, column=1, padx=20, pady=10)
+
+        save_button = ttk.Button(self.root, text="Go", command=self.on_save)
+        save_button.grid(row=1, column=0, columnspan=2, sticky=tk.W+tk.E, padx=20, pady=10)
+
+        self.image_id = None
+
+    def on_save(self):
+        if self.entry.get():
+            self.image_id = int(self.entry.get())  # Convert to int since we know it's a valid integer
+        self.root.destroy()
+
+    def validate_input(self, value_if_allowed):
+        if value_if_allowed == "":
+            return True  # Allow clearing the entry field
+        try:
+            value = int(value_if_allowed)
+            if 0 < value <= self.max_id:
+                return True  # Return True if the value is an integer and less than max_id
+            else:
+                return False  # Return False if the value exceeds max_id
+        except ValueError:
+            return False  # Return False if the value_if_allowed is not an integer
+
+    def get_image_id(self):
+        self.root.wait_window()
+        return self.image_id

@@ -7,7 +7,7 @@ from PIL import Image, ImageTk
 import tkinter as tk
 from api_requests import ProjectData, get_projects_data
 from get_labeling_app import complete_annotation, get_labeling_app
-from gui_utils import SettingsManager, get_loading_window
+from gui_utils import ImageIdForm, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
 from labeling import LabelingApp
 from tkinter import ttk
@@ -68,7 +68,7 @@ class MainWindow(tk.Tk):
         
         # Add dynamic items only after initial setup
         if not initial:
-            self.file_menu.add_command(label="Go to the first image", command=self.canvas_view.go_to_first_image)
+            self.file_menu.add_command(label="Go to image", command=self.go_to_image_id) 
             self.file_menu.add_command(label="Complete the project", command=self.complete_project)
             self.file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
             self.help_menu.add_command(label="Classes", command=self.show_classes)
@@ -121,6 +121,11 @@ class MainWindow(tk.Tk):
     def open_settings(self):
         SettingsManager(root=self)
         
+    def go_to_image_id(self):
+        form = ImageIdForm(root=self, max_id=len(self.canvas_view.app.img_names))
+        img_id = form.get_image_id()
+        self.canvas_view.app.go_to_image_by_id(img_id - 1)
+        self.canvas_view.update_frame = True
 
     def on_window_close(self):
         if self.canvas_view is not None:
@@ -356,9 +361,6 @@ class CanvasView(tk.Canvas):
         self.app.update_time_counter()
         self.update_frame = True
         
-    def go_to_first_image(self):
-        self.app.go_to_first_image()
-        self.update_frame = True
 
     def overwrite_annotations(self):
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")

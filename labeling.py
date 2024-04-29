@@ -244,11 +244,12 @@ class LabelingApp(ABC):
         self.load_image()
         self.save_state()
 
-    def go_to_first_image(self):
+    def go_to_image_by_id(self, img_id: int):
+        assert img_id < len(self.img_names)
         self.save_image()
         self.controller.clear_history()
         self.processed_img_ids.add(self.img_id)
-        self.img_id = 0
+        self.img_id = img_id
         self.load_image()
         self.save_state()
 
