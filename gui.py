@@ -217,7 +217,8 @@ class CanvasView(tk.Canvas):
 
         self.focus_set() # Set focus to the canvas to receive keyboard events 
 
-        self.bind("<Key>", self.handle_key_press)  # Bind all key press events to handle_key_press
+        self.bind("<Key>", self.handle_key_press)
+        # self.bind("<KeyRelease>", self.handle_key_release) 
 
         self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
@@ -234,6 +235,12 @@ class CanvasView(tk.Canvas):
         self.bind("<Shift_L>", self.on_shift_press)
         self.bind("<Shift_R>", self.on_shift_press)
 
+        # Use timing mechanism to monitor if "A" key is held down
+        self.last_a_press_time = 0
+        self.a_held_down = False
+        self.keyboard_events_interval = 0.5 
+        self.bind("<KeyPress-a>", self.handle_key_a_press)
+        self.bind("<KeyRelease-a>", self.handle_key_a_release)
 
         self.close_callback = None
 
@@ -310,6 +317,26 @@ class CanvasView(tk.Canvas):
     def on_resize(self, event):
         self.update_canvas()
         self.fit_image()
+
+    def handle_key_a_press(self, event: tk.Event):
+        self.last_a_press_time = time.time()
+        if not self.a_held_down:
+
+            self.app.start_selecting_class()
+            self.update_frame = True
+            self.app.update_time_counter()
+
+            self.a_held_down = True
+            
+    def handle_key_a_release(self, event: tk.Event):
+        self.after(150, self.check_key_a_pressed)
+
+    def check_key_a_pressed(self):
+        if time.time() - self.last_a_press_time > 0.15:
+            self.app.end_selecting_class()
+            self.update_frame = True
+            self.a_held_down = False
+
 
     def handle_key_press(self, event: tk.Event):
         

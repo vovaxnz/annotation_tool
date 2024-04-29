@@ -12,6 +12,7 @@ import numpy as np
 import cv2
 
 from controller import ControllerByMode, ObjectFigureController
+from drawing import create_class_selection_wheel, get_selected_sector_id
 from enums import AnnotationMode, AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from models import Figure, Label, LabeledImage, ReviewLabel, Value
@@ -69,6 +70,7 @@ class LabelingApp(ABC):
         self.scale_factor = 1
         self.image_changed = False
         self.ready_for_export = False
+        self.selecting_class = False
 
         if annotation_stage is AnnotationStage.REVIEW:
             labels = Label.get_review_labels()
@@ -76,6 +78,7 @@ class LabelingApp(ABC):
             labels = Label.get_figure_labels()
 
         self.labels_by_hotkey: Dict[str, Label] = {label.hotkey: label for label in labels}
+        self.available_labels = list(labels)
         
         self.labels: Dict[str, Dict[str, Label]] = defaultdict(dict)
         for label in Label.all():
@@ -148,6 +151,17 @@ class LabelingApp(ABC):
                 elements_scale_factor=self.scale_factor, 
                 show_label_names=False,
                 label=self.labels[figure.figure_type][figure.label]
+            )
+        
+        if self.selecting_class and self.controller.label_wheel_xc is not None and self.controller.label_wheel_yc is not None:
+            self.canvas = create_class_selection_wheel(
+                img=self.canvas,
+                classes=[label.name if label.type != FigureType.KGROUP.name else f"{label.name}"+":"+f"{label.type}" for label in self.available_labels],
+                colors=[label.color_bgr for label in self.available_labels],
+                center_x=self.controller.label_wheel_xc, 
+                center_y=self.controller.label_wheel_yc, 
+                edge_x=self.controller.cursor_x, 
+                edge_y=self.controller.cursor_y
             )
 
     def load_image(self):
@@ -277,6 +291,24 @@ class LabelingApp(ABC):
             self.controller.change_label(label)
             self.image_changed = True
 
+    def start_selecting_class(self):
+        if not self.selecting_class:
+            self.controller.update_label_wheel_coordinates()
+            self.selecting_class = True
+
+    def end_selecting_class(self):
+        if self.selecting_class:
+            label_id = get_selected_sector_id(
+                n_classes=len(self.available_labels), 
+                center_x=self.controller.label_wheel_xc, 
+                center_y=self.controller.label_wheel_yc, 
+                edge_x=self.controller.cursor_x, 
+                edge_y=self.controller.cursor_y
+            )
+            self.controller.change_label(self.available_labels[label_id])
+            self.image_changed = True
+            self.selecting_class = False
+        
     def delete_command(self):
         if self.hide_figures: return 
         self.controller.delete_command()
@@ -292,7 +324,10 @@ class LabelingApp(ABC):
         self.image_changed = True
 
     def handle_mouse_hover(self, x: int, y: int):
-        self.controller.handle_mouse_hover(x, y)
+        if self.selecting_class:
+            self.controller.cursor_x, self.controller.cursor_y = x, y
+        else:
+            self.controller.handle_mouse_hover(x, y)
 
     def handle_left_mouse_release(self, x: int, y: int):
         if self.hide_figures: return

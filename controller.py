@@ -39,6 +39,7 @@ class FigureController(ABC):
         self.shift_mode = False
         self.history: HistoryBuffer = HistoryBuffer(length=10)
         self.copied_serialized_figure: Dict = None
+        self.label_wheel_xc, self.label_wheel_yc = None, None
 
     def take_snapshot(self):
         self.history.add(
@@ -67,6 +68,9 @@ class FigureController(ABC):
         if serialized is None:
             return 
         self.update_figures_from_serialized(serialized)
+
+    def update_label_wheel_coordinates(self):
+        self.label_wheel_xc, self.label_wheel_yc = self.cursor_x, self.cursor_y
 
     @abstractmethod
     def copy(self):
