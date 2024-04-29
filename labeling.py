@@ -270,16 +270,19 @@ class LabelingApp(ABC):
         self.hide_review_labels = not self.hide_review_labels
 
     def change_label(self, label_hotkey: int):
+        if self.hide_figures: return              
         label = self.labels_by_hotkey.get(label_hotkey)
         if label is not None:
             self.controller.change_label(label)
             self.image_changed = True
 
     def delete_command(self):
+        if self.hide_figures: return 
         self.controller.delete_command()
         self.image_changed = True
 
     def handle_left_mouse_press(self, x: int, y: int):
+        if self.hide_figures: return
         self.controller.handle_left_mouse_press(x, y)
         self.image_changed = True
 
@@ -291,6 +294,7 @@ class LabelingApp(ABC):
         self.controller.handle_mouse_hover(x, y)
 
     def handle_left_mouse_release(self, x: int, y: int):
+        if self.hide_figures: return
         self.controller.handle_left_mouse_release(x, y)
 
     def handle_space(self):
@@ -303,14 +307,18 @@ class LabelingApp(ABC):
         self.controller.shift_mode = not self.controller.shift_mode
     
     def redo(self):
+        if self.hide_figures: return
         self.controller.redo()
 
     def undo(self):
+        if self.hide_figures: return
         self.controller.undo()
     
     def copy(self):
+        if self.hide_figures: return
         self.controller.copy()
 
     def paste(self):
+        if self.hide_figures: return
         self.controller.paste()
         self.image_changed = True
