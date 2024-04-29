@@ -316,6 +316,10 @@ class CanvasView(tk.Canvas):
                 self.app.undo()
             elif event.keysym.lower() == 'y':
                 self.app.redo()
+            elif event.keysym.lower() == 'c':
+                self.app.copy()
+            elif event.keysym.lower() == 'v':
+                self.app.paste()
 
             self.update_frame = True
             self.app.update_time_counter()
@@ -331,8 +335,6 @@ class CanvasView(tk.Canvas):
             self.app.change_label(event.char)
         elif event.char.lower() == "d":
             self.app.delete_command()
-        elif event.char.lower() == "c":
-            self.app.copy_figures_from_previous_image()
         elif event.char.lower() == "f":
             self.fit_image()
         elif event.char.lower() == "t":

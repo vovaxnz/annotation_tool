@@ -42,8 +42,6 @@ class HistoryBuffer:
             if self.position > 0:
                 self.position -= 1
             return result
-        else:
-            return self.history[self.position]
     
     def get_next(self):
         if len(self.history) == 0:
@@ -53,8 +51,6 @@ class HistoryBuffer:
             if self.position < self.length:
                 self.position += 1
             return result
-        else:
-            return self.history[self.position]
     
     def clear(self):
         self.history = list()

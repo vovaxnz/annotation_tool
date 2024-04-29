@@ -269,19 +269,6 @@ class LabelingApp(ABC):
     def switch_hiding_review_labels(self):
         self.hide_review_labels = not self.hide_review_labels
 
-    def copy_figures_from_previous_image(self):
-        if self.img_id > 0:
-            prev_image = LabeledImage.get(name=self.img_names[self.img_id - 1])
-
-            self.labeled_image.kgroups =  [kgroup.copy() for kgroup in prev_image.kgroups]
-            self.labeled_image.bboxes = [bbox.copy() for bbox in prev_image.bboxes]
-            self.labeled_image.masks = [mask.copy() for mask in prev_image.masks]
-
-            self.labeled_image.save()
-        self.load_image()
-        self.image_changed = True
-
-
     def change_label(self, label_hotkey: int):
         label = self.labels_by_hotkey.get(label_hotkey)
         if label is not None:
@@ -320,3 +307,10 @@ class LabelingApp(ABC):
 
     def undo(self):
         self.controller.undo()
+    
+    def copy(self):
+        self.controller.copy()
+
+    def paste(self):
+        self.controller.paste()
+        self.image_changed = True

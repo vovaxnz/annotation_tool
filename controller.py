@@ -38,6 +38,7 @@ class FigureController(ABC):
         self.img_height, self.img_width = None, None
         self.shift_mode = False
         self.history: HistoryBuffer = HistoryBuffer(length=10)
+        self.copied_serialized_figure: Dict = None
 
     def take_snapshot(self):
         self.history.add(
@@ -66,6 +67,14 @@ class FigureController(ABC):
         if serialized is None:
             return 
         self.update_figures_from_serialized(serialized)
+
+    @abstractmethod
+    def copy(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def paste(self):
+        raise NotImplementedError
 
     @abstractmethod
     def handle_mouse_move(self, x: int, y: int):
@@ -119,6 +128,20 @@ class ObjectFigureController(FigureController):
         self.start_point = None
         self.mode = Mode.IDLE
         self.update_selection(self.cursor_x, self.cursor_y)
+
+    def copy(self):
+        if self.selected_figure_id is not None:
+            self.copied_serialized_figure = {
+                "kwargs": self.figures[self.selected_figure_id].serialize(), 
+                "type": type(self.figures[self.selected_figure_id])
+            }
+        
+    def paste(self):
+        if self.copied_serialized_figure is not None:
+            fig_type = self.copied_serialized_figure["type"]
+            fig_kwargs = self.copied_serialized_figure["kwargs"]
+            self.figures.append(fig_type(**fig_kwargs))
+            self.take_snapshot()
 
     @property
     def current_figure_type(self) -> Figure:
@@ -256,6 +279,20 @@ class MaskFigureController(FigureController):
         super().redo()
         self.mode = Mode.IDLE
         self.polygon = list()
+
+    def copy(self):
+        self.copied_serialized_figure = {
+            "kwargs": self.figures_dict[self.active_label.name].serialize(), 
+            "type": type(self.figures_dict[self.active_label.name])
+        }
+        
+    def paste(self):
+        if self.copied_serialized_figure is not None:
+            fig_type = self.copied_serialized_figure["type"]
+            fig_kwargs = self.copied_serialized_figure["kwargs"]
+            label = fig_kwargs["label"]
+            self.figures_dict[label] = fig_type(**fig_kwargs)
+            self.take_snapshot()
 
     @property
     def figures(self) -> List[Figure]:
