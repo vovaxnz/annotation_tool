@@ -180,11 +180,15 @@ class Figure(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "Figure" = None):
+    def embed_to_bbox(self, start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "Figure" = None):
         raise NotImplementedError
 
     @abstractmethod
-    def contains_point(point: Point) -> bool:
+    def contains_point(self, point: Point) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
+    def serialize(self) -> Dict:
         raise NotImplementedError
 
 
@@ -350,6 +354,9 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
         cv2.putText(canvas, label.name, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 1, text_color, 2, cv2.LINE_AA)
 
         return canvas
+
+    def serialize(self) -> Dict:
+        return {"x": self.x, "y": self.y, "label": self.label}
 
 
 class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figure
@@ -540,6 +547,10 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
     def contains_point(self, point: Point) -> bool:
         return False
 
+    def serialize(self) -> Dict:
+        self.keypoints_data = self.serialize_keypoints(self.keypoints)
+        return {"keypoints_data": self.keypoints_data, "label": self.label}
+
 
 class BBox(Base): # TODO: Find how to inherit this class from the Figure
     __tablename__ = 'bbox'
@@ -702,6 +713,9 @@ class BBox(Base): # TODO: Find how to inherit this class from the Figure
                 figure.label=label.name
             return figure
 
+    def serialize(self) -> Dict:
+        return {"x1": self.x1, "y1": self.y1, "x2": self.x2, "y2": self.y2, "label": self.label}
+
 
 class Mask(Base):
     __tablename__ = 'mask'
@@ -782,6 +796,9 @@ class Mask(Base):
         canvas_copy[:, :, :3][self.mask > 0] = [b2, g2, r2]
         canvas = cv2.addWeighted(canvas_copy, 0.4, canvas, 0.6, 0)
         return canvas
+
+    def serialize(self) -> Dict:
+        return {"label": self.label, "rle": self.rle, "height": self.height, "width": self.width}
 
 
 class LabeledImage(Base):

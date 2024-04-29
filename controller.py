@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
 import json
+import random
 
 import cv2
 import numpy as np
@@ -13,6 +14,8 @@ from models import Figure, Label, Mask, Point, ReviewLabel, Value, FigureTypes
 
 
 from typing import Dict, List, Optional, Tuple
+
+from utils import HistoryBuffer
 
 
 class Mode(Enum):
@@ -34,7 +37,35 @@ class FigureController(ABC):
         self.figures: List[Figure] = list()
         self.img_height, self.img_width = None, None
         self.shift_mode = False
-        
+        self.history: HistoryBuffer = HistoryBuffer(length=10)
+
+    def take_snapshot(self):
+        self.history.add(
+            [
+                {"kwargs": figure.serialize(), "type": type(figure)}
+                for figure in self.figures
+            ]
+        )
+
+    def clear_history(self):
+        self.history.clear()
+
+    def update_figures_from_serialized(self, serialized):
+        for figure in self.figures:
+            figure.delete()
+        self.figures = [value["type"](**value["kwargs"]) for value in serialized]
+
+    def undo(self):
+        serialized = self.history.get_previous()
+        if serialized is None:
+            return 
+        self.update_figures_from_serialized(serialized)
+
+    def redo(self):
+        serialized = self.history.get_next()
+        if serialized is None:
+            return 
+        self.update_figures_from_serialized(serialized)
 
     @abstractmethod
     def handle_mouse_move(self, x: int, y: int):
@@ -73,19 +104,22 @@ class FigureController(ABC):
         raise NotImplementedError
 
 
-class ObjectFigureController:
+class ObjectFigureController(FigureController):
 
-    def __init__(self, active_label: Label):
-        self.start_point: Optional[Tuple[int, int]] = None
-        self.preview_figure: Figure = None
-        self.selected_figure_id = None
+    def undo(self):
+        super().undo()
+        self.preview_figure = None
+        self.start_point = None
         self.mode = Mode.IDLE
-        self.active_label: Label = active_label
-        self.cursor_x, self.cursor_y = 0, 0
-        self.figures: List[Figure] = list()
-        self.img_height, self.img_width = None, None
-        self.shift_mode = False
-        
+        self.update_selection(self.cursor_x, self.cursor_y)
+
+    def redo(self):
+        super().redo()
+        self.preview_figure = None
+        self.start_point = None
+        self.mode = Mode.IDLE
+        self.update_selection(self.cursor_x, self.cursor_y)
+
     @property
     def current_figure_type(self) -> Figure:
         return FigureTypes[FigureType[self.active_label.type]]
@@ -135,6 +169,7 @@ class ObjectFigureController:
     def handle_left_mouse_release(self, x: int, y: int):
         if self.mode is Mode.MOVING:
             self.mode = Mode.IDLE
+            self.take_snapshot()
         self.update_selection(x, y)
 
     def handle_left_mouse_press(self, x: int, y: int):
@@ -158,6 +193,7 @@ class ObjectFigureController:
                 self.start_point = None
                 self.mode = Mode.IDLE
                 self.update_selection(x, y)
+                self.take_snapshot()
 
     def handle_mouse_hover(self, x: int, y: int):
         if self.mode is Mode.CREATE:
@@ -174,13 +210,15 @@ class ObjectFigureController:
                 figure.delete()
                 self.figures.pop(self.selected_figure_id)
                 self.selected_figure_id, near_point_id = self.get_selected_figure_id_and_point_id(self.cursor_x, self.cursor_y)
-            
+            self.take_snapshot()
+        
     def change_label(self, label: Label):
         self.active_label = label
         if self.selected_figure_id is not None:
             fig: Figure = self.figures[self.selected_figure_id]
             if fig.figure_type == label.type:
                 fig.label = self.active_label.name
+            self.take_snapshot()
 
     def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
 
@@ -199,20 +237,25 @@ class ObjectFigureController:
     def handle_esc(self):
         pass
 
+
 class MaskFigureController(FigureController):
 
     def __init__(self, active_label: Label):
+        super().__init__(active_label)
+
         self.adding_mask = True
-        self.start_point: Optional[Tuple[int, int]] = None
-        self.preview_figure: Figure = None
-        self.selected_figure_id = None
-        self.mode = Mode.IDLE
-        self.active_label: Label = active_label
-        self.cursor_x, self.cursor_y = 0, 0
         self.figures_dict = dict()
-        self.img_height, self.img_width = None, None
-        self.shift_mode = False
         self.lock_distance = 4
+
+    def undo(self):
+        super().undo()
+        self.mode = Mode.IDLE
+        self.polygon = list()
+
+    def redo(self):
+        super().redo()
+        self.mode = Mode.IDLE
+        self.polygon = list()
 
     @property
     def figures(self) -> List[Figure]:
@@ -284,6 +327,8 @@ class MaskFigureController(FigureController):
         # Update figure rle
         figure.encode_mask()
 
+        self.take_snapshot()
+
     def handle_space(self):
         if self.mode is Mode.CREATE:
             self.edit_mask(adding=self.addition_mode)
@@ -304,6 +349,7 @@ class MaskFigureController(FigureController):
             height=self.img_height,
             width=self.img_width,
         )
+        self.take_snapshot()
 
     def change_label(self, label: Label):
         self.active_label = label

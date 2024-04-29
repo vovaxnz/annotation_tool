@@ -99,7 +99,12 @@ def complete_annotation(labeling_app: LabelingApp, root: tk.Tk):
             upload_file(labeling_app.project_uid, pm.review_ann_path)
         complete_task(project_id=project_id, duration_hours=labeling_app.duration_hours)
         Value.update_value("img_id", 0, overwrite=False)
-        if os.path.isdir(pm.images_path):
-            shutil.rmtree(pm.images_path)
+
+        if labeling_app.annotation_stage == AnnotationStage.CORRECTION:
+            if os.path.isdir(pm.project_path):
+                shutil.rmtree(pm.project_path)
+            if os.path.isfile(pm.db_local_path):
+                os.remove(pm.db_local_path)
+        
         messagebox.showinfo("Success", "Project completed")
         loading_window.destroy()

@@ -169,6 +169,7 @@ class LabelingApp(ABC):
         self.labeled_image.width = w
     
         self.is_trash = self.labeled_image.trash
+        self.controller.take_snapshot()
 
     def save_image(self):
         if self.image_changed:
@@ -227,6 +228,7 @@ class LabelingApp(ABC):
 
     def forward(self):
         self.save_image()
+        self.controller.clear_history()
         self.processed_img_ids.add(self.img_id)
         if self.img_id < len(self.img_names) - 1:
             self.img_id += 1
@@ -235,6 +237,7 @@ class LabelingApp(ABC):
         
     def backward(self):
         self.save_image()
+        self.controller.clear_history()
         self.processed_img_ids.add(self.img_id)
         if self.img_id > 0:
             self.img_id -= 1
@@ -243,6 +246,7 @@ class LabelingApp(ABC):
 
     def go_to_first_image(self):
         self.save_image()
+        self.controller.clear_history()
         self.processed_img_ids.add(self.img_id)
         self.img_id = 0
         self.load_image()
@@ -311,3 +315,8 @@ class LabelingApp(ABC):
     def on_shift_press(self):
         self.controller.shift_mode = not self.controller.shift_mode
     
+    def redo(self):
+        self.controller.redo()
+
+    def undo(self):
+        self.controller.undo()

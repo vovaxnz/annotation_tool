@@ -65,7 +65,6 @@ class MainWindow(tk.Tk):
         self.file_menu.add_command(label="Settings", command=self.open_settings)
         self.help_menu.add_command(label="How to use this tool?", command=self.show_how)
         self.help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
-        self.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
         
         # Add dynamic items only after initial setup
         if not initial:
@@ -73,6 +72,7 @@ class MainWindow(tk.Tk):
             self.file_menu.add_command(label="Complete the project", command=self.complete_project)
             self.file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
             self.help_menu.add_command(label="Classes", command=self.show_classes)
+            self.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
 
     def set_canvas(self, labeling_app: LabelingApp): 
         self.canvas_view = CanvasView(self.container, root=self, app=labeling_app)
@@ -115,6 +115,7 @@ class MainWindow(tk.Tk):
             self.canvas_view.app.ready_for_export = True
             complete_annotation(self.canvas_view.app, root=self)
         self.remove_canvas()
+        self.update_menu(initial=True)
         self.title(f"Annotation tool")
 
     def open_settings(self):
@@ -306,13 +307,26 @@ class CanvasView(tk.Canvas):
         self.fit_image()
 
     def handle_key_press(self, event: tk.Event):
+        
+        ctrl_pressed = (event.state & 0x0004) != 0  # Control key mask
+        cmd_pressed = (event.state & 0x0100) != 0  # Command key (macOS) mask
 
+        if ctrl_pressed or cmd_pressed:  # Check if Ctrl or Command key is down
+            if event.keysym.lower() == 'z':
+                self.app.undo()
+            elif event.keysym.lower() == 'y':
+                self.app.redo()
+
+            self.update_frame = True
+            self.app.update_time_counter()
+            return
+    
         current_time = time.time()
         if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= 0.2:
             self.last_key_press_time = current_time # Prevent too frequent key press
         else:
             return
-        
+
         if event.char.isdigit(): 
             self.app.change_label(event.char)
         elif event.char.lower() == "d":
