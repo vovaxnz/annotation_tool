@@ -2,7 +2,6 @@ import os
 from exceptions import MessageBoxException
 from gui import MainWindow
 from gui_utils import SettingsManager
-from trash.app import Application
 from config import settings
 
 
