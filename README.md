@@ -1,5 +1,7 @@
 # Install 
 
+## For Linux
+
 Run `bash install.sh` and follow instructions
 
 # Usage
