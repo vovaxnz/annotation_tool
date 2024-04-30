@@ -16,10 +16,12 @@ import shutil
 import tkinter as tk
 
 
-def get_labeling_app(projects_data: ProjectData, root: tk.Tk) -> LabelingApp:
+
+def download_project(project_data: ProjectData, root: tk.Tk):
+    annotation_stage, annotation_mode, project_uid, project_id = project_data.stage, project_data.mode, project_data.uid, project_data.id
+    pm = PathManager(project_data.id)
+
     loading_window = get_loading_window(text="Downloading annotations...", root=root)
-    annotation_stage, annotation_mode, project_uid, project_id = projects_data.stage, projects_data.mode, projects_data.uid, projects_data.id
-    pm = PathManager(projects_data.id)
     if not os.path.isfile(pm.meta_ann_path):
         download_file(
             uid=project_uid, 
@@ -61,6 +63,14 @@ def get_labeling_app(projects_data: ProjectData, root: tk.Tk) -> LabelingApp:
     img_number = len(os.listdir(pm.images_path))
     if img_number != img_ann_number:
         raise MessageBoxException(f"The project {project_id} has a different number of images and annotations. Re-lauch application to download again or, if that doesn't help, ask to fix the project")
+
+
+
+def get_labeling_app(project_data: ProjectData, root: tk.Tk) -> LabelingApp:
+    annotation_stage, annotation_mode, project_uid, project_id = project_data.stage, project_data.mode, project_data.uid, project_data.id
+    pm = PathManager(project_data.id)
+    
+    download_project(project_data=project_data, root=root)
 
     loading_window = get_loading_window(text="Loading project...", root=root)
     configure_database(pm.db_path)

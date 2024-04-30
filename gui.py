@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
 from api_requests import ProjectData, get_projects_data
-from get_labeling_app import complete_annotation, get_labeling_app
+from get_labeling_app import complete_annotation, download_project, get_labeling_app
 from gui_utils import ImageIdForm, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
 from labeling import LabelingApp
@@ -62,6 +62,7 @@ class MainWindow(tk.Tk):
 
         # Add basic menu items
         self.file_menu.add_command(label="Open", command=self.open_project)
+        self.file_menu.add_command(label="Download", command=self.download_project)
         self.file_menu.add_command(label="Settings", command=self.open_settings)
         self.help_menu.add_command(label="How to use this tool?", command=self.show_how)
         self.help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
@@ -106,6 +107,15 @@ class MainWindow(tk.Tk):
             self.set_canvas(labeling_app)
             self.title(f"Labeling Project {project_data.id}")
             self.update_menu()
+
+    def download_project(self):
+        loading_window = get_loading_window(text="Getting your active projects...", root=self)
+        projects_data = get_projects_data()
+        loading_window.destroy()
+        ps = ProjectSelector(projects_data, root=self)
+        project_data: ProjectData = ps.select()
+        if project_data is not None: 
+            download_project(project_data=project_data, root=self)
 
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
