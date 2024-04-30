@@ -111,6 +111,13 @@ class LabelingApp(ABC):
             review_labels_hidden=self.hide_review_labels
         )
 
+    @property
+    def editing_blocked(self):
+        if self.hide_figures:
+            if self.annotation_mode != AnnotationMode.SEGMENTATION:
+                return True
+        return False
+
     def update_time_counter(self):
         curr_time = time.time()
         step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
@@ -285,7 +292,7 @@ class LabelingApp(ABC):
         self.hide_review_labels = not self.hide_review_labels
 
     def change_label(self, label_hotkey: int):
-        if self.hide_figures: return              
+        if self.editing_blocked: return              
         label = self.labels_by_hotkey.get(label_hotkey)
         if label is not None:
             self.controller.change_label(label)
@@ -310,12 +317,12 @@ class LabelingApp(ABC):
             self.selecting_class = False
         
     def delete_command(self):
-        if self.hide_figures: return 
+        if self.editing_blocked: return 
         self.controller.delete_command()
         self.image_changed = True
 
     def handle_left_mouse_press(self, x: int, y: int):
-        if self.hide_figures: return
+        if self.editing_blocked: return
         self.controller.handle_left_mouse_press(x, y)
         self.image_changed = True
 
@@ -330,7 +337,7 @@ class LabelingApp(ABC):
             self.controller.handle_mouse_hover(x, y)
 
     def handle_left_mouse_release(self, x: int, y: int):
-        if self.hide_figures: return
+        if self.editing_blocked: return
         self.controller.handle_left_mouse_release(x, y)
 
     def handle_space(self):
@@ -343,18 +350,18 @@ class LabelingApp(ABC):
         self.controller.shift_mode = not self.controller.shift_mode
     
     def redo(self):
-        if self.hide_figures: return
+        if self.editing_blocked: return
         self.controller.redo()
 
     def undo(self):
-        if self.hide_figures: return
+        if self.editing_blocked: return
         self.controller.undo()
     
     def copy(self):
-        if self.hide_figures: return
+        if self.editing_blocked: return
         self.controller.copy()
 
     def paste(self):
-        if self.hide_figures: return
+        if self.editing_blocked: return
         self.controller.paste()
         self.image_changed = True

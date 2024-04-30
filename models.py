@@ -431,7 +431,7 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
 
     def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "KeypointGroup" = None) -> Optional[Figure]:
         x, y = end_point
-        if abs(start_point[0] - x) > min_movement_to_create and abs(start_point[1] - y) > min_movement_to_create:
+        if abs(start_point[0] - x) > min_movement_to_create or abs(start_point[1] - y) > min_movement_to_create:
             x1 = min(start_point[0], x)
             y1 = min(start_point[1], y)
             x2 = max(start_point[0], x)
