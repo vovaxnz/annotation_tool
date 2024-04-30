@@ -1,8 +1,12 @@
 # Install 
 
-## For Linux
+## Linux
 
-Run `bash install.sh` and follow instructions
+Run `bash install_linux.sh` and follow instructions
+
+## MacOS
+
+Run `bash install_mac.sh`
 
 # Usage
 

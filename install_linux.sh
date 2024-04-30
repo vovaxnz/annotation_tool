@@ -19,14 +19,11 @@ mkdir -p ~/.fonts
 cp UbuntuCondensed-Regular.ttf ~/.fonts/
 fc-cache -f -v
 
-
 # Create and activate venv
 python3 -m venv venv
 source venv/bin/activate
 
 pip install -r requirements.txt
-
-
 
 # Create desktop shortcut
 CURRENT_DIR=$(pwd)
