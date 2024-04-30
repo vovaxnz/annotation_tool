@@ -430,23 +430,35 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
                 return i
 
     def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "KeypointGroup" = None) -> Optional[Figure]:
-        x, y = end_point
-        if abs(start_point[0] - x) > min_movement_to_create or abs(start_point[1] - y) > min_movement_to_create:
-            x1 = min(start_point[0], x)
-            y1 = min(start_point[1], y)
-            x2 = max(start_point[0], x)
-            y2 = max(start_point[1], y)
+        x1, y1 = start_point
+        x2, y2 = end_point
 
-            w = x2 - x1
-            h = y2 - y1
+        if abs(x1 - x2) > min_movement_to_create or abs(y1 - y2) > min_movement_to_create:
+            
+            reflect_x = False
+            reflect_y = False
+            if x2 < x1:
+                reflect_x = True
+            if y2 < y1:
+                reflect_y = True
+
+            w = abs(x2 - x1)
+            h = abs(y2 - y1)
 
             assert label.attributes is not None
             keypoint_info = json.loads(label.attributes)["keypoint_info"]
             
             result_keypoints = list()
             for kp_label in keypoint_info:
-                kp_x = keypoint_info[kp_label]["x"] * w + x1
-                kp_y = keypoint_info[kp_label]["y"] * h + y1
+                if reflect_x:
+                    kp_x = x1 - keypoint_info[kp_label]["x"] * w
+                else:
+                    kp_x = keypoint_info[kp_label]["x"] * w + x1
+                if reflect_y:
+                    kp_y = y1 - keypoint_info[kp_label]["y"] * h
+                else:
+                    kp_y = keypoint_info[kp_label]["y"] * h + y1
+
                 result_keypoints.append(Point(x=int(kp_x), y=int(kp_y), label=kp_label))
 
 
