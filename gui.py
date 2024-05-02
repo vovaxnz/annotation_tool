@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from typing import List, Tuple
 import cv2
@@ -50,6 +51,12 @@ class MainWindow(tk.Tk):
         self.menu_bar.add_cascade(label="Help", menu=self.help_menu)
         self.update_menu(initial=True)
         
+        # Check if running on macOS
+        if sys.platform == "darwin":
+            # For macOS, setting the menu on the root should automatically handle it,
+            # but if it doesn't appear in the top bar, we force it here
+            self.tk.call('tk::mac::standardAboutPanel')
+
         # Attach the menu bar to the window
         self.config(menu=self.menu_bar)
         
