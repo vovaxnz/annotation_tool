@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, ABCMeta
 import json
 import cv2
 import numpy as np
@@ -11,8 +11,15 @@ from config import ColorBGR
 from drawing import draw_text_label
 from enums import FigureType
 from masks_encoding import decode_rle, encode_rle
+from sqlalchemy.sql import text  # For executing raw SQL statements
+from sqlalchemy.ext.declarative import DeclarativeMeta
 
-Base = declarative_base()
+# Define a new metaclass that combines ABCMeta and DeclarativeMeta
+class ABSQLAlchemyMeta(ABCMeta, DeclarativeMeta):
+    pass
+
+Base = declarative_base(metaclass=ABSQLAlchemyMeta)
+
 
 session_configured = False
 
@@ -132,7 +139,8 @@ class Label(Base):
         return session.query(cls).order_by(asc(cls.hotkey))
     
 
-class Figure(ABC):
+class Figure(Base, ABC):
+    __abstract__ = True  # Make sure Figure is not created as a table
 
     def __init__(self):
         self.active_point_id: int
@@ -145,7 +153,7 @@ class Figure(ABC):
             self,
             canvas: np.ndarray, 
             elements_scale_factor: float, 
-            label: Label, 
+            label: Label,  # TODO: Use Label reference from the database
             show_label_names: bool = False,
         ) -> np.ndarray:
         raise NotImplementedError
@@ -188,7 +196,7 @@ class Figure(ABC):
         raise NotImplementedError
 
 
-class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
+class ReviewLabel(Figure): 
     __tablename__ = 'review_label'
 
     id = Column(Integer, primary_key=True)
@@ -352,7 +360,7 @@ class ReviewLabel(Base): # TODO: Find how to inherit this class from the Figure
         return {"x": self.x, "y": self.y, "label": self.label}
 
 
-class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figure
+class KeypointGroup(Figure):
     __tablename__ = 'keypoint_group'
 
     id = Column(Integer, primary_key=True)
@@ -557,7 +565,7 @@ class KeypointGroup(Base): # TODO: Find how to inherit this class from the Figur
         return {"keypoints_data": self.keypoints_data, "label": self.label}
 
 
-class BBox(Base): # TODO: Find how to inherit this class from the Figure
+class BBox(Figure): 
     __tablename__ = 'bbox'
 
     id = Column(Integer, primary_key=True)
@@ -785,6 +793,18 @@ class Mask(Base):
             width=self.width
         )
 
+    def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
+        raise NotImplementedError
+
+    def move_active_point(self, x, y):
+        raise NotImplementedError
+
+    def embed_to_bbox(self, start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "Figure" = None):
+        raise NotImplementedError
+
+    def contains_point(self, point: Point) -> bool:
+        raise NotImplementedError
+
     def draw_figure(
             self,
             canvas: np.ndarray, 
@@ -864,7 +884,27 @@ class LabeledImage(Base):
 def configure_database(database_path):
     global session
     global session_configured
+
+    database_path += "?check_same_thread=False" # To allow shared connection usage
+
     engine = create_engine(database_path)
+
+    with engine.connect() as connection:
+
+        # In SQLite's NORMAL mode, the engine ensures the rollback journal is securely written to disk for recovery purposes, 
+        # but does not wait for the main database file updates to be confirmed, 
+        # relying on the operating system to manage these writes.
+        # This setting provides a reasonable balance between performance and durability
+        connection.execute(text("PRAGMA synchronous = NORMAL")) 
+
+        # Write-Ahead Logging (WAL) journal mode in SQLite
+        # instead of writing changes directly to the main database file, SQLite writes these changes to a separate WAL file in a sequential manner.
+        # When a transaction is committed, SQLite doesn’t immediately apply the changes in the WAL file to the main database file. 
+        # Instead, the changes remain in the WAL file, and the database file is updated in the background 
+        # or when the WAL file reaches a certain size
+        connection.execute(text("PRAGMA journal_mode = WAL"))
+
+
     Base.metadata.create_all(engine)  # Make sure all tables are created
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()

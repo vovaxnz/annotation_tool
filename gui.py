@@ -10,7 +10,7 @@ from api_requests import ProjectData, get_projects_data
 from get_labeling_app import complete_annotation, download_project, get_labeling_app
 from gui_utils import ImageIdForm, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
-from labeling import LabelingApp
+from labeling.annotation import LabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
@@ -255,7 +255,7 @@ class CanvasView(tk.Canvas):
         # Use timing mechanism to monitor if "A" key is held down
         self.last_a_press_time = 0
         self.a_held_down = False
-        self.keyboard_events_interval = 0.5 
+        self.keyboard_events_interval = 0.1
         self.bind("<KeyPress-a>", self.handle_key_a_press)
         self.bind("<KeyRelease-a>", self.handle_key_a_release)
 
@@ -346,10 +346,10 @@ class CanvasView(tk.Canvas):
             self.a_held_down = True
             
     def handle_key_a_release(self, event: tk.Event):
-        self.after(150, self.check_key_a_pressed)
+        self.after(100, self.check_key_a_pressed)
 
     def check_key_a_pressed(self):
-        if time.time() - self.last_a_press_time > 0.15:
+        if time.time() - self.last_a_press_time > 0.1:
             self.app.end_selecting_class()
             self.update_frame = True
             self.a_held_down = False
@@ -375,7 +375,7 @@ class CanvasView(tk.Canvas):
             return
     
         current_time = time.time()
-        if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= 0.2:
+        if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= self.keyboard_events_interval:
             self.last_key_press_time = current_time # Prevent too frequent key press
         else:
             return
