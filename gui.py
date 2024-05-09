@@ -6,10 +6,12 @@ import cv2
 import numpy as np
 from PIL import Image, ImageTk
 import tkinter as tk
-from api_requests import ProjectData, get_projects_data
+from api_requests import get_projects_data
+from enums import AnnotationMode
 from get_labeling_app import complete_annotation, download_project, get_labeling_app
-from gui_utils import ImageIdForm, SettingsManager, get_loading_window
+from gui_utils import AnnotationStatusBar, ImageIdForm, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
+from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
 from labeling.annotation import LabelingApp
 from tkinter import ttk
 from tkinter import font
@@ -87,7 +89,12 @@ class MainWindow(tk.Tk):
         self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
         self.canvas_view.set_close_callback(self.destroy)
 
-        self.status_bar = StatusBar(self.container, labeling_app)
+
+        if labeling_app.annotation_mode is AnnotationMode.FILTERING:
+            self.status_bar = FilteringStatusBar(self.container, labeling_app)
+        else:
+            self.status_bar = AnnotationStatusBar(self.container, labeling_app)
+
         self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
 
     def remove_canvas(self):
@@ -202,7 +209,7 @@ class MainWindow(tk.Tk):
 
 
 class CanvasView(tk.Canvas):
-    def __init__(self, parent, root: tk.Tk, app: LabelingApp):
+    def __init__(self, parent, root: tk.Tk, app: AbstractLabelingApp):
         super().__init__(parent, bg="black")
 
         self.app = app
@@ -285,8 +292,8 @@ class CanvasView(tk.Canvas):
 
             self.x0 = max(0, self.x0)
             self.y0 = max(0, self.y0)
-            self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
-            self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
+            self.x0 = min(int(self.app.canvas.shape[1]*0.9), self.x0)
+            self.y0 = min(int(self.app.canvas.shape[0]*0.9), self.y0)
 
         self.scale_event_wrapper(self.handle_mouse_move)(event)
 
@@ -335,6 +342,8 @@ class CanvasView(tk.Canvas):
         self.update_canvas()
         self.fit_image()
 
+
+    # TODO: Move handle_key_a_press, handle_key_a_release, check_key_a_pressed to AnnotationApp
     def handle_key_a_press(self, event: tk.Event):
         self.last_a_press_time = time.time()
         if not self.a_held_down:
@@ -346,10 +355,10 @@ class CanvasView(tk.Canvas):
             self.a_held_down = True
             
     def handle_key_a_release(self, event: tk.Event):
-        self.after(100, self.check_key_a_pressed)
+        self.after(int(self.keyboard_events_interval * 1000), self.check_key_a_pressed)
 
     def check_key_a_pressed(self):
-        if time.time() - self.last_a_press_time > 0.1:
+        if time.time() - self.last_a_press_time > self.keyboard_events_interval:
             self.app.end_selecting_class()
             self.update_frame = True
             self.a_held_down = False
@@ -380,21 +389,7 @@ class CanvasView(tk.Canvas):
         else:
             return
 
-        if event.char.isdigit(): 
-            self.app.change_label(event.char)
-        elif event.char.lower() == "d":
-            self.app.delete_command()
-        elif event.char.lower() == "f":
-            self.fit_image()
-        elif event.char.lower() == "t":
-            self.app.toggle_image_trash_tag()
-        elif event.char.lower() == "e":
-            self.app.switch_hiding_figures()
-        elif event.char.lower() == "r":
-            self.app.switch_hiding_review_labels() 
-        elif event.char.lower() == "n":
-            self.app.switch_object_names_visibility() 
-        elif event.char.lower() == "w":
+        if event.char.lower() == "w":
             self.app.forward()
             self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
@@ -402,7 +397,13 @@ class CanvasView(tk.Canvas):
             self.app.backward()
             self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
+        elif event.char.lower() == "f":
+            self.fit_image()
+        else:
+            self.app.handle_key(key=event.char.lower())
+
         self.app.update_time_counter()
+
         self.update_frame = True
         
 

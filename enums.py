@@ -8,12 +8,14 @@ class AnnotationStage(Enum):
     REVIEW = "REVIEW"
     CORRECTION = "CORRECTION"
     DONE = "DONE"
+    FILTERING = "FILTERING"
 
 
 class AnnotationMode(Enum):
     OBJECT_DETECTION = "OBJECT_DETECTION"
     SEGMENTATION = "SEGMENTATION"
     KEYPOINTS = "KEYPOINTS"
+    FILTERING = "FILTERING"
 
 
 class FigureType(Enum):

@@ -1,6 +1,5 @@
 
-from abc import ABC, abstractmethod
-from ast import Tuple
+
 from collections import defaultdict
 from dataclasses import dataclass
 import json
@@ -11,6 +10,7 @@ from typing import Dict, List, Optional
 import numpy as np
 import cv2
 
+from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
 from controller import ControllerByMode, ObjectFigureController
 from drawing import create_class_selection_wheel, get_selected_sector_id
 from enums import AnnotationMode, AnnotationStage, FigureType
@@ -34,13 +34,13 @@ class StatusData:
     review_labels_hidden: bool
 
 
-class LabelingApp(ABC):
+class LabelingApp(AbstractLabelingApp):
 
-    def __init__(self, img_dir: str, annotation_stage: AnnotationStage, annotation_mode: AnnotationMode, project_id: int, project_uid: str):
+    def __init__(self, data_path: str, project_data: ProjectData):
     
-        self.img_names = sorted(os.listdir(img_dir)) 
+        self.img_names = sorted(os.listdir(data_path)) 
         
-        if annotation_stage is AnnotationStage.CORRECTION:
+        if project_data.stage is AnnotationStage.CORRECTION:
             self.img_names = [img_name for img_name in self.img_names if len(LabeledImage.get(name=img_name).review_labels) > 0]
 
         for img_name in self.img_names: # Check that images from the directory are in the the database
@@ -48,31 +48,19 @@ class LabelingApp(ABC):
             if img_object is None:
                 raise MessageBoxException(f"{img_name} is not found in the database") 
             
-
         self.figures: List[Figure] = list()
         self.review_labels: List[ReviewLabel] = list()
-        self.project_id = project_id
-        self.project_uid = project_uid
-        self.tick_time = time.time()
         self.show_label_names = False
-        self.max_action_time_sec = 10
-        self.img_dir = img_dir
-        self.img_id = 0 
-        self.duration_hours = 0
-        self.processed_img_ids: set = set()
-        self.annotation_mode: AnnotationMode = annotation_mode
-        self.annotation_stage: AnnotationStage = annotation_stage
+        self.img_dir = data_path
         self.orig_image: np.ndarray = None
-        self.canvas: np.ndarray = None
         self.is_trash = False
         self.hide_figures = False
         self.hide_review_labels = False
         self.scale_factor = 1
-        self.image_changed = False
         self.ready_for_export = False
         self.selecting_class = False
 
-        if annotation_stage is AnnotationStage.REVIEW:
+        if project_data.stage is AnnotationStage.REVIEW:
             labels = Label.get_review_labels()
         else:
             labels = Label.get_figure_labels()
@@ -84,13 +72,12 @@ class LabelingApp(ABC):
         for label in Label.all():
             self.labels[label.type][label.name] = label
 
-        if self.annotation_stage is AnnotationStage.REVIEW:
+        if project_data.stage is AnnotationStage.REVIEW:
             self.controller = ObjectFigureController(active_label=labels[0])
         else:
-            self.controller = ControllerByMode[annotation_mode](active_label=labels[0])
+            self.controller = ControllerByMode[project_data.mode](active_label=labels[0])
 
-        self.load_state()
-        self.load_image()
+        super().__init__(data_path=data_path, project_data=project_data)
 
     @property
     def status_data(self):
@@ -118,11 +105,6 @@ class LabelingApp(ABC):
                 return True
         return False
 
-    def update_time_counter(self):
-        curr_time = time.time()
-        step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
-        self.tick_time = curr_time
-        self.duration_hours += step_duration / 3600
     
     def update_canvas(self): 
         self.canvas = np.copy(self.orig_image)
@@ -222,57 +204,17 @@ class LabelingApp(ABC):
 
             self.labeled_image.save()
 
-    def save_state(self):  # TODO: Save values as a batch
-        Value.update_value("img_id", self.img_id)
-        Value.update_value("duration_hours", self.duration_hours)
-        Value.update_value("processed_img_ids", list(self.processed_img_ids))
-        Value.update_value("annotation_stage", self.annotation_stage.name)
 
-    def load_state(self):
-        annotation_stage_name = Value.get_value("annotation_stage")
-        if self.annotation_stage.name != annotation_stage_name: # If annotation stage is changed
-            self.img_id = 0
-            self.duration_hours = 0
-            self.processed_img_ids = set()
-            self.image_changed = True
-        else:
-            img_id = Value.get_value("img_id")
-            self.img_id = int(img_id) if img_id is not None else self.img_id
-
-            duration_hours = Value.get_value("duration_hours")
-            self.duration_hours = float(duration_hours) if duration_hours is not None else self.duration_hours
-
-            processed_img_ids = Value.get_value("processed_img_ids")
-            self.processed_img_ids = set(json.loads(processed_img_ids)) if processed_img_ids is not None else self.processed_img_ids
-
-            self.image_changed = False
-
-    def forward(self):
-        self.save_image()
-        self.controller.clear_history()
-        self.processed_img_ids.add(self.img_id)
-        if self.img_id < len(self.img_names) - 1:
-            self.img_id += 1
-        self.load_image()
-        self.save_state()
-        
-    def backward(self):
-        self.save_image()
-        self.controller.clear_history()
-        self.processed_img_ids.add(self.img_id)
-        if self.img_id > 0:
-            self.img_id -= 1
-        self.load_image()
-        self.save_state()
-
-    def go_to_image_by_id(self, img_id: int):
-        assert img_id < len(self.img_names)
+    def change_image(self, img_id: int):
+        if img_id > len(self.img_names) - 1 or img_id < 0:
+            return
         self.save_image()
         self.controller.clear_history()
         self.processed_img_ids.add(self.img_id)
         self.img_id = img_id
         self.load_image()
         self.save_state()
+
 
     def toggle_image_trash_tag(self):
         if self.annotation_stage is AnnotationStage.REVIEW:
@@ -365,3 +307,19 @@ class LabelingApp(ABC):
         if self.editing_blocked: return
         self.controller.paste()
         self.image_changed = True
+
+    def handle_key(self, key: str):
+        if key.isdigit(): 
+            self.change_label(key)
+        elif key.lower() == "d":
+            self.delete_command()
+        elif key.lower() == "t":
+            self.toggle_image_trash_tag()
+        elif key.lower() == "e":
+            self.switch_hiding_figures()
+        elif key.lower() == "r":
+            self.switch_hiding_review_labels() 
+        elif key.lower() == "n":
+            self.switch_object_names_visibility() 
+
+

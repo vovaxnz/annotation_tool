@@ -1,17 +1,9 @@
-from dataclasses import dataclass
 from typing import List, Tuple
 import requests
 from config import settings
 from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
-
-
-@dataclass
-class ProjectData:
-    id: int
-    uid: str
-    stage: AnnotationStage
-    mode: AnnotationMode
+from labeling.abstract_labeling_app import ProjectData
 
 
 def get_projects_data() -> List[ProjectData]: 
