@@ -34,7 +34,7 @@ class StatusData:
     review_labels_hidden: bool
 
 
-class LabelingApp(AbstractLabelingApp):
+class AnnotationApp(AbstractLabelingApp):
 
     def __init__(self, data_path: str, project_data: ProjectData):
     
@@ -57,7 +57,6 @@ class LabelingApp(AbstractLabelingApp):
         self.hide_figures = False
         self.hide_review_labels = False
         self.scale_factor = 1
-        self.ready_for_export = False
         self.selecting_class = False
 
         if project_data.stage is AnnotationStage.REVIEW:

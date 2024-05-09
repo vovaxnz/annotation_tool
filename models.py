@@ -881,6 +881,38 @@ class LabeledImage(Base):
             review_label.delete()
 
 
+class ClassificationImage(Base):
+    __tablename__ = 'classification_image'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, unique=True, nullable=True)
+    img_id = Column(Integer, nullable=True)
+    selected = Column(Boolean, default=False)
+
+    @classmethod
+    def get(cls, name: str = None, img_id: int = None):
+        session = get_session()
+        if name is not None:
+            return session.query(cls).filter(cls.name == name).first()
+        elif img_id is not None:
+            return session.query(cls).filter(cls.img_id == img_id).first()
+
+    @classmethod
+    def all(cls) -> List["ClassificationImage"]:
+        session = get_session()
+        return list(session.query(cls).order_by(asc(cls.name)))
+    
+    def __init__(self, name, img_id, selected: bool = False):
+        self.name = name
+        self.img_id = img_id
+        self.selected = selected
+
+    def save(self):
+        session = get_session()
+        session.add(self)
+        session.commit()
+
+
 def configure_database(database_path):
     global session
     global session_configured

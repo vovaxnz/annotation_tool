@@ -34,6 +34,8 @@ class AbstractLabelingApp(ABC):
         self.canvas: np.ndarray = None
         self.image_changed = False
 
+        self.ready_for_export = False
+
         self.load_state()
         self.load_image()
 

@@ -8,7 +8,7 @@ from api_requests import get_project_data
 from enums import AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from file_processing.file_transfer import download_file
-from models import KeypointGroup, Label, LabeledImage, BBox, Mask, ReviewLabel, Value
+from models import ClassificationImage, KeypointGroup, Label, LabeledImage, BBox, Mask, ReviewLabel, Value
 from path_manager import PathManager
 from utils import open_json, save_json
 from PIL import Image
@@ -194,6 +194,17 @@ def export_review(review_ann_path):
             ]
     save_json(review_label_dict, review_ann_path) 
 
+
+def export_selected_frames(output_path: str):
+    result = {"names": list(), "ids": list()}
+    for limage in ClassificationImage.all(): 
+        if limage.selected:
+            if limage.name is not None:
+                result["names"].append(limage.name)
+            elif limage.img_id is not None:
+                result["ids"].append(limage.img_id)
+    save_json(result, output_path) 
+    
 
 def overwrite_annotations(project_id):
 

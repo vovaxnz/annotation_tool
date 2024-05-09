@@ -9,10 +9,9 @@ import tkinter as tk
 from api_requests import get_projects_data
 from enums import AnnotationMode
 from get_labeling_app import complete_annotation, download_project, get_labeling_app
-from gui_utils import AnnotationStatusBar, ImageIdForm, ProjectSelector, SettingsManager, get_loading_window
+from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
 from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
-from labeling.annotation import LabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
@@ -80,15 +79,16 @@ class MainWindow(tk.Tk):
         if not initial:
             self.file_menu.add_command(label="Go to image", command=self.go_to_image_id) 
             self.file_menu.add_command(label="Complete the project", command=self.complete_project)
+            if self.canvas_view.app.annotation_mode is AnnotationMode.FILTERING:
+                return
             self.file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
             self.help_menu.add_command(label="Classes", command=self.show_classes)
             self.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
 
-    def set_canvas(self, labeling_app: LabelingApp): 
+    def set_canvas(self, labeling_app: AbstractLabelingApp): 
         self.canvas_view = CanvasView(self.container, root=self, app=labeling_app)
         self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
         self.canvas_view.set_close_callback(self.destroy)
-
 
         if labeling_app.annotation_mode is AnnotationMode.FILTERING:
             self.status_bar = FilteringStatusBar(self.container, labeling_app)
@@ -119,7 +119,7 @@ class MainWindow(tk.Tk):
                 self.remove_canvas()
             labeling_app = get_labeling_app(project_data, root=self)
             self.set_canvas(labeling_app)
-            self.title(f"Labeling Project {project_data.id}")
+            self.title(f"Project {project_data.id}")
             self.update_menu()
 
     def download_project(self):

@@ -41,6 +41,7 @@ def decode_binary_to_string(binary_array):
     
     return decoded_string
 
+
 def decode_img_name_from_image(img: np.ndarray, mult=1):
 
     code_height = int(8 * FILTERING_BARCODE_PIXEL_SIZE * mult)
@@ -109,24 +110,26 @@ class FilteringApp(AbstractLabelingApp):
             number_of_images=self.img_number,
         )
     
-    def load_image(self, img_id: int = None):
-        if img_id is not None:
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, img_id)
+    def load_image(self, next: bool = True):
+        if not next:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.img_id)
         
         ret, orig_img = self.cap.read()
         if ret:
             self.canvas = orig_img
 
-        self.current_img_name = decode_img_name_from_image(self.canvas)
+        try:
+            current_img_name = decode_img_name_from_image(self.canvas)
+            self.labeled_image = ClassificationImage.get(name=current_img_name)
+        except:
+            self.labeled_image = ClassificationImage.get(img_id=self.img_id)
 
-        self.labeled_image = ClassificationImage.get(name=self.current_img_name)
         if self.labeled_image is None:
-            self.labeled_image = ClassificationImage(name=self.current_img_name)
+            self.labeled_image = ClassificationImage(name=current_img_name, img_id=self.img_id)
 
     def save_image(self):
         if self.image_changed:
             self.labeled_image.save()
-
 
     def change_image(self, img_id: int):
         if img_id > self.img_number - 1 or img_id < 0:
@@ -134,22 +137,14 @@ class FilteringApp(AbstractLabelingApp):
         time.sleep(self.delay.value)
         self.save_image()
         self.processed_img_ids.add(self.img_id)
+
+        forward = img_id == self.img_id + 1
         self.img_id = img_id
-        self.load_image()
+        self.load_image(next=forward)
         self.save_state()
-
-    def forward(self):
-        self.change_image(img_id=self.img_id+1)
-        
-    def backward(self):
-        self.change_image(img_id=self.img_id-1)
-
-    def go_to_image_by_id(self, img_id: int):
-        self.change_image(img_id=img_id)
 
     def select_image(self):
         self.labeled_image.selected = True
-
 
     def handle_key(self, key: str):
         if key.lower() == "d":

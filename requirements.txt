@@ -4,3 +4,4 @@ pillow
 requests
 Jinja2
 tkinterweb
+tqdm

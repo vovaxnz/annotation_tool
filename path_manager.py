@@ -42,4 +42,12 @@ class PathManager():
     def archive_path(self):
         return os.path.join(self.project_path, f"archive.zip")
     
+    @property
+    def video_path(self):
+        return os.path.join(self.project_path, f"video.mp4")
+    
+    @property
+    def selected_frames_json_path(self):
+        return os.path.join(self.project_path, f"selected_frames.json")
+    
     
