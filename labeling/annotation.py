@@ -79,6 +79,10 @@ class AnnotationApp(AbstractLabelingApp):
         super().__init__(data_path=data_path, project_data=project_data)
 
     @property
+    def img_number(self) -> int:
+        return len(self.img_names)
+
+    @property
     def status_data(self):
         number_of_processed = len(self.processed_img_ids)
         active_label = self.controller.active_label
@@ -152,7 +156,7 @@ class AnnotationApp(AbstractLabelingApp):
                 edge_y=self.controller.cursor_y
             )
 
-    def load_image(self):
+    def load_image(self, next: bool = True):
         self.hide_figures = False
         self.hide_review_labels = False
         img_name = self.img_names[self.img_id]

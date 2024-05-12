@@ -289,7 +289,7 @@ class FilteringStatusBar(tk.Frame):
         label_font = font.Font(family="Ubuntu Condensed", size=new_font_size)
         
         # Set the new font to all labels and progress bar
-        for widget in [self.mode_label, self.delay_label, self.img_id_label, self.speed_label, self.processed_label, self.duration_label]:
+        for widget in [self.mode_label, self.delay_label, self.selected_label, self.img_id_label, self.speed_label, self.processed_label, self.duration_label]:
             widget.config(font=label_font)
 
     def update_status(self):
@@ -301,7 +301,7 @@ class FilteringStatusBar(tk.Frame):
         self.delay_label.config(text=f"Delay: {status_data.delay}")
 
         selected_text = "Selected: TRUE" if status_data.selected else "Selected: FALSE"
-        selected_color = "green" if status_data.selected else "gray"
+        selected_color = "lime" if status_data.selected else "gray"
         self.selected_label.config(text=selected_text, bg=selected_color)
 
         self.img_id_label.config(text=f"Img id: {status_data.img_id}")

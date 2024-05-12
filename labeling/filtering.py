@@ -12,21 +12,12 @@ import cv2
 from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
 
 from exceptions import MessageBoxException
-from models import ClassificationImage, Value
+from models import ClassificationImage
 
-# TODO:
-# Mode: Filtering
-# Delay: 200ms
-# Selected: TRUE/FALSE
 
-# Img id: ...
-# Speed
-# Position
-# progress
-# duration
 
-FILTERING_BARCODE_PIXEL_SIZE = 
-MAX_IMAGE_NAME_LENGTH = 
+FILTERING_BARCODE_PIXEL_SIZE = 2
+MAX_IMAGE_NAME_LENGTH = 100
 
 
 def decode_binary_to_string(binary_array):
@@ -93,9 +84,13 @@ class FilteringApp(AbstractLabelingApp):
         if not self.cap.isOpened():
             raise MessageBoxException(f"Error opening video file {data_path}")
 
-        self.img_number = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.number_of_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         super().__init__(data_path=data_path, project_data=project_data)
+
+    @property
+    def img_number(self) -> int:
+        return self.number_of_frames
 
     @property
     def status_data(self) -> FilteringStatusData:
@@ -144,7 +139,7 @@ class FilteringApp(AbstractLabelingApp):
         self.save_state()
 
     def select_image(self):
-        self.labeled_image.selected = True
+        self.labeled_image.selected = not self.labeled_image.selected
 
     def handle_key(self, key: str):
         if key.lower() == "d":
@@ -156,3 +151,5 @@ class FilteringApp(AbstractLabelingApp):
         elif key.lower() == "3":
             self.delay = FilteringDelay.SLOW
 
+    def update_canvas(self):
+        pass

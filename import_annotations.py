@@ -206,9 +206,9 @@ def export_selected_frames(output_path: str):
     save_json(result, output_path) 
     
 
-def overwrite_annotations(project_id):
+def overwrite_annotations(project_id, project_uid):
 
-    annotation_stage, annotation_mode, project_uid = get_project_data(project_id)
+    annotation_stage, annotation_mode = get_project_data(project_uid)
     
     pm = PathManager(project_id)
 

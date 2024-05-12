@@ -24,8 +24,8 @@ def download_filtering_project(project_data: ProjectData, root: tk.Tk):
         ftc = FileTransferClient(window_title="Downloading progress", root=root)
         ftc.download(
             uid=project_data.uid, 
-            file_name=os.path.basename(pm.archive_path), 
-            save_path=pm.archive_path, 
+            file_name=os.path.basename(pm.video_path), 
+            save_path=pm.video_path, 
         )
 
 def download_annotation_project(project_data: ProjectData, root: tk.Tk):
@@ -115,11 +115,11 @@ def complete_annotation(labeling_app: AbstractLabelingApp, root: tk.Tk):
     project_id = labeling_app.project_id
     pm = PathManager(project_id)
     if labeling_app.ready_for_export:
+        loading_window = get_loading_window(text="Finishing project...", root=root)
         if labeling_app.annotation_mode is AnnotationMode.FILTERING:
             export_selected_frames(output_path=pm.selected_frames_json_path)
             upload_file(labeling_app.project_uid, pm.selected_frames_json_path)
         else:
-            loading_window = get_loading_window(text="Uploading completed project...", root=root)
 
             if labeling_app.annotation_stage in [AnnotationStage.ANNOTATE, AnnotationStage.CORRECTION]:
                 export_figures(figures_ann_path=pm.figures_ann_path)
@@ -127,8 +127,8 @@ def complete_annotation(labeling_app: AbstractLabelingApp, root: tk.Tk):
             elif labeling_app.annotation_stage is AnnotationStage.REVIEW:
                 export_review(review_ann_path=pm.review_ann_path)
                 upload_file(labeling_app.project_uid, pm.review_ann_path)
-            complete_task(project_id=project_id, duration_hours=labeling_app.duration_hours)
-            Value.update_value("img_id", 0, overwrite=False)
+        complete_task(project_uid=labeling_app.project_uid, duration_hours=labeling_app.duration_hours)
+        Value.update_value("img_id", 0, overwrite=True)
 
         if labeling_app.annotation_stage in [AnnotationStage.CORRECTION, AnnotationStage.REVIEW, AnnotationStage.FILTERING]:
             if os.path.isdir(pm.project_path):

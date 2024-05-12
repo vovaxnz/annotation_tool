@@ -146,7 +146,7 @@ class MainWindow(tk.Tk):
         SettingsManager(root=self)
         
     def go_to_image_id(self):
-        form = ImageIdForm(root=self, max_id=len(self.canvas_view.app.img_names))
+        form = ImageIdForm(root=self, max_id=len(self.canvas_view.app.img_number))
         img_id = form.get_image_id()
         self.canvas_view.app.go_to_image_by_id(img_id - 1)
         self.canvas_view.update_frame = True
@@ -411,7 +411,7 @@ class CanvasView(tk.Canvas):
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
         if agree:
             root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            overwrite_annotations(self.app.project_id)
+            overwrite_annotations(project_id=self.app.project_id, project_uid=self.app.project_uid)
             self.app.load_image()
             root.destroy()
             self.update_frame = True
@@ -423,7 +423,7 @@ class CanvasView(tk.Canvas):
         """Fits image inside the canvas and re-calculates scale_factor"""
         win_w=self.winfo_width()
         win_h=self.winfo_height()
-        img_h, img_w, c = self.app.orig_image.shape
+        img_h, img_w, c = self.app.canvas.shape
         h_scale = win_h / img_h 
         w_scale = win_w / img_w
 
@@ -463,8 +463,8 @@ class CanvasView(tk.Canvas):
         # Restrict x0y0 to be no less than 0 and no more than 2/3 of image
         self.x0 = max(0, self.x0)
         self.y0 = max(0, self.y0)
-        self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
-        self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
+        self.x0 = min(int(self.app.canvas.shape[1]*0.9), self.x0)
+        self.y0 = min(int(self.app.canvas.shape[0]*0.9), self.y0)
 
         self.app.scale_factor = self.scale_factor
 

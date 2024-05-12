@@ -30,9 +30,9 @@ def get_projects_data() -> List[ProjectData]:
     return result
 
 
-def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, str]:
+def get_project_data(project_uid: str) -> Tuple[AnnotationStage, AnnotationMode, str]:
     "annotation_stage, annotation_mode, img_path, ann_path"
-    url = f'{settings.api_url}/api/annotation/get_project_data/{project_id}/'
+    url = f'{settings.api_url}/api/annotation/get_project_data/{project_uid}/'
 
     data = {'user_token': settings.token}
     response = requests.post(url, json=data)
@@ -44,13 +44,12 @@ def get_project_data(project_id: int) -> Tuple[AnnotationStage, AnnotationMode, 
 
     annotation_stage = getattr(AnnotationStage, response_json["annotation_stage"])
     annotation_mode = getattr(AnnotationMode, response_json["annotation_mode"])
-    project_uid = response_json["project_uid"]
 
-    return annotation_stage, annotation_mode, project_uid
+    return annotation_stage, annotation_mode
 
 
-def complete_task(project_id: int, duration_hours: float):
-    url = f'{settings.api_url}/api/annotation/complete_task/{project_id}/' # Change stage of annotation project
+def complete_task(project_uid: int, duration_hours: float):
+    url = f'{settings.api_url}/api/annotation/complete_task/{project_uid}/' # Change stage of annotation project
 
     data = {'user_token': settings.token, 'duration_hours': duration_hours}
     response = requests.post(url, json=data)
@@ -59,5 +58,5 @@ def complete_task(project_id: int, duration_hours: float):
         try: 
             message = response.json()
         except:
-            message = "Internal Server Error"
+            message = f"Internal Server Error with project uid {project_uid}"
         raise MessageBoxException(message)

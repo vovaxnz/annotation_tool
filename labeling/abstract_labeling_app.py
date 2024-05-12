@@ -37,9 +37,12 @@ class AbstractLabelingApp(ABC):
         self.ready_for_export = False
 
         self.load_state()
-        self.load_image()
+        self.load_image(next=False)
 
-    @abstractmethod
+    @property
+    def img_number(self) -> int:
+        raise NotImplementedError
+
     @property
     def status_data(self):
         raise NotImplementedError
@@ -55,7 +58,7 @@ class AbstractLabelingApp(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def load_image(self):
+    def load_image(self, next: bool = True):
         raise NotImplementedError
 
     @abstractmethod
