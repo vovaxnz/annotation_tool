@@ -418,12 +418,11 @@ class CanvasView(tk.Canvas):
             self.update_frame = True
             self.app.update_time_counter()
             return
-
-        if event.char.lower() == "w":
+        if event.char.lower() == "w" or event.char.lower() == "p":
             self.app.forward()
             self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
-        elif event.char.lower() == "q":
+        elif event.char.lower() == "q" or event.char.lower() == "o":
             self.app.backward()
             self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)

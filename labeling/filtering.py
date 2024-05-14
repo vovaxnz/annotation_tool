@@ -147,11 +147,11 @@ class FilteringApp(AbstractLabelingApp):
         self.image_changed = True
 
     def handle_key(self, key: str):
-        if key.lower() == "d":
+        if key.lower() == "d" or key.lower() == "k":
             self.select_image()
-        if key.lower() == "z":
+        elif key.lower() == "z":
             self.go_to_previous_selected()
-        if key.lower() == "x":
+        elif key.lower() == "x":
             self.go_to_next_selected()
         elif key.lower() == "s":
             self.make_image_worse = not self.make_image_worse
