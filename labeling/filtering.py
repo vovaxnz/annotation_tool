@@ -76,7 +76,7 @@ class FilteringApp(AbstractLabelingApp):
     
         assert data_path.endswith("mp4")
 
-        self.delay: FilteringDelay = FilteringDelay.MIDDLE
+        self.delay: FilteringDelay = FilteringDelay.FAST
         self.cap = cv2.VideoCapture(data_path)
         self.labeled_image: ClassificationImage = None
 
@@ -109,18 +109,22 @@ class FilteringApp(AbstractLabelingApp):
         if not next:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.img_id)
         
-        ret, orig_img = self.cap.read()
+        ret, orig_image = self.cap.read()
+    
         if ret:
-            self.canvas = orig_img
+            self.orig_image = orig_image
+            self.canvas = orig_image
 
         try:
-            current_img_name = decode_img_name_from_image(self.canvas)
+            current_img_name = decode_img_name_from_image(self.orig_image)
             self.labeled_image = ClassificationImage.get(name=current_img_name)
         except:
             self.labeled_image = ClassificationImage.get(img_id=self.img_id)
 
         if self.labeled_image is None:
             self.labeled_image = ClassificationImage(name=current_img_name, img_id=self.img_id)
+        
+        self.update_canvas()
 
     def save_image(self):
         if self.image_changed:
@@ -140,10 +144,17 @@ class FilteringApp(AbstractLabelingApp):
 
     def select_image(self):
         self.labeled_image.selected = not self.labeled_image.selected
+        self.image_changed = True
 
     def handle_key(self, key: str):
         if key.lower() == "d":
             self.select_image()
+        if key.lower() == "z":
+            self.go_to_previous_selected()
+        if key.lower() == "x":
+            self.go_to_next_selected()
+        elif key.lower() == "s":
+            self.make_image_worse = not self.make_image_worse
         elif key.lower() == "1":
             self.delay = FilteringDelay.FAST
         elif key.lower() == "2":
@@ -151,5 +162,29 @@ class FilteringApp(AbstractLabelingApp):
         elif key.lower() == "3":
             self.delay = FilteringDelay.SLOW
 
+    def go_to_next_selected(self):
+        cimages = ClassificationImage.all_selected()
+        for cimage in cimages:
+            if cimage.img_id > self.img_id:
+                self.change_image(img_id=cimage.img_id)
+                break
+
+    def go_to_previous_selected(self):
+        cimages = ClassificationImage.all_selected()
+        for cimage in reversed(list(cimages)):
+            if cimage.img_id < self.img_id:
+                self.change_image(img_id=cimage.img_id)
+                break
+
     def update_canvas(self):
-        pass
+
+
+        if self.labeled_image.selected:
+            self.canvas = np.copy(self.orig_image)
+            h, w, c = self.canvas.shape
+            self.canvas = cv2.rectangle(self.canvas, (0, 0), (w, h), (0, 255, 0), 10)
+        else:
+            self.canvas = self.orig_image
+            
+        if self.make_image_worse:
+            self.canvas = self.deteriorate_image(self.canvas)

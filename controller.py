@@ -348,6 +348,7 @@ class MaskFigureController(FigureController):
         self.cursor_x, self.cursor_y = x, y
 
     def edit_mask(self, adding: bool):
+        self.polygon.append((self.cursor_x, self.cursor_y))
         self.polygon[-1] = self.polygon[0]
         figure = self.figures_dict.get(self.active_label.name)
         if figure is None:

@@ -20,6 +20,7 @@ import tkinterweb
 from models import Label
 from config import templates_path
 
+from pynput.keyboard import Listener
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -146,10 +147,11 @@ class MainWindow(tk.Tk):
         SettingsManager(root=self)
         
     def go_to_image_id(self):
-        form = ImageIdForm(root=self, max_id=len(self.canvas_view.app.img_number))
+        form = ImageIdForm(root=self, max_id=self.canvas_view.app.img_number)
         img_id = form.get_image_id()
-        self.canvas_view.app.go_to_image_by_id(img_id - 1)
-        self.canvas_view.update_frame = True
+        if img_id is not None:
+            self.canvas_view.app.go_to_image_by_id(img_id - 1)
+            self.canvas_view.update_frame = True
 
     def on_window_close(self):
         if self.canvas_view is not None:
@@ -241,14 +243,12 @@ class CanvasView(tk.Canvas):
 
         self.focus_set() # Set focus to the canvas to receive keyboard events 
 
-        self.bind("<Key>", self.handle_key_press)
-        # self.bind("<KeyRelease>", self.handle_key_release) 
+        self.bind("<Key>", self.handle_key_press) # For triggering methods by tkinter keyboard events
 
         self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
         self.bind("<Button-5>", self.on_mouse_wheel)  # For Unix/Linux, Zoom out
 
-        self.app.update_canvas()
 
         self.bind("<Configure>", self.on_resize)
 
@@ -267,6 +267,30 @@ class CanvasView(tk.Canvas):
         self.bind("<KeyRelease-a>", self.handle_key_a_release)
 
         self.close_callback = None
+
+        self.last_key_event = None
+        self.any_key_pressed = False
+        self.current_pressed_key = None
+
+        # Start listening to the keyboard
+        self.listener = Listener(on_press=self.on_key_press, on_release=self.on_key_release)
+        self.listener.start()
+
+        self.app.update_canvas()
+
+    def on_key_press(self, key):
+        self.any_key_pressed = True
+        self.current_pressed_key = None
+        try:
+            if hasattr(key, 'char') and key.char:
+                self.current_pressed_key = str(key.char).lower()
+        except AttributeError:
+            pass
+
+    def on_key_release(self, key):
+        self.any_key_pressed = False
+        self.current_pressed_key = None
+        self.last_key_event = None
 
     def on_shift_press(self, event):
         self.app.on_shift_press()
@@ -289,11 +313,10 @@ class CanvasView(tk.Canvas):
             delta_y = (self.click_win_y - win_cursor_y) / self.scale_factor
             self.y0 = self.start_y0 + delta_y 
             
-
             self.x0 = max(0, self.x0)
             self.y0 = max(0, self.y0)
-            self.x0 = min(int(self.app.canvas.shape[1]*0.9), self.x0)
-            self.y0 = min(int(self.app.canvas.shape[0]*0.9), self.y0)
+            self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
+            self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
 
         self.scale_event_wrapper(self.handle_mouse_move)(event)
 
@@ -365,6 +388,18 @@ class CanvasView(tk.Canvas):
 
 
     def handle_key_press(self, event: tk.Event):
+        if self.current_pressed_key is not None:
+            if event.keysym.lower() == self.current_pressed_key:
+                self.last_key_event = event
+        elif self.any_key_pressed:
+            self.last_key_event = event
+
+    def process_last_key_press(self):
+        if not self.any_key_pressed:
+            return
+        event = self.last_key_event
+        if event is None:
+            return
         
         ctrl_pressed = (event.state & 0x0004) != 0  # Control key mask
         cmd_pressed = (event.state & 0x0100) != 0  # Command key (macOS) mask
@@ -378,15 +413,10 @@ class CanvasView(tk.Canvas):
                 self.app.copy()
             elif event.keysym.lower() == 'v':
                 self.app.paste()
+            time.sleep(0.1) # Added to prevent too fast redo or paste
 
             self.update_frame = True
             self.app.update_time_counter()
-            return
-    
-        current_time = time.time()
-        if self.last_key_press_time is None or (current_time - self.last_key_press_time) >= self.keyboard_events_interval:
-            self.last_key_press_time = current_time # Prevent too frequent key press
-        else:
             return
 
         if event.char.lower() == "w":
@@ -405,6 +435,7 @@ class CanvasView(tk.Canvas):
         self.app.update_time_counter()
 
         self.update_frame = True
+        self.last_key_event = None
         
 
     def overwrite_annotations(self):
@@ -423,7 +454,7 @@ class CanvasView(tk.Canvas):
         """Fits image inside the canvas and re-calculates scale_factor"""
         win_w=self.winfo_width()
         win_h=self.winfo_height()
-        img_h, img_w, c = self.app.canvas.shape
+        img_h, img_w, c = self.app.orig_image.shape
         h_scale = win_h / img_h 
         w_scale = win_w / img_w
 
@@ -463,8 +494,8 @@ class CanvasView(tk.Canvas):
         # Restrict x0y0 to be no less than 0 and no more than 2/3 of image
         self.x0 = max(0, self.x0)
         self.y0 = max(0, self.y0)
-        self.x0 = min(int(self.app.canvas.shape[1]*0.9), self.x0)
-        self.y0 = min(int(self.app.canvas.shape[0]*0.9), self.y0)
+        self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
+        self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
 
         self.app.scale_factor = self.scale_factor
 
@@ -473,6 +504,7 @@ class CanvasView(tk.Canvas):
         self.update_frame = True
 
     def update_canvas(self):
+        self.process_last_key_press()
         if self.update_frame:
 
             # Convert the OpenCV image to a format suitable for Tkinter

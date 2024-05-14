@@ -27,15 +27,15 @@
 </head>
 <body>
     <div class="container">
-        <h2>Instructions for using the Annotation Tool</h2>
+        <h2>Basic instructions for using the Annotation Tool</h2>
         <p>
             To get started, you need to enter the settings in the <strong>Project &gt; Settings menu</strong>
         </p>
         <p>
-        To start annotation select project via <strong>Project &gt; Open</strong>. Application will download images and annotations if they not already downloaded. Then the project will be opened in the appropriate mode (annotation/review/correction) depending on task status on the portal.
+        To start annotation select project via <strong>Project &gt; Open</strong>. Application will download images and annotations if they not already downloaded. Then the project will be opened in the appropriate mode depending on task type and status on the portal.
         </p>
         <p>
-        You can close the application at any time, the figures will be saved and the next time you open this project - it will be opened at the same place. 
+        You can close the application at any time, your work will be saved and the next time you open this project - it will be opened at the same place. 
         </p>
         <p>
         Work duration is calculated during you are working. Application counts time intervals between key presses and mouse clicks, but no more than 10 seconds. 
@@ -44,16 +44,7 @@
          After you processed all images, press <strong>Project &gt; Complete the project</strong>. It will send annotated data to the server and updates task status on the portal
         </p>
         <p>
-        The actions while annotation are performed mostly using hotkeys. You can see them in the <strong>Help</strong> menu
-        </p>
-        <p>
-        If you want to rest your work and overwrite your annotations with initial annotations, click <strong>Project &gt; Download and overwrite annotations</strong>.
-        </p>
-        <p>
-        Use <strong>Ctrl+Z</strong> and <strong>Ctrl+Y</strong> for undo/redo
-        </p>
-        <p>
-        Place cursor under the figure and press <strong>Ctrl+C</strong> to copy it. Use <strong>Ctrl+V</strong> to paste it on another image.
+        Use hotkeys. You can see them in the <strong>Help</strong> menu
         </p>
         <p>
         To go to the specific image of the project click <strong>Project &gt; Go to image</strong> and specify image id in the field.
@@ -62,30 +53,45 @@
         Pay attention to the <strong>Mode</strong> section on the left side of the status bar (bottom field on the window). It shows which task you have to do.
         </p>
         <p>
+        You can run project downloading of next project via <strong>Project &gt; Download</strong> while annotating a previous project 
+        </p>
+
+        <h2>Annotation</h2>
+        <p>
+        If you want to reset your work and overwrite your annotations with initial annotations, click <strong>Project &gt; Download and overwrite annotations</strong>.
+        </p>
+        <p>
+        Use <strong>Ctrl+Z</strong> and <strong>Ctrl+Y</strong> for undo/redo
+        </p>
+        <p>
+        Place cursor under the figure and press <strong>Ctrl+C</strong> to copy it. Use <strong>Ctrl+V</strong> to paste it on another image.
+        </p>
+        <p>
         Press <strong>T</strong> if you want to tag image as a trash. After that the <strong>Trash</strong> section on the status bar become red. Press <strong>T</strong> again to remove trash tag from the image.
         </p>
         <p>
-        You can rename BBoxes by placing the cursor over them and pressing the class hotkey. See the <strong>Help &gt; Classes</strong> menu to see the classes, their colors, and hotkeys. You can rename only BBoxes and Review labels in a review mode. Keypoint groups and segmentation masks it is impossible to rename for now. 
+            You can rename BBoxes by placing the cursor over them and pressing the class hotkey. See the <strong>Help &gt; Classes</strong> menu to see the classes, their colors, and hotkeys. You can rename only BBoxes and Review labels in a review mode. Keypoint groups and segmentation masks it is impossible to rename for now. 
         </p>
         <p>
-        You can also use <strong>A</strong> key for renaming figures and changing active label. Place a cursor under figure, press <strong>A</strong>. You will see a widged for label selection. Move cursor to select class you want. After releasing <strong>A</strong> the figure label and active label will be changed to selected class.
+            You can also use <strong>A</strong> key for renaming figures and changing active label. Place a cursor under figure, press <strong>A</strong>. You will see a widged for label selection. Move cursor to select class you want. After releasing <strong>A</strong> the figure label and active label will be changed to selected class.
         </p>
         <p>
-        In review mode you can use point of review label to move or delete it (by pressing D). You also can rename the label by pressing another label hotkey while holding cursor over the label`s point.
+            In review mode you can use point of review label to move or delete it (by pressing D). You also can rename the label by pressing another label hotkey while holding cursor over the label`s point.
         </p>
         <p>
-        Hide figures using hotkeys while annotating or reviewing images if you need to see the image under them.
+            Hide figures using hotkeys while annotating or reviewing images if you need to see the image under them.
         </p>
         <p>
-        Don't forget that you can show or hide figures names using <strong>N</strong>  while annotating or reviewing images. It is important for keypoints annotation when you need to see the names of keypoints. 
-        </p>
-        <p>
-        You can run project downloading of next project via <strong>Project &gt; Download</strong> while annotating a previous project 
+            Don't forget that you can show or hide figures names using <strong>N</strong>  while annotating or reviewing images. It is important for keypoints annotation when you need to see the names of keypoints. 
         </p>
       
-    <h2>Segmentation mode guide</h2>
+    <h3>Segmentation mode guide</h3>
     <p>https://docs.google.com/document/d/1DwXRi_SYmAl2jPBjSSe2j2319Yr4rkjTXUmDq6JOhxE/edit?usp=sharing</p>
 
+    <h2>Filtering</h2>
+    <p>
+        The selected image will have a green border
+    </p>
 
     </div>
 </body>

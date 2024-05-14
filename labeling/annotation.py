@@ -111,6 +111,10 @@ class AnnotationApp(AbstractLabelingApp):
     
     def update_canvas(self): 
         self.canvas = np.copy(self.orig_image)
+
+        if self.make_image_worse:
+            self.canvas = self.deteriorate_image(self.canvas)
+
         if not self.hide_figures:
             if self.annotation_stage is AnnotationStage.REVIEW:
                 # review_labels was edited and figures stored unchanged
@@ -324,5 +328,7 @@ class AnnotationApp(AbstractLabelingApp):
             self.switch_hiding_review_labels() 
         elif key.lower() == "n":
             self.switch_object_names_visibility() 
+        elif key.lower() == "s":
+            self.make_image_worse = not self.make_image_worse
 
 

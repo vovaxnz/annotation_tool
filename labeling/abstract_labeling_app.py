@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import json
 import time
+import cv2
 import numpy as np
 from enums import AnnotationMode, AnnotationStage
 from models import Value
@@ -32,9 +33,12 @@ class AbstractLabelingApp(ABC):
         self.processed_img_ids: set = set()
 
         self.canvas: np.ndarray = None
+        self.orig_image: np.ndarray = None
         self.image_changed = False
 
         self.ready_for_export = False
+
+        self.make_image_worse: bool = False
 
         self.load_state()
         self.load_image(next=False)
@@ -65,6 +69,12 @@ class AbstractLabelingApp(ABC):
     def save_image(self):
         raise NotImplementedError
 
+    def deteriorate_image(self, img) -> np.ndarray:
+        img = cv2.GaussianBlur(src=img, ksize=(31, 31), sigmaX=0)
+        hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        hsv_img[:, :, 1] = hsv_img[:, :, 1] * 0.5  # reduce saturation to 50%
+        img = cv2.cvtColor(hsv_img, cv2.COLOR_HSV2BGR)
+        return img
 
     def save_state(self):  # TODO: Save values as a batch
         Value.update_value("img_id", self.img_id)

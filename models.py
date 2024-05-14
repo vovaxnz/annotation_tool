@@ -902,6 +902,11 @@ class ClassificationImage(Base):
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
     
+    @classmethod
+    def all_selected(cls) -> List["ClassificationImage"]:
+        session = get_session()
+        return list(session.query(cls).filter(cls.selected == True).order_by(asc(cls.img_id)))
+    
     def __init__(self, name, img_id, selected: bool = False):
         self.name = name
         self.img_id = img_id
