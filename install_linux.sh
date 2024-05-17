@@ -12,7 +12,7 @@ VENV_PACKAGE_NAME="python${PYTHON_VERSION}-venv"
 echo $VENV_PACKAGE_NAME
 sudo apt install -y "$VENV_PACKAGE_NAME"
 
-sudo apt install rsync python3-tk  -y
+sudo apt install python3-tk python3-venv -y
 
 # Copy and install font
 mkdir -p ~/.fonts
