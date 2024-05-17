@@ -3,7 +3,6 @@ import os
 import traceback
 from typing import Callable
 import zipfile
-from tqdm import tqdm
 import time
 from exceptions import MessageBoxException
 from file_processing.progress_bar import ProcessingProgressBar
@@ -55,7 +54,7 @@ def unzip_archive(archive_path: str, output_dir: str, update_callback: Callable,
         processed_size = 0
         start_time = time.time()
         
-        for file in tqdm(file_names, desc="Extracting files"):
+        for file in file_names:
             if should_terminate():
                 print("Unzip terminated by user.")
                 return

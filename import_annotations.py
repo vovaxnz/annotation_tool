@@ -170,7 +170,6 @@ def import_project(
 
 def export_figures(figures_ann_path: str):
     figures_dict = dict()
-    print("Exporting figures...")
     for limage in LabeledImage.all():
         figures_dict[limage.name] = {
             "trash": limage.trash, 
@@ -185,7 +184,6 @@ def export_figures(figures_ann_path: str):
 
 def export_review(review_ann_path):
     review_label_dict = dict()
-    print("Exporting review labels...")
     for limage in LabeledImage.all(): 
         if len(limage.review_labels) > 0:
             review_label_dict[limage.name] = [
