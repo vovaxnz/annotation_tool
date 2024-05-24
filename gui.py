@@ -19,8 +19,12 @@ from jinja2 import Environment, FileSystemLoader
 import tkinterweb
 from models import Label
 from config import templates_path
+from config import settings
 
 from pynput.keyboard import Listener
+
+from path_manager import get_local_projects_data
+from utils import check_url_rechable
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -111,7 +115,13 @@ class MainWindow(tk.Tk):
 
     def open_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
-        projects_data = get_projects_data()
+        
+        try:
+            projects_data = get_projects_data()
+        except:
+            messagebox.showinfo("Error", "Unable to reach a web service. You`ll be shown only already downloaded projects.")
+            projects_data = get_local_projects_data()
+    
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
@@ -125,7 +135,13 @@ class MainWindow(tk.Tk):
 
     def download_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
-        projects_data = get_projects_data()
+
+        try:
+            projects_data = get_projects_data()
+        except:
+            messagebox.showinfo("Error", "Unable to reach a web service. You can not download a project now.")
+            return
+        
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
@@ -138,7 +154,10 @@ class MainWindow(tk.Tk):
             self.canvas_view.app.save_image()
             self.canvas_view.app.save_state()
             self.canvas_view.app.ready_for_export = True
-            complete_annotation(self.canvas_view.app, root=self)
+            if check_url_rechable(settings.api_url):
+                complete_annotation(self.canvas_view.app, root=self)
+            else:
+                messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
         self.remove_canvas()
         self.update_menu(initial=True)
         self.title(f"Annotation tool")
@@ -228,6 +247,8 @@ class CanvasView(tk.Canvas):
 
         self.update_frame = True
 
+        self.fit_at_img_change = True
+
         self.last_key_press_time = None
 
         self.bind("<Button-1>", self.scale_event_wrapper(self.handle_left_mouse_press))
@@ -248,7 +269,6 @@ class CanvasView(tk.Canvas):
         self.bind("<MouseWheel>", self.on_mouse_wheel)  # For Windows
         self.bind("<Button-4>", self.on_mouse_wheel)  # For Unix/Linux, Zoom in
         self.bind("<Button-5>", self.on_mouse_wheel)  # For Unix/Linux, Zoom out
-
 
         self.bind("<Configure>", self.on_resize)
 
@@ -420,12 +440,16 @@ class CanvasView(tk.Canvas):
             return
         if event.char.lower() == "w" or event.char.lower() == "p":
             self.app.forward()
-            self.fit_image()
+            if self.fit_at_img_change:
+                self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
+            self.update_frame = True
         elif event.char.lower() == "q" or event.char.lower() == "o":
             self.app.backward()
-            self.fit_image()
+            if self.fit_at_img_change:
+                self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
+            self.update_frame = True
         elif event.char.lower() == "f":
             self.fit_image()
         else:
@@ -438,6 +462,11 @@ class CanvasView(tk.Canvas):
         
 
     def overwrite_annotations(self):
+
+        if not check_url_rechable(settings.api_url):
+            messagebox.showinfo("Error", "Unable to reach a web service")
+            return
+        
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
         if agree:
             root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)

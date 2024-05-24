@@ -285,10 +285,11 @@ class MaskFigureController(FigureController):
         self.polygon = list()
 
     def copy(self):
-        self.copied_serialized_figure = {
-            "kwargs": self.figures_dict[self.active_label.name].serialize(), 
-            "type": type(self.figures_dict[self.active_label.name])
-        }
+        if self.figures_dict.get(self.active_label.name) is not None:
+            self.copied_serialized_figure = {
+                "kwargs": self.figures_dict[self.active_label.name].serialize(), 
+                "type": type(self.figures_dict[self.active_label.name])
+            }
         
     def paste(self):
         if self.copied_serialized_figure is not None:
@@ -384,14 +385,15 @@ class MaskFigureController(FigureController):
 
     def delete_command(self):
         # Delete class with active label (does not matter where is cursor)
-        self.figures_dict[self.active_label.name].delete()
-        self.figures_dict[self.active_label.name] = Mask(
-            label=self.active_label.name,
-            rle=get_empty_rle(height=self.img_height, width=self.img_width),
-            height=self.img_height,
-            width=self.img_width,
-        )
-        self.take_snapshot()
+        if self.figures_dict.get(self.active_label.name) is not None:
+            self.figures_dict[self.active_label.name].delete()
+            self.figures_dict[self.active_label.name] = Mask(
+                label=self.active_label.name,
+                rle=get_empty_rle(height=self.img_height, width=self.img_width),
+                height=self.img_height,
+                width=self.img_width,
+            )
+            self.take_snapshot()
 
     def change_label(self, label: Label):
         self.active_label = label

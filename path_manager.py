@@ -1,6 +1,29 @@
 import os
+from typing import List
 
 from config import settings
+from enums import AnnotationMode, AnnotationStage
+from labeling.abstract_labeling_app import ProjectData
+from utils import open_json
+
+
+def get_local_projects_data() -> List[ProjectData]: 
+    result = list()
+    for project_name in os.listdir(os.path.join(settings.data_dir, "data")):
+        pm = PathManager(project_id=project_name)
+        if pm.is_valid:
+            result.append(get_project_data_from_json(pm.state_path))
+    return result
+
+
+def get_project_data_from_json(json_path) -> ProjectData:
+    data = open_json(json_path)
+    return ProjectData(
+        id=data["id"],
+        uid=data["uid"],
+        stage=getattr(AnnotationStage, data["stage"]),
+        mode=getattr(AnnotationMode, data["mode"]),
+    )
 
 
 class PathManager():
@@ -50,4 +73,14 @@ class PathManager():
     def selected_frames_json_path(self):
         return os.path.join(self.project_path, f"selected_frames.json")
     
+    @property
+    def state_path(self):
+        return os.path.join(self.project_path, f"state.json")
     
+    @property
+    def is_valid(self) -> bool:
+        if not os.path.isfile(self.state_path):
+            return False
+        if not os.path.isfile(self.db_local_path):
+            return False
+        return True

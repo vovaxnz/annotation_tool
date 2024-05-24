@@ -16,6 +16,15 @@ class ProjectData:
     stage: AnnotationStage
     mode: AnnotationMode
 
+    def to_json(self):
+        data_dict = {
+            'id': self.id,
+            'uid': self.uid,
+            'stage': self.stage.name, 
+            'mode': self.mode.name
+        }
+        return data_dict
+
 
 class AbstractLabelingApp(ABC):
 

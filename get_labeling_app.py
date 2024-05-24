@@ -12,7 +12,7 @@ from labeling.annotation import AnnotationApp
 from labeling.filtering import FilteringApp
 from models import Value, configure_database
 from path_manager import PathManager
-from utils import open_json
+from utils import open_json, save_json
 from tkinter import messagebox
 import shutil
 import tkinter as tk
@@ -85,11 +85,14 @@ def download_project(project_data: ProjectData, root: tk.Tk):
 
 def get_labeling_app(project_data: ProjectData, root: tk.Tk) -> AbstractLabelingApp:
     
+    pm = PathManager(project_data.id)
+    
+    save_json(project_data.to_json(), pm.state_path)
+
     download_project(project_data=project_data, root=root)
 
     loading_window = get_loading_window(text="Loading project...", root=root)
 
-    pm = PathManager(project_data.id)
     configure_database(pm.db_path)
     if project_data.mode is AnnotationMode.FILTERING:
         labeling_app = FilteringApp(

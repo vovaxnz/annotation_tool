@@ -1,8 +1,10 @@
 import json
 import os
 
+import requests
+
 def open_json(detections_file):
-    with open(detections_file) as file:
+    with open(detections_file, "r") as file:
         value = json.load(file)
     return value
 
@@ -55,3 +57,11 @@ class HistoryBuffer:
     def clear(self):
         self.history = list()
         self.position = 0
+
+
+def check_url_rechable(url) -> bool:
+    try:
+        response = requests.get(url)
+    except requests.exceptions.RequestException as e:
+        return False
+    return True
