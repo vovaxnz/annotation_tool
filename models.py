@@ -13,6 +13,7 @@ from enums import FigureType
 from masks_encoding import decode_rle, encode_rle
 from sqlalchemy.sql import text  # For executing raw SQL statements
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from config import settings
 
 # Define a new metaclass that combines ABCMeta and DeclarativeMeta
 class ABSQLAlchemyMeta(ABCMeta, DeclarativeMeta):
@@ -533,7 +534,7 @@ class KeypointGroup(Figure):
                     under_point = True
                 )
             
-            circle_radius = max(1, int(5 / ((elements_scale_factor + 1e-7) ** (1/3))))
+            circle_radius = max(1, int(settings.kp_radius / ((elements_scale_factor + 1e-7) ** (1/3))))
             
             if highlight_keypoint:
                 circle_radius += 1
@@ -672,7 +673,11 @@ class BBox(Figure):
             show_label_names: bool = False,
         ) -> np.ndarray:
 
-        line_width = max(1, int(5 / ((elements_scale_factor + 1e-7) ** (1/3))))
+        if settings.bbox_transparency != 0:
+            canvas_copy = np.copy(canvas)
+        else:
+            canvas_copy = None
+        line_width = max(1, int(settings.bbox_line_width / ((elements_scale_factor + 1e-7) ** (1/3))))
 
         if self.selected:
             if elements_scale_factor < 3:
@@ -701,10 +706,11 @@ class BBox(Figure):
 
         if self.active_point_id is not None:
             point = self.points[self.active_point_id]
-            circle_radius = max(1, int(7 / ((elements_scale_factor + 1e-7) ** (1/3))))
+            circle_radius = max(1, int(settings.bbox_point_size / ((elements_scale_factor + 1e-7) ** (1/3))))
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), 2)
-
+        if canvas_copy is not None:
+            canvas = cv2.addWeighted(canvas_copy, settings.bbox_transparency, canvas, 1 - settings.bbox_transparency, 0)
         return canvas
 
     def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "BBox" = None) -> Optional[Figure]:
@@ -815,7 +821,7 @@ class Mask(Base):
         b2, g2, r2 = label.color_bgr
         canvas_copy = np.copy(canvas)
         canvas_copy[:, :, :3][self.mask > 0] = [b2, g2, r2]
-        canvas = cv2.addWeighted(canvas_copy, 0.4, canvas, 0.6, 0)
+        canvas = cv2.addWeighted(canvas_copy, 1 - settings.mask_transparency, canvas, settings.mask_transparency, 0)
         return canvas
 
     def serialize(self) -> Dict:

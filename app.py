@@ -9,7 +9,7 @@ class Application:
     def __init__(self):
 
         if settings.has_empty:
-            SettingsManager(message="Please enter your settings")
+            SettingsManager()
             try:
                 os.makedirs(settings.data_dir, exist_ok=True)
             except:

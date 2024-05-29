@@ -41,43 +41,83 @@ def get_loading_window(text: str, root: tk.Tk):
 
 
 class SettingsManager:
-    def __init__(self, root: tk.Tk = None, message: str = None):
-        if root is not None:
-            self.root = tk.Toplevel(root)
-        else:
-            self.root = tk.Tk()
+    def __init__(self, root: tk.Tk = None):
+        
+        self.root = tk.Toplevel(root) if root else tk.Tk()
         self.root.title("Settings Manager")
-        self.message = message
+        self.widgets = {}
+        
         self.setup_gui()
-
-        if root is None:
+        
+        if not root:
             self.root.mainloop()
-        
+
     def setup_gui(self):
-        labels = sorted(settings.data.keys())
-        self.entries = {}
         row_offset = 0
-        if self.message is not None:
-            message_label = ttk.Label(self.root, text=self.message)
-            message_label.grid(row=0, column=0, columnspan=2, padx=20, pady=10)
-            row_offset = 1
+        for key, value in settings.data.items():
+            if isinstance(value, dict) and 'type' not in value:
+                self.create_header(key, row_offset)
+                row_offset += 1
+                row_offset = self.create_nested_widgets(value, row_offset, key)
+            else:
+                self.create_widget(key, value, row_offset)
+                row_offset += 1
 
-        for i, label in enumerate(labels):
-            ttk.Label(self.root, text=label).grid(row=i + row_offset, column=0, padx=20, pady=10)
-            entry = ttk.Entry(self.root, width=40)
-            entry.grid(row=i + row_offset, column=1, padx=20, pady=10)
-            value = settings.data.get(label, '')
-            value = "" if value is None else value
-            entry.insert(0, value)
-            self.entries[label] = entry
+        self.create_save_button(row_offset)
 
+    def create_header(self, key, row):
+        ttk.Label(self.root, text=key.capitalize(), font=('Arial', 12, 'bold')).grid(
+            row=row, column=0, columnspan=2, sticky=tk.W, padx=10, pady=(10, 0)
+        )
+
+    def create_nested_widgets(self, data, start_row, parent_key):
+        for key, value in data.items():
+            full_key = f"{parent_key}.{key}"
+            self.create_widget(full_key, value, start_row)
+            start_row += 1
+        return start_row
+
+    def create_widget(self, key, value, row):
+        ttk.Label(self.root, text=key.split('.')[-1].replace('_', ' ').capitalize()).grid(
+            row=row, column=0, sticky=tk.W, padx=10, pady=5
+        )
+        if value['type'] == 'string':
+            self.create_entry_widget(key, value, row)
+        elif value['type'] == 'number':
+            self.create_scale_widget(key, value, row)
+
+    def create_entry_widget(self, key, value, row):
+        entry = ttk.Entry(self.root)
+        entry.grid(row=row, column=1, padx=10, pady=5, sticky=tk.W + tk.E)
+        if value['value']:
+            entry.insert(0, value['value'])
+        self.widgets[key] = entry
+
+    def create_scale_widget(self, key, value, row):
+        scale_var = tk.DoubleVar()
+        if value['value'] is not None:
+            scale_var.set(value['value'])
+        scale = tk.Scale(
+            self.root, from_=value['min'], to=value['max'], orient='horizontal', variable=scale_var, resolution=value['step']
+        )
+        scale.grid(row=row, column=1, padx=10, pady=5, sticky=tk.W + tk.E)
+        self.widgets[key] = scale_var
+
+    def create_save_button(self, row):
         save_button = ttk.Button(self.root, text="Save", command=self.on_save)
-        save_button.grid(row=len(labels) + row_offset, column=1, sticky=tk.W+tk.E, padx=20, pady=10)
+        save_button.grid(
+            row=row, column=1, sticky=tk.W + tk.E, padx=20, pady=10
+        )
 
-        
     def on_save(self):
-        for key, entry in self.entries.items():
-            settings.data[key] = entry.get()
+        for key, widget in self.widgets.items():
+            value = widget.get()
+            if "." in key:
+                keys = key.split('.')
+                assert (len(keys) == 2)
+                settings.data[keys[0]][keys[1]]['value'] = value
+            else:
+                settings.data[key]['value'] = value
         settings.save_settings()
         self.root.destroy()
 
