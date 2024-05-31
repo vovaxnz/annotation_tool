@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
@@ -162,8 +162,11 @@ class MainWindow(tk.Tk):
         self.update_menu(initial=True)
         self.title(f"Annotation tool")
 
+    def set_update_canvas(self):
+        self.canvas_view.update_frame=True
+
     def open_settings(self):
-        SettingsManager(root=self)
+        SettingsManager(root=self, at_exit=lambda : self.set_update_canvas())
         
     def go_to_image_id(self):
         form = ImageIdForm(root=self, max_id=self.canvas_view.app.img_number)

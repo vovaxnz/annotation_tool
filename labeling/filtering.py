@@ -65,9 +65,9 @@ class FilteringStatusData:
 
 
 class FilteringDelay(Enum):
-    SLOW = 0.25
+    LONG = 0.25
     MIDDLE = 0.1
-    FAST = 0.01
+    SHORT = 0.01
 
 
 class FilteringApp(AbstractLabelingApp):
@@ -76,7 +76,7 @@ class FilteringApp(AbstractLabelingApp):
     
         assert data_path.endswith("mp4")
 
-        self.delay: FilteringDelay = FilteringDelay.FAST
+        self.delay: FilteringDelay = FilteringDelay.SHORT
         self.cap = cv2.VideoCapture(data_path)
         self.labeled_image: ClassificationImage = None
 
@@ -156,11 +156,11 @@ class FilteringApp(AbstractLabelingApp):
         elif key.lower() == "s":
             self.make_image_worse = not self.make_image_worse
         elif key.lower() == "1":
-            self.delay = FilteringDelay.FAST
+            self.delay = FilteringDelay.SHORT
         elif key.lower() == "2":
             self.delay = FilteringDelay.MIDDLE
         elif key.lower() == "3":
-            self.delay = FilteringDelay.SLOW
+            self.delay = FilteringDelay.LONG
 
     def go_to_next_selected(self):
         cimages = ClassificationImage.all_selected()

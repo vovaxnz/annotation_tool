@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import List
+from typing import Callable, List
 from config import settings
 from labeling.abstract_labeling_app import ProjectData
 from labeling.annotation import AnnotationApp
@@ -41,7 +41,7 @@ def get_loading_window(text: str, root: tk.Tk):
 
 
 class SettingsManager:
-    def __init__(self, root: tk.Tk = None):
+    def __init__(self, root: tk.Tk = None, at_exit: Callable = None):
         
         self.root = tk.Toplevel(root) if root else tk.Tk()
         self.root.title("Settings Manager")
@@ -49,6 +49,8 @@ class SettingsManager:
         
         self.setup_gui()
         
+        self.at_exit = at_exit
+
         if not root:
             self.root.mainloop()
 
@@ -119,6 +121,8 @@ class SettingsManager:
             else:
                 settings.data[key]['value'] = value
         settings.save_settings()
+        if self.at_exit is not None:
+            self.at_exit()
         self.root.destroy()
 
 
