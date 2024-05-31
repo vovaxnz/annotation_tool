@@ -166,7 +166,8 @@ class MainWindow(tk.Tk):
         self.title(f"Annotation tool")
 
     def set_update_canvas(self):
-        self.canvas_view.update_frame=True
+        if self.canvas_view is not None:
+            self.canvas_view.update_frame=True
 
     def open_settings(self):
         SettingsManager(root=self, at_exit=lambda : self.set_update_canvas())
