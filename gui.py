@@ -25,10 +25,13 @@ from pynput.keyboard import Listener
 
 from path_manager import get_local_projects_data
 from utils import check_url_rechable
+from tkinter import PhotoImage
 
 class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
+        icon = PhotoImage(file=os.path.join(os.path.dirname(os.path.realpath(__file__)), "icon.png"))
+        self.iconphoto(True, icon)
         self.title(f"Annotation tool")
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
