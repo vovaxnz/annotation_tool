@@ -266,7 +266,7 @@ class AnnotationStatusBar(tk.Frame):
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
         
         # Schedule the next update
-        self.after(30, self.update_status)
+        self.after(10, self.update_status)
 
 
 class FilteringStatusBar(tk.Frame):
@@ -357,7 +357,7 @@ class FilteringStatusBar(tk.Frame):
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
         
         # Schedule the next update
-        self.after(30, self.update_status)
+        self.after(10, self.update_status)
 
 
 class ProjectSelector:
