@@ -4,7 +4,7 @@
 
 Run `bash install_linux.sh` and follow instructions
 
-## MacOS
+## MacOS 
 
 Run `bash install_mac.sh`
 
