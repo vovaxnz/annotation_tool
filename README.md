@@ -2,7 +2,7 @@
 
 ## Linux
 
-Run `bash install_linux.sh` and follow instructions
+Run `bash install_linux.sh` and follow instructions 
 
 ## MacOS 
 
