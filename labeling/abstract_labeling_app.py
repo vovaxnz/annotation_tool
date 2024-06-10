@@ -36,7 +36,7 @@ class AbstractLabelingApp(ABC):
         self.annotation_stage: AnnotationStage = project_data.stage
 
         self.tick_time = time.time()
-        self.max_action_time_sec = 10
+        self.max_action_time_sec = 60
         self.img_id = 0 
         self.duration_hours = 0
         self.processed_img_ids: set = set()

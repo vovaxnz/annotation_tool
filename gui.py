@@ -9,7 +9,7 @@ import tkinter as tk
 from api_requests import get_projects_data
 from enums import AnnotationMode
 from get_labeling_app import complete_annotation, download_project, get_labeling_app
-from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, ProjectSelector, SettingsManager, get_loading_window
+from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
 from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
 from tkinter import ttk
@@ -20,6 +20,8 @@ import tkinterweb
 from models import Label
 from config import templates_path
 from config import settings
+
+import subprocess
 
 from pynput.keyboard import Listener
 
@@ -80,6 +82,7 @@ class MainWindow(tk.Tk):
         self.file_menu.add_command(label="Open", command=self.open_project)
         self.file_menu.add_command(label="Download", command=self.download_project)
         self.file_menu.add_command(label="Settings", command=self.open_settings)
+        self.file_menu.add_command(label="Update tool", command=self.update_tool)
         self.help_menu.add_command(label="How to use this tool?", command=self.show_how)
         self.help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
         
@@ -164,6 +167,22 @@ class MainWindow(tk.Tk):
         self.remove_canvas()
         self.update_menu(initial=True)
         self.title(f"Annotation tool")
+
+    
+    def update_tool(self):
+
+        agree = messagebox.askokcancel("Tool update", "Are you sure you want to update annotation tool?")
+        if agree:
+            root_path = os.path.dirname(os.path.abspath(__file__))
+            print(root_path)
+
+            result = subprocess.run(["git", "-C", root_path, "pull"], capture_output=True, text=True)
+
+            message = f"{result.stdout}\n{result.stderr}"
+            if "Updating" in message:
+                message= message + "\n\nSuccess\n\nRe-open the tool for the changes to take effect"
+
+            MessageBox(message)
 
     def set_update_canvas(self):
         if self.canvas_view is not None:
