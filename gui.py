@@ -275,7 +275,8 @@ class CanvasView(tk.Canvas):
 
         self.fit_at_img_change = True
 
-        self.last_key_press_time = None
+        self.last_key_press_time = time.time()
+        self.min_time_between_frame_change = 0.5
 
         self.bind("<Button-1>", self.scale_event_wrapper(self.handle_left_mouse_press))
         self.bind("<Button-3>", self.handle_right_mouse_press)
@@ -465,12 +466,16 @@ class CanvasView(tk.Canvas):
             self.app.update_time_counter()
             return
         if event.char.lower() == "w" or event.char.lower() == "p":
+            if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
+                return
             self.app.forward()
             if self.fit_at_img_change:
                 self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
             self.update_frame = True
         elif event.char.lower() == "q" or event.char.lower() == "o":
+            if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
+                return
             self.app.backward()
             if self.fit_at_img_change:
                 self.fit_image()
@@ -481,6 +486,7 @@ class CanvasView(tk.Canvas):
         else:
             self.app.handle_key(key=event.char.lower())
 
+        self.last_key_press_time = time.time()
         self.app.update_time_counter()
 
         self.update_frame = True
