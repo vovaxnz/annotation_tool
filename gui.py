@@ -276,7 +276,7 @@ class CanvasView(tk.Canvas):
         self.fit_at_img_change = True
 
         self.last_key_press_time = time.time()
-        self.min_time_between_frame_change = 0.5
+        self.min_time_between_frame_change = 0.1
 
         self.bind("<Button-1>", self.scale_event_wrapper(self.handle_left_mouse_press))
         self.bind("<Button-3>", self.handle_right_mouse_press)
