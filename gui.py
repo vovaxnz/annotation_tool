@@ -8,6 +8,7 @@ from PIL import Image, ImageTk
 import tkinter as tk
 from api_requests import get_projects_data
 from enums import AnnotationMode
+from exceptions import handle_exception
 from get_labeling_app import complete_annotation, download_project, get_labeling_app
 from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
@@ -254,6 +255,8 @@ class MainWindow(tk.Tk):
         html_content = template.render(data=data)
         self._show_html_window(title="Classes", html_content=html_content)
 
+    def report_callback_exception(self, exc_type, exc_value, exc_traceback):
+        handle_exception(exc_type, exc_value, exc_traceback)
 
 class CanvasView(tk.Canvas):
     def __init__(self, parent, root: tk.Tk, app: AbstractLabelingApp):
@@ -610,3 +613,5 @@ class CanvasView(tk.Canvas):
         cropped = cv2.resize(cropped, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
         return cropped
 
+    def report_callback_exception(self, exc_type, exc_value, exc_traceback):
+        handle_exception(exc_type, exc_value, exc_traceback)

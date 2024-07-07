@@ -12,7 +12,7 @@ from labeling.annotation import AnnotationApp
 from labeling.filtering import FilteringApp
 from models import Value, configure_database
 from path_manager import PathManager
-from utils import open_json, save_json
+from utils import check_correct_json, open_json, save_json
 from tkinter import messagebox
 import shutil
 import tkinter as tk
@@ -30,22 +30,23 @@ def download_filtering_project(project_data: ProjectData, root: tk.Tk):
 
 def download_annotation_project(project_data: ProjectData, root: tk.Tk):
 
-    pm = PathManager(project_data.id)
 
-    loading_window = get_loading_window(text="Downloading annotations...", root=root)
-    if not os.path.isfile(pm.meta_ann_path):
+    pm = PathManager(project_data.id)
+    
+    loading_window = get_loading_window(text="Downloading annotations...")
+    if not os.path.isfile(pm.meta_ann_path) or not check_correct_json(pm.meta_ann_path):
         download_file(
             uid=project_data.uid, 
             file_name=os.path.basename(pm.meta_ann_path), 
             save_path=pm.meta_ann_path, 
         )
-    if not os.path.isfile(pm.figures_ann_path):
+    if not os.path.isfile(pm.figures_ann_path) or not check_correct_json(pm.figures_ann_path):
         download_file(
             uid=project_data.uid, 
             file_name=os.path.basename(pm.figures_ann_path), 
             save_path=pm.figures_ann_path, 
         )
-    if project_data.stage is AnnotationStage.CORRECTION and not os.path.isfile(pm.review_ann_path):
+    if project_data.stage is AnnotationStage.CORRECTION and not os.path.isfile(pm.review_ann_path) or not check_correct_json(pm.review_ann_path):
         download_file(
             uid=project_data.uid, 
             file_name=os.path.basename(pm.review_ann_path), 

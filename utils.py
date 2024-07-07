@@ -65,3 +65,11 @@ def check_url_rechable(url) -> bool:
     except requests.exceptions.RequestException as e:
         return False
     return True
+
+
+def check_correct_json(json_path: str) -> bool:
+    try:
+        open_json(json_path)
+        return True
+    except:
+        return False
