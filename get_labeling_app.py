@@ -46,12 +46,14 @@ def download_annotation_project(project_data: ProjectData, root: tk.Tk):
             file_name=os.path.basename(pm.figures_ann_path), 
             save_path=pm.figures_ann_path, 
         )
-    if project_data.stage is AnnotationStage.CORRECTION and not os.path.isfile(pm.review_ann_path) or not check_correct_json(pm.review_ann_path):
-        download_file(
-            uid=project_data.uid, 
-            file_name=os.path.basename(pm.review_ann_path), 
-            save_path=pm.review_ann_path, 
-        )
+    
+    if project_data.stage is AnnotationStage.CORRECTION:
+        if not check_correct_json(pm.review_ann_path):
+            download_file(
+                uid=project_data.uid, 
+                file_name=os.path.basename(pm.review_ann_path), 
+                save_path=pm.review_ann_path, 
+            )
 
     img_ann_number = len(open_json(pm.figures_ann_path))
     if os.path.isdir(pm.images_path):
