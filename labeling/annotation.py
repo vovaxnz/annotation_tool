@@ -163,6 +163,7 @@ class AnnotationApp(AbstractLabelingApp):
     def load_image(self, next: bool = True):
         self.hide_figures = False
         self.hide_review_labels = False
+        assert 0 <= self.img_id < len(self.img_names), f"The Image ID {self.img_id} is out of range of the images list: {len(self.img_names)}" 
         img_name = self.img_names[self.img_id]
         self.orig_image = cv2.imread(os.path.join(self.img_dir, img_name))
         self.labeled_image = LabeledImage.get(name=img_name)
