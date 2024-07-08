@@ -109,6 +109,8 @@ class AbstractLabelingApp(ABC):
             self.processed_img_ids = set(json.loads(processed_img_ids)) if processed_img_ids is not None else self.processed_img_ids
 
             self.image_changed = False
+        
+        assert self.img_id < self.img_number, f"Incorrect img_id {self.img_id}. The number of images is {self.img_number}"
 
     @abstractmethod
     def change_image(self, img_id: int):

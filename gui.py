@@ -9,7 +9,7 @@ import tkinter as tk
 from api_requests import get_projects_data
 from enums import AnnotationMode
 from exceptions import handle_exception
-from get_labeling_app import complete_annotation, download_project, get_labeling_app
+from get_labeling_app import complete_annotation, download_project, get_labeling_app, remove_project
 from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
 from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
@@ -84,6 +84,7 @@ class MainWindow(tk.Tk):
         self.file_menu.add_command(label="Download", command=self.download_project)
         self.file_menu.add_command(label="Settings", command=self.open_settings)
         self.file_menu.add_command(label="Update tool", command=self.update_tool)
+        self.file_menu.add_command(label="Remove project by ID", command=self.remove_project)
         self.help_menu.add_command(label="How to use this tool?", command=self.show_how)
         self.help_menu.add_command(label="Hotkeys", command=self.show_hotkeys)
         
@@ -154,6 +155,20 @@ class MainWindow(tk.Tk):
         project_data: ProjectData = ps.select()
         if project_data is not None: 
             download_project(project_data=project_data, root=self)
+
+
+    def remove_project(self):
+        projects_data = get_local_projects_data()
+        ps = ProjectSelector(projects_data, root=self, title="Select project to remove", description="Select project to remove\nfrom your computer. \nThis will remove project files \nfrom your computer, \nbut not from eg-ml")
+        project_data: ProjectData = ps.select()
+        if project_data is not None: 
+            remove_project(project_id=project_data.id)
+            messagebox.showinfo("Project removed", f"Project {project_data.id} removed")
+            if self.canvas_view is not None:
+                if self.canvas_view.app.project_id == project_data.id:
+                    self.remove_canvas()
+                    self.update_menu(initial=True)
+                    self.title(f"Annotation tool")
 
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")

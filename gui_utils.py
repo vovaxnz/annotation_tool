@@ -362,14 +362,16 @@ class FilteringStatusBar(tk.Frame):
 
 
 class ProjectSelector:
-    def __init__(self, projects: List[ProjectData], root: tk.Tk):
+    def __init__(self, projects: List[ProjectData], root: tk.Tk, title: str = None, description: str = None):
         self.projects = projects
         self.selected_project = None
         self.parent = root
+        self.title = "Select Project" if title is None else title
+        self.description = "Select Project" if description is None else description
 
     def select(self):
         self.root = tk.Toplevel(self.parent)
-        self.root.title("Select Project")
+        self.root.title(self.title)
 
         # Set window size
         window_width = 300
@@ -386,7 +388,7 @@ class ProjectSelector:
         # Set the dimensions of the window and where it is placed
         self.root.geometry('%dx%d+%d+%d' % (window_width, window_height, x, y))
 
-        self.text = tk.Label(self.root, text="Select project")
+        self.text = tk.Label(self.root, text=self.description, justify='left')
         self.text.pack(pady=10)
 
         # Create a canvas and a scrollbar

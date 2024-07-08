@@ -33,7 +33,7 @@ def download_annotation_project(project_data: ProjectData, root: tk.Tk):
 
     pm = PathManager(project_data.id)
     
-    loading_window = get_loading_window(text="Downloading annotations...")
+    loading_window = get_loading_window(text="Downloading annotations...", root=root)
     if not os.path.isfile(pm.meta_ann_path) or not check_correct_json(pm.meta_ann_path):
         download_file(
             uid=project_data.uid, 
@@ -142,3 +142,11 @@ def complete_annotation(labeling_app: AbstractLabelingApp, root: tk.Tk):
         
         messagebox.showinfo("Success", "Project completed")
         loading_window.destroy()
+
+def remove_project(project_id: int):
+    pm = PathManager(project_id)
+    if os.path.isdir(pm.project_path):
+        shutil.rmtree(pm.project_path)
+    if os.path.isfile(pm.db_local_path):
+        os.remove(pm.db_local_path)
+
