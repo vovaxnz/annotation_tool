@@ -33,7 +33,7 @@ def download_annotation_project(project_data: ProjectData, root: tk.Tk):
 
     pm = PathManager(project_data.id)
     
-    loading_window = get_loading_window(text="Downloading annotations...")
+    loading_window = get_loading_window(text="Downloading annotations...", root=root)
     if not os.path.isfile(pm.meta_ann_path) or not check_correct_json(pm.meta_ann_path):
         download_file(
             uid=project_data.uid, 
