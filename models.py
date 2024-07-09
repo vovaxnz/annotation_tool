@@ -412,6 +412,8 @@ class KeypointGroup(Figure):
 
     def delete_point(self, point_id):
         self.keypoints.pop(point_id)
+        if len(self.keypoints) == 1: # Remove both keypoints if there are 2 kepoints left
+            self.keypoints = list()
         self.keypoints_data = self.serialize_keypoints(self.keypoints)
         self.point_number = len(self.keypoints)
 
