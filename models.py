@@ -156,6 +156,7 @@ class Figure(Base, ABC):
             elements_scale_factor: float, 
             label: Label,  # TODO: Use Label reference from the database
             show_label_names: bool = False,
+            show_object_size: bool = False,
         ) -> np.ndarray:
         raise NotImplementedError
 
@@ -283,6 +284,7 @@ class ReviewLabel(Figure):
             elements_scale_factor: float,
             label: Label, 
             show_label_names: bool = True,
+            show_object_size: bool = False,
         ) -> np.ndarray:
 
         circle_radius = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))
@@ -490,6 +492,7 @@ class KeypointGroup(Figure):
             elements_scale_factor: float, 
             label: Label, 
             show_label_names: bool = False,
+            show_object_size: bool = False,
         ) -> np.ndarray:
 
         line_width = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))
@@ -671,6 +674,7 @@ class BBox(Figure):
             elements_scale_factor: float, 
             label: Label, 
             show_label_names: bool = False,
+            show_object_size: bool = False,
         ) -> np.ndarray:
 
         if settings.bbox_transparency != 0:
@@ -688,7 +692,18 @@ class BBox(Figure):
         for layer_id in range(line_width):
             canvas = cv2.rectangle(canvas, (int(self.x1 - layer_id), int(self.y1 - layer_id)), (int(self.x2 + layer_id), int(self.y2 + layer_id)), label.color_bgr, 1)
 
+        label_text = None
         if show_label_names:
+            label_text = label.name
+        if show_object_size:
+            w = abs(self.x2 - self.x1)
+            h = abs(self.y2 - self.y1)
+            if label_text is not None:
+                label_text += f", {h}x{w}"
+            else:
+                label_text = f"{h}x{w}"
+        
+        if label_text is not None:
             x, y = self.x1, self.y1
             under_point = True
             if y - 20 < 0:
@@ -696,13 +711,14 @@ class BBox(Figure):
                 under_point = False
             draw_text_label(
                 canvas, 
-                text=label.name, 
+                text=label_text, 
                 x=x, 
                 y=y, 
                 color_bgr=label.color_bgr, 
                 padding=5, 
                 under_point=under_point
             )
+
 
         if self.active_point_id is not None:
             point = self.points[self.active_point_id]
@@ -817,6 +833,7 @@ class Mask(Base):
             elements_scale_factor: float, 
             label: Label, 
             show_label_names: bool = False,
+            show_object_size: bool = False,
         ) -> np.ndarray:   
         b2, g2, r2 = label.color_bgr
         canvas_copy = np.copy(canvas)

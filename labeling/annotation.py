@@ -51,6 +51,7 @@ class AnnotationApp(AbstractLabelingApp):
         self.figures: List[Figure] = list()
         self.review_labels: List[ReviewLabel] = list()
         self.show_label_names = False
+        self.show_object_size = False
         self.img_dir = data_path
         self.orig_image: np.ndarray = None
         self.is_trash = False
@@ -135,6 +136,7 @@ class AnnotationApp(AbstractLabelingApp):
                     canvas=self.canvas, 
                     elements_scale_factor=self.scale_factor, 
                     show_label_names=self.show_label_names,
+                    show_object_size=self.show_object_size,
                     label=self.labels[figure.figure_type][figure.label]
                 )
         
@@ -235,6 +237,9 @@ class AnnotationApp(AbstractLabelingApp):
     def switch_object_names_visibility(self):
         self.show_label_names = not self.show_label_names
 
+    def switch_object_size_visibility(self):
+        self.show_object_size = not self.show_object_size
+
     def switch_hiding_figures(self):
         self.hide_figures = not self.hide_figures
 
@@ -329,6 +334,8 @@ class AnnotationApp(AbstractLabelingApp):
             self.switch_hiding_review_labels() 
         elif key.lower() == "n":
             self.switch_object_names_visibility() 
+        elif key.lower() == "h":
+            self.switch_object_size_visibility() 
         elif key.lower() == "s":
             self.make_image_worse = not self.make_image_worse
 
