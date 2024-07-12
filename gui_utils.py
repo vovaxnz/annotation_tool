@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import scrolledtext
 from typing import Callable, List
 from config import settings
-from labeling.abstract_labeling_app import ProjectData
+from labeling.project_data import ProjectData
 from labeling.annotation import AnnotationApp
 from labeling.filtering import FilteringApp
 from tkinter import ttk

@@ -9,9 +9,10 @@ from typing import Dict, List, Optional
 import numpy as np
 import cv2
 
-from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
+from labeling.abstract_labeling_app import AbstractLabelingApp
 
 from exceptions import MessageBoxException
+from labeling.project_data import ProjectData
 from models import ClassificationImage
 
 

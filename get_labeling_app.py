@@ -7,9 +7,10 @@ from file_processing.file_transfer import FileTransferClient, download_file, upl
 from file_processing.unzipping import ArchiveUnzipper
 from gui_utils import  get_loading_window
 from import_annotations import export_figures, export_review, export_selected_frames, import_project
-from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
+from labeling.abstract_labeling_app import AbstractLabelingApp
 from labeling.annotation import AnnotationApp
 from labeling.filtering import FilteringApp
+from labeling.project_data import ProjectData
 from models import Value, configure_database
 from path_manager import PathManager
 from utils import check_correct_json, open_json, save_json
@@ -133,9 +134,13 @@ def complete_annotation(labeling_app: AbstractLabelingApp, root: tk.Tk):
             elif labeling_app.annotation_stage is AnnotationStage.REVIEW:
                 export_review(review_ann_path=pm.review_ann_path)
                 upload_file(labeling_app.project_uid, pm.review_ann_path)
+
+        if os.path.isfile(pm.statistics_path):
+            upload_file(labeling_app.project_uid, pm.statistics_path)
+
         complete_task(project_uid=labeling_app.project_uid, duration_hours=labeling_app.duration_hours)
         Value.update_value("img_id", 0, overwrite=True)
-
+        
         if labeling_app.annotation_stage in [AnnotationStage.CORRECTION, AnnotationStage.REVIEW, AnnotationStage.FILTERING]:
             if os.path.isdir(pm.project_path):
                 shutil.rmtree(pm.project_path)

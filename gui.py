@@ -12,12 +12,13 @@ from exceptions import handle_exception
 from get_labeling_app import complete_annotation, download_project, get_labeling_app, remove_project
 from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
-from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
+from labeling.abstract_labeling_app import AbstractLabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
 from jinja2 import Environment, FileSystemLoader
 import tkinterweb
+from labeling.project_data import ProjectData
 from models import Label
 from config import templates_path
 from config import settings
@@ -389,7 +390,7 @@ class CanvasView(tk.Canvas):
     def handle_right_mouse_press(self, event: tk.Event):
 
         self.update_frame = True
-        self.app.update_time_counter()
+        self.app.update_time_counter("rmp")
 
         self.panning = True
         self.click_win_x, self.click_win_y = event.x, event.y
@@ -398,7 +399,7 @@ class CanvasView(tk.Canvas):
     def handle_left_mouse_press(self, event: tk.Event):
         self.app.handle_left_mouse_press(event.x, event.y)
         self.update_frame = True
-        self.app.update_time_counter()
+        self.app.update_time_counter("lmp")
 
     def handle_mouse_move(self, event: tk.Event):
         self.app.handle_mouse_move(event.x, event.y)
@@ -407,11 +408,9 @@ class CanvasView(tk.Canvas):
     def handle_left_mouse_release(self, event: tk.Event):
         self.app.handle_left_mouse_release(event.x, event.y)
         self.update_frame = True
-        self.app.update_time_counter()
 
     def handle_right_mouse_release(self, event: tk.Event):
         self.update_frame = True
-        self.app.update_time_counter()
         self.panning = False
 
     def handle_mouse_hover(self, event: tk.Event):
@@ -438,7 +437,7 @@ class CanvasView(tk.Canvas):
 
             self.app.start_selecting_class()
             self.update_frame = True
-            self.app.update_time_counter()
+            self.app.update_time_counter("keyboard")
 
             self.a_held_down = True
             
@@ -481,7 +480,7 @@ class CanvasView(tk.Canvas):
             time.sleep(0.1) # Added to prevent too fast redo or paste
 
             self.update_frame = True
-            self.app.update_time_counter()
+            self.app.update_time_counter("keyboard")
             return
         if event.char.lower() == "w" or event.char.lower() == "p":
             if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
@@ -505,7 +504,7 @@ class CanvasView(tk.Canvas):
             self.app.handle_key(key=event.char.lower())
 
         self.last_key_press_time = time.time()
-        self.app.update_time_counter()
+        self.app.update_time_counter("keyboard")
 
         self.update_frame = True
         self.last_key_event = None

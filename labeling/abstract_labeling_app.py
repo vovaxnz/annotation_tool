@@ -1,29 +1,14 @@
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 import json
 import time
 import cv2
 import numpy as np
 from enums import AnnotationMode, AnnotationStage
+from labeling.project_data import ProjectData
 from models import Value
-
-
-@dataclass
-class ProjectData:
-    id: int
-    uid: str
-    stage: AnnotationStage
-    mode: AnnotationMode
-
-    def to_json(self):
-        data_dict = {
-            'id': self.id,
-            'uid': self.uid,
-            'stage': self.stage.name, 
-            'mode': self.mode.name
-        }
-        return data_dict
+from path_manager import PathManager
+from utils import get_datetime_str
 
 
 class AbstractLabelingApp(ABC):
@@ -49,6 +34,8 @@ class AbstractLabelingApp(ABC):
 
         self.make_image_worse: bool = False
 
+        self.pm = PathManager(project_id=self.project_id)
+
         self.load_state()
         self.load_image(next=False)
 
@@ -60,7 +47,9 @@ class AbstractLabelingApp(ABC):
     def status_data(self):
         raise NotImplementedError
 
-    def update_time_counter(self):
+    def update_time_counter(self, message: str = None):
+        with open(self.pm.statistics_path, 'a+') as file:
+            file.write(f"{self.annotation_stage.name},{get_datetime_str()},{message}\n")
         curr_time = time.time()
         step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
         self.tick_time = curr_time

@@ -3,7 +3,7 @@ import requests
 from config import settings
 from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
-from labeling.abstract_labeling_app import ProjectData
+from labeling.project_data import ProjectData
 
 
 def get_projects_data() -> List[ProjectData]: 

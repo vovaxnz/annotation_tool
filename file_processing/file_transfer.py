@@ -42,10 +42,14 @@ class FileTransferClient(ProcessingProgressBar):
         else:
             self.root.after(100, lambda: self.check_download_completion(future, uid, file_name))
 
-def download_file(uid, file_name, save_path, update_callback: Callable = None, should_terminate: Callable = None):
+def download_file(uid, file_name, save_path, update_callback: Callable = None, should_terminate: Callable = None, ignore_404=False):
     with requests.post(f"{settings.file_url}/download/{uid}/{file_name}", headers={'Authorization': f'Bearer {settings.token}'}, stream=True) as r:
+        
         if r.status_code != 200:
-            raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {str(r.json())}")
+            if ignore_404 and r.status_code == 404:
+                return
+            else:
+                raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {str(r.json())}")
         total_size_in_bytes = int(r.headers.get('content-length', 0))
         downloaded_size = 0
         start_time = time.time()

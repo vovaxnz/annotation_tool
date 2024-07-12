@@ -10,11 +10,12 @@ from typing import Dict, List, Optional
 import numpy as np
 import cv2
 
-from labeling.abstract_labeling_app import AbstractLabelingApp, ProjectData
+from labeling.abstract_labeling_app import AbstractLabelingApp
 from controller import ControllerByMode, ObjectFigureController
 from drawing import create_class_selection_wheel, get_selected_sector_id
 from enums import AnnotationMode, AnnotationStage, FigureType
 from exceptions import MessageBoxException
+from labeling.project_data import ProjectData
 from models import Figure, Label, LabeledImage, ReviewLabel, Value
 
 

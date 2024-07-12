@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 
@@ -73,3 +74,7 @@ def check_correct_json(json_path: str) -> bool:
         return True
     except:
         return False
+    
+
+def get_datetime_str():
+    return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

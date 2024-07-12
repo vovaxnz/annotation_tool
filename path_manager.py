@@ -3,8 +3,8 @@ from typing import List
 
 from config import settings
 from enums import AnnotationMode, AnnotationStage
-from labeling.abstract_labeling_app import ProjectData
-from utils import open_json
+from labeling.project_data import ProjectData
+from utils import get_datetime_str, open_json
 
 
 def get_local_projects_data() -> List[ProjectData]: 
@@ -76,6 +76,13 @@ class PathManager():
     @property
     def state_path(self):
         return os.path.join(self.project_path, f"state.json")
+    
+    @property
+    def statistics_path(self):
+        for file_name in os.listdir(self.project_path):
+            if "statistics" in file_name:
+                return os.path.join(self.project_path, file_name)
+        return os.path.join(self.project_path, f"statistics_{get_datetime_str()}.txt")
     
     @property
     def is_valid(self) -> bool:
