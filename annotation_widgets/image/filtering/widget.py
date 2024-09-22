@@ -1,6 +1,6 @@
 from annotation_widgets.image.filtering.io import ImageFilteringIO
 from annotation_widgets.image.filtering.logic import ImageFilteringLogic
-from gui import AbstractAnnotationWidget
+from annotation_widgets.widget import AbstractAnnotationWidget
 
 
 class ImageFilteringWidget(AbstractAnnotationWidget):

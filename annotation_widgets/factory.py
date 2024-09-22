@@ -1,13 +1,15 @@
+from annotation_widgets.image.filtering.gui import ImageFilteringGUI
 from annotation_widgets.image.filtering.io import ImageFilteringIO
 from annotation_widgets.image.filtering.logic import ImageFilteringLogic
 from annotation_widgets.image.filtering.widget import ImageFilteringWidget
+from annotation_widgets.image.labeling.gui import ImageLabelingGUI
 from annotation_widgets.image.labeling.io import ImageLabelingIO
 from annotation_widgets.image.labeling.logic import ImageLabelingLogic
 from annotation_widgets.image.labeling.widget import ImageLabelingWidget
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 from db import configure_database
 from enums import AnnotationMode
-from gui import AbstractAnnotationWidget
+from annotation_widgets.widget import AbstractAnnotationWidget
 from gui_utils import get_loading_window
 from models import ProjectData
 from path_manager import PathManager
@@ -32,11 +34,13 @@ class AnnotationWidgetFactory:
         if widget_type is AnnotationWidgetType.BBOX:
             io = ImageLabelingIO()
             logic = ImageLabelingLogic()
-            return ImageLabelingWidget(io, logic)
+            gui = ImageLabelingGUI()
+            return ImageLabelingWidget(io, logic, gui)
         elif widget_type is AnnotationWidgetType.FILTERING:
             io = ImageFilteringIO()
             logic = ImageFilteringLogic()
-            return ImageFilteringWidget(io, logic)
+            gui = ImageFilteringGUI()
+            return ImageFilteringWidget(io, logic, gui)
         else:
             raise ValueError(f"Unknown widget type: {widget_type}")
 

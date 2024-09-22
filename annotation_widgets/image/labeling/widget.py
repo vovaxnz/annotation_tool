@@ -1,6 +1,6 @@
 from annotation_widgets.image.labeling.io import ImageLabelingIO
 from annotation_widgets.image.labeling.logic import ImageLabelingLogic
-from gui import AbstractAnnotationWidget
+from annotation_widgets.widget import AbstractAnnotationWidget
 
 
 class ImageLabelingWidget(AbstractAnnotationWidget):

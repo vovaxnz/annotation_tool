@@ -1,8 +1,14 @@
 from annotation_widgets.image.filtering.logic import ImageFilteringLogic
+from annotation_widgets.image.gui import AbstractImageAnnotationGUI
 
 
 import tkinter as tk
 from tkinter import font, ttk
+
+
+
+class ImageFilteringGUI(AbstractImageAnnotationGUI):
+    pass
 
 
 class FilteringStatusBar(tk.Frame):
