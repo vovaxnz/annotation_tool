@@ -1,7 +1,9 @@
 from datetime import datetime
 import json
 import os
+from typing import Tuple
 
+from PIL import Image
 import requests
 
 def open_json(detections_file):
@@ -78,3 +80,11 @@ def check_correct_json(json_path: str) -> bool:
 
 def get_datetime_str():
     return datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+
+def get_img_size(img_path: str) -> Tuple[int, int]:
+    """Returns width and height of img"""
+    assert os.path.isfile(img_path), f"{img_path} is not found"
+    im = Image.open(img_path)
+    frame_width, frame_height = im.size
+    return int(frame_width), int(frame_height)

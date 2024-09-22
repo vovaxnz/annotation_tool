@@ -2,34 +2,32 @@
 
 import json
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
+from annotation_modes.image.filtering.models import ClassificationImage
+from annotation_modes.image.labeling.bboxes.models import BBox
+from annotation_modes.image.labeling.keypoints.models import KeypointGroup
+from annotation_modes.image.labeling.models import Label, LabeledImage, ReviewLabel
+from annotation_modes.image.labeling.segmentation.models import Mask
 from api_requests import get_project_data
 from enums import AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from file_processing.file_transfer import download_file
-from models import ClassificationImage, KeypointGroup, Label, LabeledImage, BBox, Mask, ReviewLabel, Value
+from models import Value
 from path_manager import PathManager
-from utils import open_json, save_json
-from PIL import Image
+from utils import get_img_size, open_json, save_json
 
 
-def get_img_size(img_path: str) -> Tuple[int, int]:
-    """Returns width and height of img"""
-    assert os.path.isfile(img_path), f"{img_path} is not found"
-    im = Image.open(img_path)
-    frame_width, frame_height = im.size
-    return int(frame_width), int(frame_height)
-
-
-
-def import_project(
+# TODO: Use AnnotationModeStrategy.import_project()
+# Move to annotation_modes/image/filtering/io.py
+# Move to annotation_modes/image/labeling/io.py
+def import_project( 
         figures_ann_path: str, 
         review_ann_path: str, 
         meta_ann_path: str,
         img_dir: str, 
         overwrite: bool = False
-    ):
+    ): 
     """
     review_ann format:
     {
@@ -167,6 +165,10 @@ def import_project(
                 limages.append(image)
         LabeledImage.save_batch(limages)
 
+
+# TODO: Use AnnotationModeStrategy.export()
+# Move to annotation_modes/image/filtering/io.py
+# Move to annotation_modes/image/labeling/io.py
 
 def export_figures(figures_ann_path: str):
     figures_dict = dict()

@@ -5,7 +5,7 @@ import time
 import cv2
 import numpy as np
 from enums import AnnotationMode, AnnotationStage
-from labeling.project_data import ProjectData
+from models import ProjectData
 from models import Value
 from path_manager import PathManager
 from utils import get_datetime_str

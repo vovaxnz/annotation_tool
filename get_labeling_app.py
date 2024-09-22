@@ -7,11 +7,12 @@ from file_processing.file_transfer import FileTransferClient, download_file, upl
 from file_processing.unzipping import ArchiveUnzipper
 from gui_utils import  get_loading_window
 from import_annotations import export_figures, export_review, export_selected_frames, import_project
-from labeling.abstract_labeling_app import AbstractLabelingApp
-from labeling.annotation import AnnotationApp
-from labeling.filtering import FilteringApp
-from labeling.project_data import ProjectData
-from models import Value, configure_database
+from annotation_modes.image.app import AbstractLabelingApp
+from annotation_modes.image.labeling.app import AnnotationApp
+from annotation_modes.image.filtering.app import FilteringApp
+from models import ProjectData
+from db import configure_database
+from models import Value
 from path_manager import PathManager
 from utils import check_correct_json, open_json, save_json
 from tkinter import messagebox
@@ -19,7 +20,7 @@ import shutil
 import tkinter as tk
 
 
-def download_filtering_project(project_data: ProjectData, root: tk.Tk):
+def download_filtering_project(project_data: ProjectData, root: tk.Tk): # TODO: Use AnnotationModeStrategy.dowload_project()
     pm = PathManager(project_data.id)
     if not os.path.isfile(pm.video_path):
         ftc = FileTransferClient(window_title="Downloading progress", root=root)
@@ -29,8 +30,7 @@ def download_filtering_project(project_data: ProjectData, root: tk.Tk):
             save_path=pm.video_path, 
         )
 
-def download_annotation_project(project_data: ProjectData, root: tk.Tk):
-
+def download_annotation_project(project_data: ProjectData, root: tk.Tk): # TODO: Use AnnotationModeStrategy.dowload_project()
 
     pm = PathManager(project_data.id)
     
@@ -87,7 +87,7 @@ def download_project(project_data: ProjectData, root: tk.Tk):
         download_annotation_project(project_data=project_data, root=root)
 
 
-def get_labeling_app(project_data: ProjectData, root: tk.Tk) -> AbstractLabelingApp:
+def get_labeling_app(project_data: ProjectData, root: tk.Tk) -> AbstractLabelingApp: # TODO: Use AnnotationModeStrategy.get_annotation_app()
     
     pm = PathManager(project_data.id)
     
@@ -118,7 +118,7 @@ def get_labeling_app(project_data: ProjectData, root: tk.Tk) -> AbstractLabeling
     loading_window.destroy()
     return labeling_app
     
-def complete_annotation(labeling_app: AbstractLabelingApp, root: tk.Tk):
+def complete_annotation(labeling_app: AbstractLabelingApp, root: tk.Tk): # TODO: Use AnnotationModeStrategy.complete_annotation()
     project_id = labeling_app.project_id
     pm = PathManager(project_id)
     if labeling_app.ready_for_export:

@@ -5,3 +5,4 @@ venv
 .env
 trash
 settings.json
+*.txt

@@ -8,15 +8,17 @@ import os
 import time
 from typing import Dict, List, Optional
 import numpy as np
+from annotation_modes.image.labeling.figure_controller import ObjectFigureController
+from annotation_modes.image.labeling.models import Figure, Label, LabeledImage, ReviewLabel
 import cv2
 
-from labeling.abstract_labeling_app import AbstractLabelingApp
-from controller import ControllerByMode, ObjectFigureController
-from drawing import create_class_selection_wheel, get_selected_sector_id
+from annotation_modes.image.app import AbstractLabelingApp
+from annotation_modes.image.labeling.figure_controller_factory import ControllerByMode
+from annotation_modes.image.labeling.drawing import create_class_selection_wheel, get_selected_sector_id
 from enums import AnnotationMode, AnnotationStage, FigureType
 from exceptions import MessageBoxException
-from labeling.project_data import ProjectData
-from models import Figure, Label, LabeledImage, ReviewLabel, Value
+from models import ProjectData
+from models import Value
 
 
 @dataclass

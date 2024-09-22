@@ -2,6 +2,8 @@ import os
 import sys
 import time
 from typing import Callable, List, Tuple
+from annotation_modes.image.filtering.gui import FilteringStatusBar
+from annotation_modes.image.labeling.gui import AnnotationStatusBar
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
@@ -10,16 +12,16 @@ from api_requests import get_projects_data
 from enums import AnnotationMode
 from exceptions import handle_exception
 from get_labeling_app import complete_annotation, download_project, get_labeling_app, remove_project
-from gui_utils import AnnotationStatusBar, FilteringStatusBar, ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
+from gui_utils import ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
 from import_annotations import overwrite_annotations
-from labeling.abstract_labeling_app import AbstractLabelingApp
+from annotation_modes.image.app import AbstractLabelingApp
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
 from jinja2 import Environment, FileSystemLoader
 import tkinterweb
-from labeling.project_data import ProjectData
-from models import Label
+from models import ProjectData
+from annotation_modes.image.labeling.models import Label
 from config import templates_path
 from config import settings
 

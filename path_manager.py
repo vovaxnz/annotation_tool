@@ -3,7 +3,7 @@ from typing import List
 
 from config import settings
 from enums import AnnotationMode, AnnotationStage
-from labeling.project_data import ProjectData
+from models import ProjectData
 from utils import get_datetime_str, open_json
 
 
@@ -26,7 +26,7 @@ def get_project_data_from_json(json_path) -> ProjectData:
     )
 
 
-class PathManager():
+class PathManager(): # TODO: Inherit path manager for each annotation mode
 
     def __init__(self, project_id: int):
         self.project_name = str(project_id).zfill(5)
