@@ -4,6 +4,7 @@ import json
 import time
 import cv2
 import numpy as np
+from annotation_widgets.logic import AbstractAnnotationLogic
 from enums import AnnotationMode, AnnotationStage
 from models import ProjectData
 from models import Value
@@ -11,7 +12,7 @@ from path_manager import PathManager
 from utils import get_datetime_str
 
 
-class AbstractImageAnnotationLogic(ABC):
+class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
 
     def __init__(self, data_path: str, project_data: ProjectData):
 

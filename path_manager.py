@@ -26,7 +26,7 @@ def get_project_data_from_json(json_path) -> ProjectData:
     )
 
 
-class PathManager():  # TODO: Inherit path manager for each annotation_widget
+class PathManager():  # TODO: Implement a concrete path manager for each annotation_widget inherited from AbstractPathManager
 
     def __init__(self, project_id: int):
         self.project_name = str(project_id).zfill(5)
