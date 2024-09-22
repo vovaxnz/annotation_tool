@@ -9,11 +9,11 @@ from typing import Dict, List, Optional
 import numpy as np
 import cv2
 
-from annotation_modes.image.app import AbstractLabelingApp
+from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 
 from exceptions import MessageBoxException
 from models import ProjectData
-from annotation_modes.image.filtering.models import ClassificationImage
+from annotation_widgets.image.filtering.models import ClassificationImage
 
 
 
@@ -71,7 +71,7 @@ class FilteringDelay(Enum):
     SHORT = 0.01
 
 
-class FilteringApp(AbstractLabelingApp):
+class ImageFilteringLogic(AbstractImageAnnotationLogic):
 
     def __init__(self, data_path: str, project_data: ProjectData):
     

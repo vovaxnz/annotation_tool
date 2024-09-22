@@ -1,4 +1,4 @@
-from annotation_modes.image.filtering.app import FilteringApp
+from annotation_widgets.image.filtering.logic import ImageFilteringLogic
 
 
 import tkinter as tk
@@ -6,9 +6,9 @@ from tkinter import font, ttk
 
 
 class FilteringStatusBar(tk.Frame):
-    def __init__(self, parent, app: FilteringApp, **kw):
+    def __init__(self, parent, logic: ImageFilteringLogic, **kw):
         super().__init__(parent, **kw)
-        self.app: FilteringApp = app
+        self.logic: ImageFilteringLogic = logic
 
         # Create labels within the status bar
         self.mode_label = tk.Label(self, bd=1)
@@ -73,7 +73,7 @@ class FilteringStatusBar(tk.Frame):
             widget.config(font=label_font)
 
     def update_status(self):
-        status_data = self.app.status_data
+        status_data = self.logic.status_data
 
         # Update labels
         self.mode_label.config(text=f"Mode: Filtering")

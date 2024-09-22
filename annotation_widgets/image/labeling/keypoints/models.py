@@ -1,5 +1,5 @@
-from annotation_modes.image.labeling.drawing import draw_text_label
-from annotation_modes.image.labeling.models import Figure, Label, Point
+from annotation_widgets.image.labeling.drawing import draw_text_label
+from annotation_widgets.image.labeling.models import Figure, Label, Point
 from config import ColorBGR
 from db import get_session
 

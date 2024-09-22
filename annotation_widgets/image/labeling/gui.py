@@ -1,14 +1,14 @@
-from annotation_modes.image.labeling.app import AnnotationApp
+from annotation_widgets.image.labeling.logic import ImageLabelingLogic
 
 
 import tkinter as tk
 from tkinter import font, ttk
 
 
-class AnnotationStatusBar(tk.Frame):
-    def __init__(self, parent, app: AnnotationApp, **kw):
+class AnnotationStatusBar(tk.Frame): # TODO: Should be a part of AnnotationWidget
+    def __init__(self, parent, logic: ImageLabelingLogic, **kw):
         super().__init__(parent, **kw)
-        self.app: AnnotationApp = app
+        self.logic: ImageLabelingLogic = logic
 
         # Create labels within the status bar
         self.mode_label = tk.Label(self, bd=1)
@@ -79,7 +79,7 @@ class AnnotationStatusBar(tk.Frame):
             widget.config(font=label_font)
 
     def update_status(self):
-        status_data = self.app.status_data
+        status_data = self.logic.status_data
 
         # Update labels
         self.mode_label.config(text=f"Mode: {status_data.annotation_mode}: {status_data.annotation_stage}")

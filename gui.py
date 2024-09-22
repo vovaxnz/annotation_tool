@@ -2,8 +2,8 @@ import os
 import sys
 import time
 from typing import Callable, List, Tuple
-from annotation_modes.image.filtering.gui import FilteringStatusBar
-from annotation_modes.image.labeling.gui import AnnotationStatusBar
+from annotation_widgets.image.filtering.gui import FilteringStatusBar
+from annotation_widgets.image.labeling.gui import AnnotationStatusBar
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
@@ -11,17 +11,17 @@ import tkinter as tk
 from api_requests import get_projects_data
 from enums import AnnotationMode
 from exceptions import handle_exception
-from get_labeling_app import complete_annotation, download_project, get_labeling_app, remove_project
+from annotation_widgets.widget import download_project
 from gui_utils import ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
-from import_annotations import overwrite_annotations
-from annotation_modes.image.app import AbstractLabelingApp
+from annotation_widgets.widget import complete_annotation, get_widget, overwrite_annotations, remove_project
+from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
 from jinja2 import Environment, FileSystemLoader
 import tkinterweb
 from models import ProjectData
-from annotation_modes.image.labeling.models import Label
+from annotation_widgets.image.labeling.models import Label
 from config import templates_path
 from config import settings
 
@@ -32,6 +32,7 @@ from pynput.keyboard import Listener
 from path_manager import get_local_projects_data
 from utils import check_url_rechable
 from tkinter import PhotoImage
+
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -47,12 +48,13 @@ class MainWindow(tk.Tk):
         self.container = tk.Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
 
+        # TODO: Status bar should be a part of AbstractAnnotationWidget and we should use a a single cell
         # Use grid layout within the container
-        self.container.grid_rowconfigure(0, weight=1)  # CanvasView row, make it expandable
+        self.container.grid_rowconfigure(0, weight=1)  # AbstractAnnotationWidget row, make it expandable
         self.container.grid_columnconfigure(0, weight=1)  # Single column for simplicity
         self.container.grid_rowconfigure(1, weight=0, minsize=40) # container for StatusBar
 
-        self.canvas_view = None
+        self.annotation_widget = None
         self.status_bar = None
         
         # Create a menu bar
@@ -95,30 +97,31 @@ class MainWindow(tk.Tk):
         if not initial:
             self.file_menu.add_command(label="Go to image", command=self.go_to_image_id) 
             self.file_menu.add_command(label="Complete the project", command=self.complete_project)
-            if self.canvas_view.app.annotation_mode is AnnotationMode.FILTERING:
+            if self.annotation_widget.logic.annotation_mode is AnnotationMode.FILTERING:
                 return
-            self.file_menu.add_command(label="Download and overwrite annotations", command=self.canvas_view.overwrite_annotations)
+            self.file_menu.add_command(label="Download and overwrite annotations", command=self.annotation_widget.overwrite_annotations)
             self.help_menu.add_command(label="Classes", command=self.show_classes)
             self.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
 
-    def set_canvas(self, labeling_app: AbstractLabelingApp): 
-        self.canvas_view = CanvasView(self.container, root=self, app=labeling_app)
-        self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
-        self.canvas_view.set_close_callback(self.destroy)
+    def set_annotation_widget(self, annotation_logic: AbstractImageAnnotationLogic): 
+        # TODO: Use AnnotationWidgetFactory to get an AnnotationWidget
+        self.annotation_widget = AbstractAnnotationWidget(self.container, root=self, logic=annotation_logic)
+        self.annotation_widget.grid(row=0, column=0, sticky="nsew")  # Make AbstractAnnotationWidget expand in all directions
+        self.annotation_widget.set_close_callback(self.destroy)
 
-        if labeling_app.annotation_mode is AnnotationMode.FILTERING:
-            self.status_bar = FilteringStatusBar(self.container, labeling_app)
+        if annotation_logic.annotation_mode is AnnotationMode.FILTERING:
+            self.status_bar = FilteringStatusBar(self.container, annotation_logic)
         else:
-            self.status_bar = AnnotationStatusBar(self.container, labeling_app)
+            self.status_bar = AnnotationStatusBar(self.container, annotation_logic)
 
         self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
 
-    def remove_canvas(self):
-        if self.canvas_view is not None:
-            self.canvas_view.app.save_image()
-            self.canvas_view.app.save_state()
-            self.canvas_view.destroy()
-            self.canvas_view = None
+    def remove_annotation_widget(self):
+        if self.annotation_widget is not None:
+            self.annotation_widget.logic.save_image()
+            self.annotation_widget.logic.save_state()
+            self.annotation_widget.destroy()
+            self.annotation_widget = None
 
         if self.status_bar is not None:
             self.status_bar.destroy()
@@ -137,10 +140,10 @@ class MainWindow(tk.Tk):
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
         if project_data is not None: 
-            if self.canvas_view is not None:
-                self.remove_canvas()
-            labeling_app = get_labeling_app(project_data, root=self)
-            self.set_canvas(labeling_app)
+            if self.annotation_widget is not None:
+                self.remove_annotation_widget()
+            annotation_logic = get_widget(project_data, root=self) # TODO: Create a widget here using an AbstractWidgetFactory
+            self.set_annotation_widget(annotation_logic)
             self.title(f"Project {project_data.id}")
             self.update_menu()
 
@@ -167,23 +170,24 @@ class MainWindow(tk.Tk):
         if project_data is not None: 
             remove_project(project_id=project_data.id)
             messagebox.showinfo("Project removed", f"Project {project_data.id} removed")
-            if self.canvas_view is not None:
-                if self.canvas_view.app.project_id == project_data.id:
-                    self.remove_canvas()
+            if self.annotation_widget is not None:
+                if self.annotation_widget.logic.project_id == project_data.id:
+                    self.remove_annotation_widget()
                     self.update_menu(initial=True)
                     self.title(f"Annotation tool")
 
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
         if agree:
-            self.canvas_view.app.save_image()
-            self.canvas_view.app.save_state()
-            self.canvas_view.app.ready_for_export = True
+            self.annotation_widget.logic.save_image()
+            self.annotation_widget.logic.save_state()
+            self.annotation_widget.logic.ready_for_export = True
             if check_url_rechable(settings.api_url):
-                complete_annotation(self.canvas_view.app, root=self)
+                # TODO: self.annotation_widget.complete_annotation()
+                complete_annotation(self.annotation_widget.logic, root=self)
             else:
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
-        self.remove_canvas()
+        self.remove_annotation_widget()
         self.update_menu(initial=True)
         self.title(f"Annotation tool")
 
@@ -203,24 +207,24 @@ class MainWindow(tk.Tk):
 
             MessageBox(message)
 
-    def set_update_canvas(self):
-        if self.canvas_view is not None:
-            self.canvas_view.update_frame=True
+    def set_update_annotation_widget(self):
+        if self.annotation_widget is not None:
+            self.annotation_widget.update_frame=True
 
     def open_settings(self):
-        SettingsManager(root=self, at_exit=lambda : self.set_update_canvas())
+        SettingsManager(root=self, at_exit=lambda : self.set_update_annotation_widget())
         
     def go_to_image_id(self):
-        form = ImageIdForm(root=self, max_id=self.canvas_view.app.img_number)
+        form = ImageIdForm(root=self, max_id=self.annotation_widget.logic.img_number)
         img_id = form.get_image_id()
         if img_id is not None:
-            self.canvas_view.app.go_to_image_by_id(img_id - 1)
-            self.canvas_view.update_frame = True
+            self.annotation_widget.logic.go_to_image_by_id(img_id - 1)
+            self.annotation_widget.update_frame = True
 
     def on_window_close(self):
-        if self.canvas_view is not None:
-            self.canvas_view.app.save_image()
-            self.canvas_view.app.save_state()
+        if self.annotation_widget is not None:
+            self.annotation_widget.logic.save_image()
+            self.annotation_widget.logic.save_state()
         self.destroy()
 
     def _show_html_window(self, title, html_content):
@@ -276,11 +280,11 @@ class MainWindow(tk.Tk):
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
 
-class CanvasView(tk.Canvas):
-    def __init__(self, parent, root: tk.Tk, app: AbstractLabelingApp):
+class AbstractAnnotationWidget(tk.Canvas):
+    def __init__(self, parent, root: tk.Tk, logic: AbstractImageAnnotationLogic):
         super().__init__(parent, bg="black")
 
-        self.app = app
+        self.logic = logic
 
         self.parent=root
 
@@ -310,7 +314,8 @@ class CanvasView(tk.Canvas):
         self.bind("<ButtonRelease-1>", self.scale_event_wrapper(self.handle_left_mouse_release))
         self.bind("<ButtonRelease-3>", self.scale_event_wrapper(self.handle_right_mouse_release))
 
-        self.focus_set() # Set focus to the canvas to receive keyboard events 
+        # TODO: Debug after refactoring
+        self.focus_set() # Set focus to the annotation_widget to receive keyboard events 
 
         self.bind("<Key>", self.handle_key_press) # For triggering methods by tkinter keyboard events
 
@@ -344,7 +349,7 @@ class CanvasView(tk.Canvas):
         self.listener = Listener(on_press=self.on_key_press, on_release=self.on_key_release)
         self.listener.start()
 
-        self.app.update_canvas()
+        self.logic.update_canvas()
 
     def on_key_press(self, key):
         self.any_key_pressed = True
@@ -361,7 +366,7 @@ class CanvasView(tk.Canvas):
         self.last_key_event = None
 
     def on_shift_press(self, event):
-        self.app.on_shift_press()
+        self.logic.on_shift_press()
         self.update_frame = True
 
     def set_close_callback(self, callback):
@@ -383,8 +388,8 @@ class CanvasView(tk.Canvas):
             
             self.x0 = max(0, self.x0)
             self.y0 = max(0, self.y0)
-            self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
-            self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
+            self.x0 = min(int(self.logic.orig_image.shape[1]*0.9), self.x0)
+            self.y0 = min(int(self.logic.orig_image.shape[0]*0.9), self.y0)
 
         self.scale_event_wrapper(self.handle_mouse_move)(event)
 
@@ -392,23 +397,23 @@ class CanvasView(tk.Canvas):
     def handle_right_mouse_press(self, event: tk.Event):
 
         self.update_frame = True
-        self.app.update_time_counter("rmp")
+        self.logic.update_time_counter("rmp")
 
         self.panning = True
         self.click_win_x, self.click_win_y = event.x, event.y
         self.start_x0, self.start_y0 = self.x0, self.y0
 
     def handle_left_mouse_press(self, event: tk.Event):
-        self.app.handle_left_mouse_press(event.x, event.y)
+        self.logic.handle_left_mouse_press(event.x, event.y)
         self.update_frame = True
-        self.app.update_time_counter("lmp")
+        self.logic.update_time_counter("lmp")
 
     def handle_mouse_move(self, event: tk.Event):
-        self.app.handle_mouse_move(event.x, event.y)
+        self.logic.handle_mouse_move(event.x, event.y)
         self.update_frame = True
 
     def handle_left_mouse_release(self, event: tk.Event):
-        self.app.handle_left_mouse_release(event.x, event.y)
+        self.logic.handle_left_mouse_release(event.x, event.y)
         self.update_frame = True
 
     def handle_right_mouse_release(self, event: tk.Event):
@@ -416,30 +421,30 @@ class CanvasView(tk.Canvas):
         self.panning = False
 
     def handle_mouse_hover(self, event: tk.Event):
-        self.app.handle_mouse_hover(event.x, event.y)
+        self.logic.handle_mouse_hover(event.x, event.y)
         self.update_frame = True
 
     def handle_space(self, event: tk.Event):
-        self.app.handle_space()
+        self.logic.handle_space()
         self.update_frame = True
 
     def handle_esc(self, event: tk.Event):
-        self.app.handle_esc()
+        self.logic.handle_esc()
         self.update_frame = True
 
     def on_resize(self, event):
-        self.update_canvas()
+        self.update_annotation_widget()
         self.fit_image()
 
 
-    # TODO: Move handle_key_a_press, handle_key_a_release, check_key_a_pressed to AnnotationApp
+    # TODO: Move handle_key_a_press, handle_key_a_release, check_key_a_pressed to ImageLabelingLogic
     def handle_key_a_press(self, event: tk.Event):
         self.last_a_press_time = time.time()
         if not self.a_held_down:
 
-            self.app.start_selecting_class()
+            self.logic.start_selecting_class()
             self.update_frame = True
-            self.app.update_time_counter("keyboard")
+            self.logic.update_time_counter("keyboard")
 
             self.a_held_down = True
             
@@ -448,7 +453,7 @@ class CanvasView(tk.Canvas):
 
     def check_key_a_pressed(self):
         if time.time() - self.last_a_press_time > self.keyboard_events_interval:
-            self.app.end_selecting_class()
+            self.logic.end_selecting_class()
             self.update_frame = True
             self.a_held_down = False
 
@@ -472,22 +477,22 @@ class CanvasView(tk.Canvas):
 
         if ctrl_pressed or cmd_pressed:  # Check if Ctrl or Command key is down
             if event.keysym.lower() == 'z':
-                self.app.undo()
+                self.logic.undo()
             elif event.keysym.lower() == 'y':
-                self.app.redo()
+                self.logic.redo()
             elif event.keysym.lower() == 'c':
-                self.app.copy()
+                self.logic.copy()
             elif event.keysym.lower() == 'v':
-                self.app.paste()
+                self.logic.paste()
             time.sleep(0.1) # Added to prevent too fast redo or paste
 
             self.update_frame = True
-            self.app.update_time_counter("keyboard")
+            self.logic.update_time_counter("keyboard")
             return
         if event.char.lower() == "w" or event.char.lower() == "p":
             if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
                 return
-            self.app.forward()
+            self.logic.forward()
             if self.fit_at_img_change:
                 self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
@@ -495,7 +500,7 @@ class CanvasView(tk.Canvas):
         elif event.char.lower() == "q" or event.char.lower() == "o":
             if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
                 return
-            self.app.backward()
+            self.logic.backward()
             if self.fit_at_img_change:
                 self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
@@ -503,10 +508,10 @@ class CanvasView(tk.Canvas):
         elif event.char.lower() == "f":
             self.fit_image()
         else:
-            self.app.handle_key(key=event.char.lower())
+            self.logic.handle_key(key=event.char.lower())
 
         self.last_key_press_time = time.time()
-        self.app.update_time_counter("keyboard")
+        self.logic.update_time_counter("keyboard")
 
         self.update_frame = True
         self.last_key_event = None
@@ -521,25 +526,25 @@ class CanvasView(tk.Canvas):
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
         if agree:
             root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            overwrite_annotations(project_id=self.app.project_id, project_uid=self.app.project_uid)
-            self.app.load_image()
+            overwrite_annotations(project_id=self.logic.project_id, project_uid=self.logic.project_uid)
+            self.logic.load_image()
             root.destroy()
             self.update_frame = True
-            self.update_canvas()
+            self.update_annotation_widget()
             messagebox.showinfo("Success", "The annotations have been overwritten")
 
 
-    def fit_image(self):
-        """Fits image inside the canvas and re-calculates scale_factor"""
+    def fit_image(self): # TODO: Should be moved to the ImageLabelingWidget
+        """Fits image inside the annotation_widget and re-calculates scale_factor"""
         win_w=self.winfo_width()
         win_h=self.winfo_height()
-        img_h, img_w, c = self.app.orig_image.shape
+        img_h, img_w, c = self.logic.orig_image.shape
         h_scale = win_h / img_h 
         w_scale = win_w / img_w
 
         self.scale_factor = min(h_scale, w_scale)
 
-        self.app.scale_factor = self.scale_factor
+        self.logic.scale_factor = self.scale_factor
         self.x0, self.y0 = 0, 0
         self.update_frame = True
 
@@ -573,22 +578,22 @@ class CanvasView(tk.Canvas):
         # Restrict x0y0 to be no less than 0 and no more than 2/3 of image
         self.x0 = max(0, self.x0)
         self.y0 = max(0, self.y0)
-        self.x0 = min(int(self.app.orig_image.shape[1]*0.9), self.x0)
-        self.y0 = min(int(self.app.orig_image.shape[0]*0.9), self.y0)
+        self.x0 = min(int(self.logic.orig_image.shape[1]*0.9), self.x0)
+        self.y0 = min(int(self.logic.orig_image.shape[0]*0.9), self.y0)
 
-        self.app.scale_factor = self.scale_factor
+        self.logic.scale_factor = self.scale_factor
 
-        self.app.cursor_x, self.app.cursor_y = self.xy_screen_to_image(event.x, event.y)
+        self.logic.cursor_x, self.logic.cursor_y = self.xy_screen_to_image(event.x, event.y)
 
         self.update_frame = True
 
-    def update_canvas(self):
+    def update_annotation_widget(self):
         self.process_last_key_press()
         if self.update_frame:
 
             # Convert the OpenCV image to a format suitable for Tkinter
-            self.app.update_canvas()
-            cv_image = cv2.cvtColor(self.app.canvas, cv2.COLOR_BGR2RGB)
+            self.logic.update_canvas()
+            cv_image = cv2.cvtColor(self.logic.canvas, cv2.COLOR_BGR2RGB)
             cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
             pil_image = Image.fromarray(cv_image)
             tk_image = ImageTk.PhotoImage(image=pil_image)
@@ -604,7 +609,7 @@ class CanvasView(tk.Canvas):
 
             self.update_frame = False
 
-        self.after(5, self.update_canvas)
+        self.after(5, self.update_annotation_widget)
         
     def xy_screen_to_image(self, x, y) -> Tuple[int, int]: 
         """Transforms coordinates on the window to the coordinates on the image"""

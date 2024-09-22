@@ -11,7 +11,7 @@ from path_manager import PathManager
 from utils import get_datetime_str
 
 
-class AbstractLabelingApp(ABC):
+class AbstractImageAnnotationLogic(ABC):
 
     def __init__(self, data_path: str, project_data: ProjectData):
 

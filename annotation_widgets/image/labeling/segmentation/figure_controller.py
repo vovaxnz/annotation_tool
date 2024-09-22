@@ -1,9 +1,9 @@
-from annotation_modes.image.labeling.models import Figure, Label
-from annotation_modes.image.labeling.segmentation.models import Mask
+from annotation_widgets.image.labeling.models import Figure, Label
+from annotation_widgets.image.labeling.segmentation.models import Mask
 from config import ColorBGR
-from annotation_modes.image.labeling.figure_controller import FigureController, Mode
-from annotation_modes.image.labeling.segmentation.masks_encoding import get_empty_rle
-from annotation_modes.image.labeling.models import Point
+from annotation_widgets.image.labeling.figure_controller import FigureController, Mode
+from annotation_widgets.image.labeling.segmentation.masks_encoding import get_empty_rle
+from annotation_widgets.image.labeling.models import Point
 
 
 import numpy as np
