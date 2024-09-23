@@ -83,7 +83,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         super().__init__(data_path=data_path, project_data=project_data)
 
     @property
-    def img_number(self) -> int:
+    def elements_number(self) -> int:
         return len(self.img_names)
 
     @property

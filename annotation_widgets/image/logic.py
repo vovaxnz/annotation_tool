@@ -13,6 +13,7 @@ from utils import get_datetime_str
 
 
 class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
+    # TODO: Rename "image" to "element" 
 
     def __init__(self, data_path: str, project_data: ProjectData):
 
@@ -41,7 +42,7 @@ class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
         self.load_image(next=False)
 
     @property
-    def img_number(self) -> int:
+    def elements_number(self) -> int:
         raise NotImplementedError
 
     @property
@@ -100,7 +101,7 @@ class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
 
             self.image_changed = False
         
-        assert self.img_id < self.img_number, f"Incorrect img_id {self.img_id}. The number of images is {self.img_number}"
+        assert self.img_id < self.elements_number, f"Incorrect img_id {self.img_id}. The number of images is {self.elements_number}"
 
     @abstractmethod
     def change_image(self, img_id: int):
@@ -112,7 +113,7 @@ class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
     def backward(self):
         self.change_image(img_id=self.img_id-1)
 
-    def go_to_image_by_id(self, img_id: int):
+    def go_to_id(self, img_id: int):
         self.change_image(img_id=img_id)
 
     def start_selecting_class(self): # ?

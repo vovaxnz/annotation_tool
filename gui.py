@@ -1,25 +1,20 @@
 import os
 import sys
-import time
-from typing import Callable, List, Tuple
-from annotation_widgets.image.filtering.gui import FilteringStatusBar
-from annotation_widgets.image.labeling.gui import AnnotationStatusBar
-import cv2
-import numpy as np
-from PIL import Image, ImageTk
+from typing import Callable, List
+from annotation_widgets.factory import get_io, get_widget
+
 import tkinter as tk
 from api_requests import get_projects_data
 from enums import AnnotationMode
 from exceptions import handle_exception
-from annotation_widgets.widget import download_project
-from gui_utils import ImageIdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window
-from annotation_widgets.widget import complete_annotation, get_widget, overwrite_annotations, remove_project
-from annotation_widgets.image.logic import AbstractImageAnnotationLogic
+from annotation_widgets.widget import AbstractAnnotationWidget
+from gui_utils import IdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window, show_html_window
+from annotation_widgets.widget import remove_project
+from jinja2 import Environment, FileSystemLoader
+
 from tkinter import ttk
 from tkinter import font
 from tkinter import messagebox
-from jinja2 import Environment, FileSystemLoader
-import tkinterweb
 from models import ProjectData
 from annotation_widgets.image.labeling.models import Label
 from config import templates_path
@@ -27,7 +22,6 @@ from config import settings
 
 import subprocess
 
-from pynput.keyboard import Listener
 
 from path_manager import get_local_projects_data
 from utils import check_url_rechable
@@ -48,13 +42,12 @@ class MainWindow(tk.Tk):
         self.container = tk.Frame(self)
         self.container.pack(side="top", fill="both", expand=True)
 
-        # TODO: Status bar should be a part of AbstractAnnotationWidget and we should use a a single cell
-        # Use grid layout within the container
-        self.container.grid_rowconfigure(0, weight=1)  # AbstractAnnotationWidget row, make it expandable
-        self.container.grid_columnconfigure(0, weight=1)  # Single column for simplicity
-        self.container.grid_rowconfigure(1, weight=0, minsize=40) # container for StatusBar
+        # AbstractAnnotationWidget cell, make it expandable
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1) 
 
-        self.annotation_widget = None
+
+        self.annotation_widget: AbstractAnnotationWidget = None
         self.status_bar = None
         
         # Create a menu bar
@@ -68,11 +61,6 @@ class MainWindow(tk.Tk):
         self.menu_bar.add_cascade(label="Help", menu=self.help_menu)
         self.update_menu(initial=True)
         
-        # Check if running on macOS
-        if sys.platform == "darwin":
-            # For macOS, setting the menu on the root should automatically handle it,
-            # but if it doesn't appear in the top bar, we force it here
-            self.tk.call('tk::mac::standardAboutPanel')
 
         # Attach the menu bar to the window
         self.config(menu=self.menu_bar)
@@ -95,37 +83,21 @@ class MainWindow(tk.Tk):
         
         # Add dynamic items only after initial setup
         if not initial:
-            self.file_menu.add_command(label="Go to image", command=self.go_to_image_id) 
+            self.file_menu.add_command(label="Go to ID", command=self.go_to_id) 
             self.file_menu.add_command(label="Complete the project", command=self.complete_project)
-            if self.annotation_widget.logic.annotation_mode is AnnotationMode.FILTERING:
-                return
-            self.file_menu.add_command(label="Download and overwrite annotations", command=self.annotation_widget.overwrite_annotations)
-            self.help_menu.add_command(label="Classes", command=self.show_classes)
-            self.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
 
-    def set_annotation_widget(self, annotation_logic: AbstractImageAnnotationLogic): 
-        # TODO: Use AnnotationWidgetFactory to get an AnnotationWidget
-        self.annotation_widget = AbstractAnnotationWidget(self.container, root=self, logic=annotation_logic)
-        self.annotation_widget.grid(row=0, column=0, sticky="nsew")  # Make AbstractAnnotationWidget expand in all directions
+    def set_annotation_widget(self, project_data: ProjectData): 
+        self.annotation_widget: AbstractAnnotationWidget = get_widget(root=self, project_data=project_data)
+        self.annotation_widget.grid(row=0, column=0, sticky="nsew")  # Make Widget expand in all directions
         self.annotation_widget.set_close_callback(self.destroy)
-
-        if annotation_logic.annotation_mode is AnnotationMode.FILTERING:
-            self.status_bar = FilteringStatusBar(self.container, annotation_logic)
-        else:
-            self.status_bar = AnnotationStatusBar(self.container, annotation_logic)
-
-        self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
+        self.update_menu()
+        self.annotation_widget.add_menu_items(self) # TODO: Test
 
     def remove_annotation_widget(self):
         if self.annotation_widget is not None:
-            self.annotation_widget.logic.save_image()
-            self.annotation_widget.logic.save_state()
-            self.annotation_widget.destroy()
+            self.annotation_widget.close()
             self.annotation_widget = None
-
-        if self.status_bar is not None:
-            self.status_bar.destroy()
-            self.status_bar = None 
+            self.update_menu()
 
     def open_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
@@ -142,8 +114,7 @@ class MainWindow(tk.Tk):
         if project_data is not None: 
             if self.annotation_widget is not None:
                 self.remove_annotation_widget()
-            annotation_logic = get_widget(project_data, root=self) # TODO: Create a widget here using an AbstractWidgetFactory
-            self.set_annotation_widget(annotation_logic)
+            self.set_annotation_widget(project_data)
             self.title(f"Project {project_data.id}")
             self.update_menu()
 
@@ -159,8 +130,9 @@ class MainWindow(tk.Tk):
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
+        io = get_io(project_data.mode)
         if project_data is not None: 
-            download_project(project_data=project_data, root=self)
+            io.download_project(project_data=project_data, root=self)
 
 
     def remove_project(self):
@@ -168,10 +140,11 @@ class MainWindow(tk.Tk):
         ps = ProjectSelector(projects_data, root=self, title="Select project to remove", description="Select project to remove\nfrom your computer. \nThis will remove project files \nfrom your computer, \nbut not from eg-ml")
         project_data: ProjectData = ps.select()
         if project_data is not None: 
-            remove_project(project_id=project_data.id)
+            io = get_io(project_data.mode)
+            io.remove_project(project_id=project_data.id)
             messagebox.showinfo("Project removed", f"Project {project_data.id} removed")
             if self.annotation_widget is not None:
-                if self.annotation_widget.logic.project_id == project_data.id:
+                if self.annotation_widget.project_id == project_data.id:
                     self.remove_annotation_widget()
                     self.update_menu(initial=True)
                     self.title(f"Annotation tool")
@@ -179,21 +152,30 @@ class MainWindow(tk.Tk):
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
         if agree:
-            self.annotation_widget.logic.save_image()
-            self.annotation_widget.logic.save_state()
-            self.annotation_widget.logic.ready_for_export = True
             if check_url_rechable(settings.api_url):
-                # TODO: self.annotation_widget.complete_annotation()
-                complete_annotation(self.annotation_widget.logic, root=self)
+                self.annotation_widget.complete_annotation(root=self)
+                self.remove_annotation_widget()
+                self.update_menu(initial=True)
+                self.title(f"Annotation tool")
             else:
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
-        self.remove_annotation_widget()
-        self.update_menu(initial=True)
-        self.title(f"Annotation tool")
 
-    
+    def open_settings(self):
+        SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update())
+        
+    def go_to_id(self):
+        form = IdForm(root=self, max_id=self.annotation_widget.elements_number) 
+        element_id = form.get_id()
+        if element_id is not None:
+            self.annotation_widget.go_to_id(element_id - 1)
+
+    def on_window_close(self):
+        if self.annotation_widget is not None:
+            self.annotation_widget.close()
+        self.destroy()
+
     def update_tool(self):
-
+        """Pulls git repository"""
         agree = messagebox.askokcancel("Tool update", "Are you sure you want to update annotation tool?")
         if agree:
             root_path = os.path.dirname(os.path.abspath(__file__))
@@ -207,75 +189,17 @@ class MainWindow(tk.Tk):
 
             MessageBox(message)
 
-    def set_update_annotation_widget(self):
-        if self.annotation_widget is not None:
-            self.annotation_widget.update_frame=True
-
-    def open_settings(self):
-        SettingsManager(root=self, at_exit=lambda : self.set_update_annotation_widget())
-        
-    def go_to_image_id(self):
-        form = ImageIdForm(root=self, max_id=self.annotation_widget.logic.img_number)
-        img_id = form.get_image_id()
-        if img_id is not None:
-            self.annotation_widget.logic.go_to_image_by_id(img_id - 1)
-            self.annotation_widget.update_frame = True
-
-    def on_window_close(self):
-        if self.annotation_widget is not None:
-            self.annotation_widget.logic.save_image()
-            self.annotation_widget.logic.save_state()
-        self.destroy()
-
-    def _show_html_window(self, title, html_content):
-        window = tk.Toplevel(self)
-        window.title(title)
-
-        html_frame = tkinterweb.HtmlFrame(window, messages_enabled=False)
-        html_frame.load_html(html_content)
-        html_frame.pack(fill="both", expand=True)
-
-        window.update_idletasks()
-        window.update()
-
     def show_hotkeys(self):
         template_path = os.path.join(templates_path, "hotkeys.html")
         with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        self._show_html_window(title="Hotkeys", html_content=html_content)
+        show_html_window(title="Hotkeys", html_content=html_content)
 
     def show_how(self):
         template_path = os.path.join(templates_path, "how.html")
         with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        self._show_html_window(title="How to use this tool?", html_content=html_content)
-
-    def show_classes(self):
-        data = [
-            {
-                "name": l.name,
-                "color": l.color,
-                "hotkey": l.hotkey,
-            } for l in Label.get_figure_labels()
-        ]
-        
-        env = Environment(loader=FileSystemLoader(templates_path))
-        template = env.get_template('classes.html')
-        html_content = template.render(data=data)
-        self._show_html_window(title="Classes", html_content=html_content)
-
-    def show_review_labels(self):
-        data = [
-            {
-                "name": l.name,
-                "color": l.color,
-                "hotkey": l.hotkey,
-            } for l in Label.get_review_labels()
-        ]
-        env = Environment(loader=FileSystemLoader(templates_path))
-        template = env.get_template('classes.html')
-        html_content = template.render(data=data)
-        self._show_html_window(title="Classes", html_content=html_content)
+        show_html_window(title="How to use this tool?", html_content=html_content)
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)

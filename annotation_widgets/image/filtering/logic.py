@@ -90,7 +90,7 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
         super().__init__(data_path=data_path, project_data=project_data)
 
     @property
-    def img_number(self) -> int:
+    def elements_number(self) -> int:
         return self.number_of_frames
 
     @property
@@ -103,7 +103,7 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
             img_id=self.img_id,
             annotation_hours=round(self.duration_hours, 2),
             number_of_processed=number_of_processed,
-            number_of_images=self.img_number,
+            number_of_images=self.elements_number,
         )
     
     def load_image(self, next: bool = True):
@@ -132,7 +132,7 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
             self.labeled_image.save()
 
     def change_image(self, img_id: int):
-        if img_id > self.img_number - 1 or img_id < 0:
+        if img_id > self.elements_number - 1 or img_id < 0:
             return
         time.sleep(self.delay.value)
         self.save_image()

@@ -35,18 +35,22 @@ class AbstractAnnotationIO:
     """
     Importing, exporting data
     """
+    #  TODO: Segregate logic into image labeling and image filtering
 
     def import_project( 
             self,
-            figures_ann_path: str, 
-            review_ann_path: str, 
-            meta_ann_path: str,
-            img_dir: str, 
+            project_data: ProjectData,
             overwrite: bool = False
         ): 
-        #  TODO: Use AbstractAnnotationWidget.import_project()
-        # Move to annotation_widgets/image/filtering/io.py
-        # Move to annotation_widgets/image/labeling/io.py
+
+
+        pm = PathManager(project_data.id) 
+
+        figures_ann_path=pm.figures_ann_path 
+        review_ann_path=pm.review_ann_path 
+        meta_ann_path=pm.meta_ann_path,
+        img_dir=pm.images_path, 
+
         """
         review_ann format:
         {
@@ -186,9 +190,6 @@ class AbstractAnnotationIO:
 
 
     def _export_figures(self, figures_ann_path: str):
-        #  TODO: Use AbstractAnnotationWidget.export()
-        # Move to annotation_widgets/image/filtering/io.py
-        # Move to annotation_widgets/image/labeling/io.py
         figures_dict = dict()
         for limage in LabeledImage.all():
             figures_dict[limage.name] = {
@@ -271,7 +272,6 @@ class AbstractAnnotationIO:
 
 
     def complete_annotation(self, annotation_logic: AbstractImageAnnotationLogic, root: tk.Tk):
-        # TODO: Use AbstractAnnotationWidget.complete_annotation()
         project_id = annotation_logic.project_id
         pm = PathManager(project_id)
         if annotation_logic.ready_for_export:
@@ -305,7 +305,6 @@ class AbstractAnnotationIO:
 
 
     def _download_annotation_project(self, project_data: ProjectData, root: tk.Tk):
-        # TODO: Use AbstractAnnotationWidget.dowload_project()
         pm = PathManager(project_data.id)
 
         loading_window = get_loading_window(text="Downloading annotations...", root=root)
@@ -355,7 +354,6 @@ class AbstractAnnotationIO:
 
 
     def _download_filtering_project(self, project_data: ProjectData, root: tk.Tk):
-        # TODO: Use AbstractAnnotationWidget.dowload_project()
         pm = PathManager(project_data.id)
         if not os.path.isfile(pm.video_path):
             ftc = FileTransferClient(window_title="Downloading progress", root=root)

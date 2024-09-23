@@ -5,6 +5,7 @@ from typing import Callable, List
 from config import settings
 from models import ProjectData
 from tkinter import ttk
+import tkinterweb
 
 
 
@@ -123,7 +124,7 @@ class SettingsManager:
         self.root.destroy()
 
 
-class ImageIdForm:
+class IdForm:
     def __init__(self, root: tk.Tk = None, max_id: int = None):
         self.root = tk.Toplevel(root)
         self.root.title("Enter image ID")
@@ -159,7 +160,7 @@ class ImageIdForm:
         except ValueError:
             return False  # Return False if the value_if_allowed is not an integer
 
-    def get_image_id(self):
+    def get_id(self):
         self.root.wait_window()
         return self.image_id
     
@@ -269,3 +270,14 @@ class MessageBox:
 
     def close_window(self):
         self.root.destroy()
+
+def show_html_window(root: tk.Tk, title, html_content):
+    window = tk.Toplevel(root)
+    window.title(title)
+
+    html_frame = tkinterweb.HtmlFrame(window, messages_enabled=False)
+    html_frame.load_html(html_content)
+    html_frame.pack(fill="both", expand=True)
+
+    window.update_idletasks()
+    window.update()

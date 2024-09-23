@@ -1,4 +1,3 @@
-from annotation_widgets.image.gui import AbstractImageAnnotationGUI
 from annotation_widgets.image.labeling.logic import ImageLabelingLogic
 
 
@@ -6,11 +5,9 @@ import tkinter as tk
 from tkinter import font, ttk
 
 
-class ImageLabelingGUI(AbstractImageAnnotationGUI):
-    pass
 
 
-class AnnotationStatusBar(tk.Frame): # TODO: Should be a part of AnnotationWidget
+class AnnotationStatusBar(tk.Frame): 
     def __init__(self, parent, logic: ImageLabelingLogic, **kw):
         super().__init__(parent, **kw)
         self.logic: ImageLabelingLogic = logic

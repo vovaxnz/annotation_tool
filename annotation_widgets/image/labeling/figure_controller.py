@@ -23,7 +23,7 @@ class Mode(Enum):
     CREATE = auto()
 
 
-class FigureController(ABC):
+class AbstractFigureController(ABC):
 
     def __init__(self, active_label: Label):
         self.start_point: Optional[Tuple[int, int]] = None
@@ -115,7 +115,7 @@ class FigureController(ABC):
         raise NotImplementedError
 
 
-class ObjectFigureController(FigureController):
+class ObjectFigureController(AbstractFigureController):
 
     def undo(self):
         super().undo()

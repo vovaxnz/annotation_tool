@@ -33,7 +33,7 @@ def get_projects_data() -> List[ProjectData]:
     raise MessageBoxException(f"Unable to get projects data. {response.status_code}")
 
 
-def get_project_data(project_uid: str) -> Tuple[AnnotationStage, AnnotationMode, str]:
+def get_project_data(project_uid: str) -> Tuple[AnnotationStage, AnnotationMode]:
     "annotation_stage, annotation_mode, img_path, ann_path"
     url = f'{settings.api_url}/api/annotation/get_project_data/{project_uid}/'
 

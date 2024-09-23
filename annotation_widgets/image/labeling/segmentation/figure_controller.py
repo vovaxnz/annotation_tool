@@ -1,7 +1,7 @@
 from annotation_widgets.image.labeling.models import Figure, Label
 from annotation_widgets.image.labeling.segmentation.models import Mask
 from config import ColorBGR
-from annotation_widgets.image.labeling.figure_controller import FigureController, Mode
+from annotation_widgets.image.labeling.figure_controller import AbstractFigureController, Mode
 from annotation_widgets.image.labeling.segmentation.masks_encoding import get_empty_rle
 from annotation_widgets.image.labeling.models import Point
 
@@ -12,7 +12,7 @@ import numpy as np
 from typing import List
 
 
-class MaskFigureController(FigureController):
+class MaskFigureController(AbstractFigureController):
 
     def __init__(self, active_label: Label):
         super().__init__(active_label)

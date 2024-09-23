@@ -1,9 +1,13 @@
-from annotation_widgets.gui import AbstractAnnotationGUI
+
+from annotation_widgets.image.labeling.io import ImageLabelingIO
+from annotation_widgets.image.labeling.logic import ImageLabelingLogic
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from annotation_widgets.widget import overwrite_annotations
+from annotation_widgets.widget import AbstractAnnotationWidget, overwrite_annotations
 from exceptions import handle_exception
 from gui_utils import get_loading_window
+from models import ProjectData
 from utils import check_url_rechable
+from config import settings
 
 
 import cv2
@@ -19,9 +23,72 @@ from typing import Tuple
 
 
 
+class ImageAnnotationWidget(AbstractAnnotationWidget):
+    def __init__(self, root: tk.Tk, io: ImageLabelingIO, logic: ImageLabelingLogic, project_data: ProjectData):
+        super().__init__(root, io, logic, project_data)
 
-class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
-    def __init__(self, parent, root: tk.Tk, logic: AbstractImageAnnotationLogic):
+        self.logic: ImageLabelingLogic = logic # TODO: For autocomplete purposes. Remove after moving common logic from ImageLabelingLogic to AbstractAnnotationLogic
+
+        # Create a container frame for better layout control
+        self.container = tk.Frame(self)
+        self.container.pack(side="top", fill="both", expand=True)
+
+        # Use grid layout within the container
+        self.container.grid_rowconfigure(0, weight=1)  # AbstractAnnotationWidget row, make it expandable
+        self.container.grid_columnconfigure(0, weight=1)  # Single column for simplicity
+        self.container.grid_rowconfigure(1, weight=0, minsize=40) # container for StatusBar
+
+        # Canvas
+        self.canvas_view = CanvasView(self.container, root=self, logic=self.logic)
+        self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
+
+        # Status bar
+        self.set_up_status_bar()
+        assert self.status_bar is not None
+        self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
+
+    def set_up_status_bar(self):
+        raise NotImplementedError
+
+    def schedule_update(self):
+        self.canvas_view.update_frame = True
+
+    def close(self):
+        self.logic.save_image()
+        self.logic.save_state() 
+        self.destroy()
+
+        if self.status_bar is not None:
+            self.status_bar.destroy()
+            self.status_bar = None 
+
+        if self.close_callback:
+            self.close_callback()
+
+    def overwrite_annotations(self):
+
+        if not check_url_rechable(settings.api_url):
+            messagebox.showinfo("Error", "Unable to reach a web service")
+            return
+
+        agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
+        if agree:
+            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
+            self.io.overwrite_annotations(project_id=self.logic.project_id, project_uid=self.logic.project_uid)
+            self.logic.load_image()
+            root.destroy()
+            self.update_frame = True
+            self.canvas_view.update_canvas()
+            messagebox.showinfo("Success", "The annotations have been overwritten")
+
+    def report_callback_exception(self, exc_type, exc_value, exc_traceback):
+        handle_exception(exc_type, exc_value, exc_traceback)
+
+
+
+class CanvasView(tk.Canvas):
+
+    def __init__(self, parent: tk.Tk, root: tk.Tk, logic: AbstractImageAnnotationLogic):
         super().__init__(parent, bg="black")
 
         self.logic = logic
@@ -54,7 +121,6 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
         self.bind("<ButtonRelease-1>", self.scale_event_wrapper(self.handle_left_mouse_release))
         self.bind("<ButtonRelease-3>", self.scale_event_wrapper(self.handle_right_mouse_release))
 
-        # TODO: Debug after refactoring
         self.focus_set() # Set focus to the annotation_widget to receive keyboard events 
 
         self.bind("<Key>", self.handle_key_press) # For triggering methods by tkinter keyboard events
@@ -109,14 +175,6 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
         self.logic.on_shift_press()
         self.update_frame = True
 
-    def set_close_callback(self, callback):
-        self.close_callback = callback
-
-    def close(self):
-        self.destroy()
-        if self.close_callback:
-            self.close_callback()
-
     def handle_right_mouse_motion(self, event: tk.Event):
         if self.panning:
             win_cursor_x, win_cursor_y = event.x, event.y
@@ -132,7 +190,6 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
             self.y0 = min(int(self.logic.orig_image.shape[0]*0.9), self.y0)
 
         self.scale_event_wrapper(self.handle_mouse_move)(event)
-
 
     def handle_right_mouse_press(self, event: tk.Event):
 
@@ -173,12 +230,11 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
         self.update_frame = True
 
     def on_resize(self, event):
-        self.update_annotation_widget()
+        self.update_canvas()
         self.fit_image()
 
-
-    # TODO: Move handle_key_a_press, handle_key_a_release, check_key_a_pressed to ImageLabelingLogic
     def handle_key_a_press(self, event: tk.Event):
+        # TODO: Move handle_key_a_press, handle_key_a_release, check_key_a_pressed to ImageLabelingLogic
         self.last_a_press_time = time.time()
         if not self.a_held_down:
 
@@ -196,7 +252,6 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
             self.logic.end_selecting_class()
             self.update_frame = True
             self.a_held_down = False
-
 
     def handle_key_press(self, event: tk.Event):
         if self.current_pressed_key is not None:
@@ -256,25 +311,7 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
         self.update_frame = True
         self.last_key_event = None
 
-
-    def overwrite_annotations(self):
-
-        if not check_url_rechable(settings.api_url):
-            messagebox.showinfo("Error", "Unable to reach a web service")
-            return
-
-        agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
-        if agree:
-            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            overwrite_annotations(project_id=self.logic.project_id, project_uid=self.logic.project_uid)
-            self.logic.load_image()
-            root.destroy()
-            self.update_frame = True
-            self.update_annotation_widget()
-            messagebox.showinfo("Success", "The annotations have been overwritten")
-
-
-    def fit_image(self): # TODO: Should be moved to the ImageLabelingWidget
+    def fit_image(self):
         """Fits image inside the annotation_widget and re-calculates scale_factor"""
         win_w=self.winfo_width()
         win_h=self.winfo_height()
@@ -327,7 +364,7 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
 
         self.update_frame = True
 
-    def update_annotation_widget(self):
+    def update_canvas(self):
         self.process_last_key_press()
         if self.update_frame:
 
@@ -349,7 +386,7 @@ class AbstractImageAnnotationGUI(AbstractAnnotationGUI):
 
             self.update_frame = False
 
-        self.after(5, self.update_annotation_widget)
+        self.after(5, self.update_canvas)
 
     def xy_screen_to_image(self, x, y) -> Tuple[int, int]:
         """Transforms coordinates on the window to the coordinates on the image"""

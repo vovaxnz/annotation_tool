@@ -1,8 +1,7 @@
-from annotation_widgets.image.filtering.gui import ImageFilteringGUI
 from annotation_widgets.image.filtering.io import ImageFilteringIO
 from annotation_widgets.image.filtering.logic import ImageFilteringLogic
 from annotation_widgets.image.filtering.widget import ImageFilteringWidget
-from annotation_widgets.image.labeling.gui import ImageLabelingGUI
+from annotation_widgets.image.io import AbstractAnnotationIO
 from annotation_widgets.image.labeling.io import ImageLabelingIO
 from annotation_widgets.image.labeling.logic import ImageLabelingLogic
 from annotation_widgets.image.labeling.widget import ImageLabelingWidget
@@ -21,38 +20,43 @@ import tkinter as tk
 from enum import Enum, auto
 
 
-class AnnotationWidgetType(Enum):
-    BBOX = auto()
-    SEGMENTATION = auto()
-    KEYPOINTS = auto()
-    FILTERING = auto()
-    EVENT_VALIDATION = auto()
+def get_io(annotation_mode: AnnotationMode) -> AbstractAnnotationIO:
+    if annotation_mode in [
+            AnnotationMode.OBJECT_DETECTION,
+            AnnotationMode.SEGMENTATION,
+            AnnotationMode.KEYPOINTS
+        ]:
+        return ImageLabelingIO()
+    elif annotation_mode is AnnotationMode.FILTERING:
+        return ImageFilteringIO()
+    else:
+        raise ValueError(f"Unknown annotation_mode: {annotation_mode}")
 
 
-class AnnotationWidgetFactory:
-    def get_widget(self, widget_type: AnnotationWidgetType) -> AbstractAnnotationWidget:
-        if widget_type is AnnotationWidgetType.BBOX:
-            io = ImageLabelingIO()
-            logic = ImageLabelingLogic()
-            gui = ImageLabelingGUI()
-            return ImageLabelingWidget(io, logic, gui)
-        elif widget_type is AnnotationWidgetType.FILTERING:
-            io = ImageFilteringIO()
-            logic = ImageFilteringLogic()
-            gui = ImageFilteringGUI()
-            return ImageFilteringWidget(io, logic, gui)
-        else:
-            raise ValueError(f"Unknown widget type: {widget_type}")
+def get_widget(root: tk.Tk, project_data: ProjectData) -> AbstractAnnotationWidget:
+    if project_data.mode is AnnotationMode.OBJECT_DETECTION:
+        io = ImageLabelingIO()
+        logic = ImageLabelingLogic()
+        return ImageLabelingWidget(root, io, logic, project_data)
+    elif project_data.mode is AnnotationMode.FILTERING:
+        io = ImageFilteringIO()
+        logic = ImageFilteringLogic()
+        return ImageFilteringWidget(root, io, logic, project_data)
+    else:
+        raise ValueError(f"Unknown annotation_mode: {project_data.mode}")
 
 
-def get_widget(project_data: ProjectData, root: tk.Tk) -> AbstractImageAnnotationLogic:
-    # TODO: Make it return a Widget and Use AnnotationWidgetFactory.get_widget()
+def load_project(project_data: ProjectData, root: tk.Tk) -> AbstractImageAnnotationLogic:
+    # TODO: Incapsulate to Annoation Widgets and move to main.py to appropriate method
+    # widget.download_project()
+    # widget.import_project()
 
     pm = PathManager(project_data.id)
+    io = get_io(project_data.mode)
 
     save_json(project_data.to_json(), pm.state_path)
 
-    download_project(project_data=project_data, root=root)
+    io.download_project(project_data=project_data, root=root)
 
     loading_window = get_loading_window(text="Loading project...", root=root)
 
@@ -63,7 +67,7 @@ def get_widget(project_data: ProjectData, root: tk.Tk) -> AbstractImageAnnotatio
             project_data=project_data,
         )
     else:
-        import_project(
+        io.import_project(
             figures_ann_path=pm.figures_ann_path,
             review_ann_path=pm.review_ann_path,
             meta_ann_path=pm.meta_ann_path,
