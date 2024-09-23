@@ -1,8 +1,8 @@
 
-from annotation_widgets.image.labeling.io import ImageLabelingIO
-from annotation_widgets.image.labeling.logic import ImageLabelingLogic
-from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from annotation_widgets.widget import AbstractAnnotationWidget, overwrite_annotations
+from .labeling.io import ImageLabelingIO
+from .labeling.logic import ImageLabelingLogic
+from .logic import AbstractImageAnnotationLogic
+from annotation_widgets.widget import AbstractAnnotationWidget
 from exceptions import handle_exception
 from gui_utils import get_loading_window
 from models import ProjectData

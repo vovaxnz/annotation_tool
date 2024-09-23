@@ -1,5 +1,5 @@
-from annotation_widgets.image.io import AbstractAnnotationIO
+from annotation_widgets.image.io import ImageAnnotationIO
 
 
-class ImageFilteringIO(AbstractAnnotationIO):
+class ImageFilteringIO(ImageAnnotationIO):
     ...

@@ -1,4 +1,4 @@
-from annotation_widgets.image.filtering.logic import ImageFilteringLogic
+from .logic import ImageFilteringLogic
 
 import tkinter as tk
 from tkinter import font, ttk

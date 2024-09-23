@@ -1,7 +1,7 @@
 
 
-from annotation_widgets.event_validation.logic import EventValidationLogic
-from annotation_widgets.event_validation.io import EventValidationIO
+from .logic import EventValidationLogic
+from .io import EventValidationIO
 from annotation_widgets.widget import AbstractAnnotationWidget
 import tkinter as tk
 

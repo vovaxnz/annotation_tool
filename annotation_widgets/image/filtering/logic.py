@@ -13,7 +13,7 @@ from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 
 from exceptions import MessageBoxException
 from models import ProjectData
-from annotation_widgets.image.filtering.models import ClassificationImage
+from .models import ClassificationImage
 
 
 

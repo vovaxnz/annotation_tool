@@ -1,14 +1,14 @@
-from annotation_widgets.image.filtering.io import ImageFilteringIO
-from annotation_widgets.image.filtering.logic import ImageFilteringLogic
-from annotation_widgets.image.filtering.widget import ImageFilteringWidget
-from annotation_widgets.image.io import AbstractAnnotationIO
-from annotation_widgets.image.labeling.io import ImageLabelingIO
-from annotation_widgets.image.labeling.logic import ImageLabelingLogic
-from annotation_widgets.image.labeling.widget import ImageLabelingWidget
-from annotation_widgets.image.logic import AbstractImageAnnotationLogic
+from .image.filtering.io import ImageFilteringIO
+from .image.filtering.logic import ImageFilteringLogic
+from .image.filtering.widget import ImageFilteringWidget
+from .image.io import ImageAnnotationIO
+from .image.labeling.io import ImageLabelingIO
+from .image.labeling.logic import ImageLabelingLogic
+from .image.labeling.widget import ImageLabelingWidget
+from .image.logic import AbstractImageAnnotationLogic
 from db import configure_database
 from enums import AnnotationMode
-from annotation_widgets.widget import AbstractAnnotationWidget
+from .widget import AbstractAnnotationWidget
 from gui_utils import get_loading_window
 from models import ProjectData
 from path_manager import PathManager
@@ -20,7 +20,7 @@ import tkinter as tk
 from enum import Enum, auto
 
 
-def get_io(annotation_mode: AnnotationMode) -> AbstractAnnotationIO:
+def get_io(annotation_mode: AnnotationMode) -> ImageAnnotationIO:
     if annotation_mode in [
             AnnotationMode.OBJECT_DETECTION,
             AnnotationMode.SEGMENTATION,

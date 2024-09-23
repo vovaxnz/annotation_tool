@@ -8,14 +8,16 @@ import tkinter as tk
 from tkinter import messagebox
 from typing import Dict, List
 
-from annotation_widgets.image.filtering.logic import ImageFilteringLogic
-from annotation_widgets.image.filtering.models import ClassificationImage
-from annotation_widgets.image.labeling.bboxes.models import BBox
-from annotation_widgets.image.labeling.keypoints.models import KeypointGroup
-from annotation_widgets.image.labeling.logic import ImageLabelingLogic
-from annotation_widgets.image.labeling.models import Label, LabeledImage, ReviewLabel
-from annotation_widgets.image.labeling.segmentation.models import Mask
-from annotation_widgets.image.logic import AbstractImageAnnotationLogic
+from annotation_widgets.io import AbstractAnnotationIO
+
+from .filtering.logic import ImageFilteringLogic
+from .filtering.models import ClassificationImage
+from .labeling.bboxes.models import BBox
+from .labeling.keypoints.models import KeypointGroup
+from .labeling.logic import ImageLabelingLogic
+from .labeling.models import Label, LabeledImage, ReviewLabel
+from .labeling.segmentation.models import Mask
+from .logic import AbstractImageAnnotationLogic
 from api_requests import complete_task, get_project_data
 from db import configure_database
 from enums import AnnotationMode, AnnotationStage, FigureType
@@ -31,7 +33,7 @@ from utils import check_correct_json, get_img_size, open_json, save_json
 
 
 
-class AbstractAnnotationIO:
+class ImageAnnotationIO(AbstractAnnotationIO):
     """
     Importing, exporting data
     """

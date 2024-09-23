@@ -1,7 +1,7 @@
-from annotation_widgets.image.labeling.gui import AnnotationStatusBar
-from annotation_widgets.image.labeling.io import ImageLabelingIO
-from annotation_widgets.image.labeling.logic import ImageLabelingLogic
-from annotation_widgets.image.labeling.models import Label
+from .gui import AnnotationStatusBar
+from .io import ImageLabelingIO
+from .logic import ImageLabelingLogic
+from .models import Label
 from annotation_widgets.image.widget import ImageAnnotationWidget
 from jinja2 import Environment, FileSystemLoader
 from config import templates_path

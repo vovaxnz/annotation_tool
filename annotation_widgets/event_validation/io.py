@@ -1,4 +1,4 @@
-from annotation_widgets.image.io import AbstractAnnotationIO
+from annotation_widgets.io import AbstractAnnotationIO
 
 
 class EventValidationIO(AbstractAnnotationIO):

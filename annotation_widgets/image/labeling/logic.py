@@ -8,13 +8,13 @@ import os
 import time
 from typing import Dict, List, Optional
 import numpy as np
-from annotation_widgets.image.labeling.figure_controller import ObjectFigureController
-from annotation_widgets.image.labeling.models import Figure, Label, LabeledImage, ReviewLabel
+from .figure_controller import ObjectFigureController
+from .models import Figure, Label, LabeledImage, ReviewLabel
 import cv2
 
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from annotation_widgets.image.labeling.figure_controller_factory import ControllerByMode
-from annotation_widgets.image.labeling.drawing import create_class_selection_wheel, get_selected_sector_id
+from .figure_controller_factory import ControllerByMode
+from .drawing import create_class_selection_wheel, get_selected_sector_id
 from enums import AnnotationMode, AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from models import ProjectData

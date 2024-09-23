@@ -1,6 +1,6 @@
 from typing import Callable
-from annotation_widgets.image.io import AbstractAnnotationIO
-from annotation_widgets.logic import AbstractAnnotationLogic
+from .io import AbstractAnnotationIO
+from .logic import AbstractAnnotationLogic
 import tkinter as tk
 
 from models import ProjectData
@@ -36,7 +36,7 @@ class AbstractAnnotationWidget(tk.Tk):
 
     def set_close_callback(self, callback):
         self.close_callback = callback
-        
+
     def add_menu_items(self, root: tk.Tk):
         """Here you can add additinal menu items specific to the widget"""
         pass
