@@ -1,6 +1,6 @@
 import os
 from exceptions import MessageBoxException
-from gui import MainWindow
+from main import MainWindow
 from gui_utils import SettingsManager
 from config import settings
 
