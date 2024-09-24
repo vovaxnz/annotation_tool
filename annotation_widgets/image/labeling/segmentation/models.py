@@ -15,7 +15,7 @@ class Mask(Base):
     __tablename__ = 'mask'
 
     id = Column(Integer, primary_key=True)
-    image_id = Column(Integer, ForeignKey('image.id'))
+    item_id = Column(Integer, ForeignKey('image.id'))
     rle = Column(Integer)
     label = Column(String)
     height = Column(Integer)

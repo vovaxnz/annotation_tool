@@ -56,7 +56,7 @@ class AbstractAnnotationIO(ABC):
         self._upload_annotation_results()
 
         complete_task(project_uid=self.project_data.uid, duration_hours=duration_hours)
-        Value.update_value("img_id", 0, overwrite=True)
+        Value.update_value("item_id", 0, overwrite=True)
 
         self._remove_after_completion()
 

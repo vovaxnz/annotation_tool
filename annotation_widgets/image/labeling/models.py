@@ -200,7 +200,7 @@ class ReviewLabel(Figure):
     __tablename__ = 'review_label'
 
     id = Column(Integer, primary_key=True)
-    image_id = Column(Integer, ForeignKey('image.id'))
+    item_id = Column(Integer, ForeignKey('image.id'))
     x = Column(Integer)
     y = Column(Integer)
     label = Column(String) # TODO: Use Label reference instead of str

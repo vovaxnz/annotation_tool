@@ -42,8 +42,8 @@ class ImageFilteringIO(AbstractAnnotationIO):
             if limage.selected:
                 if limage.name is not None:
                     result["names"].append(limage.name)
-                elif limage.img_id is not None:
-                    result["ids"].append(limage.img_id)
+                elif limage.item_id is not None:
+                    result["ids"].append(limage.item_id)
         save_json(result, output_path) 
 
     def _upload_annoation_results(self):

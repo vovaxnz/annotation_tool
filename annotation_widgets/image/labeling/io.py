@@ -108,7 +108,7 @@ class ImageLabelingIO(AbstractAnnotationIO):
         }
         """
         # Set current image id to 0
-        Value.update_value("img_id", 0, overwrite=False)
+        Value.update_value("item_id", 0, overwrite=False)
 
         figures_data = open_json(self.pm.figures_ann_path )
         meta_data = open_json(self.pm.meta_ann_path)

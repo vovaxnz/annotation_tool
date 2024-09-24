@@ -24,7 +24,7 @@ class KeypointGroup(Figure):
     __tablename__ = 'keypoint_group'
 
     id = Column(Integer, primary_key=True)
-    image_id = Column(Integer, ForeignKey('image.id'))
+    item_id = Column(Integer, ForeignKey('image.id'))
     label = Column(String)
     keypoints_data = Column(String) # "[{"x": ..., "y": ..., "label": ...}, ...]"
 

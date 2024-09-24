@@ -127,10 +127,10 @@ class SettingsManager:
 class IdForm:
     def __init__(self, root: tk.Tk = None, max_id: int = None):
         self.root = tk.Toplevel(root)
-        self.root.title("Enter image ID")
+        self.root.title("Enter item ID")
         self.max_id = max_id  # Store the maximum ID allowed
         
-        ttk.Label(self.root, text="Image ID:").grid(row=0, column=0, padx=20, pady=10)
+        ttk.Label(self.root, text="Item ID:").grid(row=0, column=0, padx=20, pady=10)
 
         # Validation command setup
         vcmd = (self.root.register(self.validate_input), '%P')  # %P passes the value of the entry if the edit is allowed
@@ -141,11 +141,11 @@ class IdForm:
         save_button = ttk.Button(self.root, text="Go", command=self.on_save)
         save_button.grid(row=1, column=0, columnspan=2, sticky=tk.W+tk.E, padx=20, pady=10)
 
-        self.image_id = None
+        self.item_id = None
 
     def on_save(self):
         if self.entry.get():
-            self.image_id = int(self.entry.get())  # Convert to int since we know it's a valid integer
+            self.item_id = int(self.entry.get())  # Convert to int since we know it's a valid integer
         self.root.destroy()
 
     def validate_input(self, value_if_allowed):
@@ -162,7 +162,7 @@ class IdForm:
 
     def get_id(self):
         self.root.wait_window()
-        return self.image_id
+        return self.item_id
     
 
 class ProjectSelector:

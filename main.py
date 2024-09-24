@@ -164,7 +164,7 @@ class MainWindow(tk.Tk):
         SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update())
         
     def go_to_id(self):
-        form = IdForm(root=self, max_id=self.annotation_widget.elements_number) 
+        form = IdForm(root=self, max_id=self.annotation_widget.items_number) 
         element_id = form.get_id()
         if element_id is not None:
             self.annotation_widget.go_to_id(element_id - 1)

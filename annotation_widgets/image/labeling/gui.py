@@ -17,7 +17,7 @@ class AnnotationStatusBar(tk.Frame):
         self.class_label = tk.Label(self, bd=1)
         self.trash_label = tk.Label(self, bd=1)
         self.hidden_label = tk.Label(self, bd=1)
-        self.img_id_label = tk.Label(self, bd=1)
+        self.item_id_label = tk.Label(self, bd=1)
         self.speed_label = tk.Label(self, bd=1)
         self.processed_label = tk.Label(self, bd=1)
         self.progress_bar = ttk.Progressbar(self, orient="horizontal", mode="determinate")
@@ -49,7 +49,7 @@ class AnnotationStatusBar(tk.Frame):
         sep4 = ttk.Separator(self, orient='vertical')
         sep4.grid(row=0, column=7, sticky='ns')
 
-        self.img_id_label.grid(row=0, column=8, sticky='ew', padx=15)
+        self.item_id_label.grid(row=0, column=8, sticky='ew', padx=15)
         sep5 = ttk.Separator(self, orient='vertical')
         sep5.grid(row=0, column=9, sticky='ns')
 
@@ -77,7 +77,7 @@ class AnnotationStatusBar(tk.Frame):
 
         # Set the new font to all labels and progress bar
         for widget in [self.mode_label, self.class_label, self.trash_label, self.hidden_label,
-                       self.img_id_label, self.speed_label, self.processed_label, self.duration_label]:
+                       self.item_id_label, self.speed_label, self.processed_label, self.duration_label]:
             widget.config(font=label_font)
 
     def update_status(self):
@@ -97,11 +97,11 @@ class AnnotationStatusBar(tk.Frame):
         hidden_color = self.hidden_label.master.cget('bg') if hidden_text == "All Visible" else "blue"
         self.hidden_label.config(text=hidden_text, bg=hidden_color)
 
-        self.img_id_label.config(text=f"Img id: {status_data.img_id}")
+        self.item_id_label.config(text=f"Img id: {status_data.item_id}")
         self.speed_label.config(text=f"Speed: {status_data.speed_per_hour} img/hour")
 
-        position_percent = int((status_data.img_id + 1) / status_data.number_of_images * 100)
-        self.processed_label.config(text=f"Position: {position_percent} % ({status_data.img_id + 1}/{status_data.number_of_images})")
+        position_percent = int((status_data.item_id + 1) / status_data.number_of_items * 100)
+        self.processed_label.config(text=f"Position: {position_percent} % ({status_data.item_id + 1}/{status_data.number_of_items})")
         self.progress_bar["value"] = position_percent
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
 

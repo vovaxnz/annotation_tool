@@ -54,7 +54,7 @@ class ImageAnnotationWidget(AbstractAnnotationWidget):
         self.canvas_view.update_frame = True
 
     def close(self):
-        self.logic.save_image()
+        self.logic.save_item()
         self.logic.save_state() 
         self.destroy()
 
@@ -75,7 +75,7 @@ class ImageAnnotationWidget(AbstractAnnotationWidget):
         if agree:
             root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
             self.io.overwrite_annotations()
-            self.logic.load_image()
+            self.logic.load_item()
             root.destroy()
             self.update_frame = True
             self.canvas_view.update_canvas()

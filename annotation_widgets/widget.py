@@ -19,15 +19,15 @@ class AbstractAnnotationWidget(tk.Tk):
         self.focus_set() # Set focus to the annotation_widget to receive keyboard events 
 
     @property
-    def elements_number(self):
-        return self.logic.elements_number
+    def items_number(self):
+        return self.logic.items_number
     
     @property
     def project_id(self):
         return self.logic.project_id
 
     def close(self):
-        self.logic.save_image()
+        self.logic.save_item()
         self.logic.save_state() 
         self.destroy()
 
@@ -60,7 +60,6 @@ class AbstractAnnotationWidget(tk.Tk):
         self.io.remove_project()
 
     def complete_annotation(self, root: tk.Tk): 
-        self.logic.save_image()
+        self.logic.save_item()
         self.logic.save_state()
-        self.logic.ready_for_export = True 
         self.io.complete_annotation(duration_hours=self.logic.duration_hours, root=root)

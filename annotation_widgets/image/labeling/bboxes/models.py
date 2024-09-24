@@ -20,7 +20,7 @@ class BBox(Figure):
     __tablename__ = 'bbox'
 
     id = Column(Integer, primary_key=True)
-    image_id = Column(Integer, ForeignKey('image.id'))
+    item_id = Column(Integer, ForeignKey('image.id'))
     x1 = Column(Integer)
     y1 = Column(Integer)
     x2 = Column(Integer)
