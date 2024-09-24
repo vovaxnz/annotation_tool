@@ -51,19 +51,16 @@ class AbstractAnnotationWidget(tk.Tk):
         self.schedule_update()
 
     def import_project(self, overwrite: bool = False):
-        self.io.import_project(project_data=self.project_data, overwrite=overwrite)
+        self.io.import_project(overwrite=overwrite)
 
     def overwrite_annotations(self):
-        self.io.overwrite_annotations(
-            project_id=self.project_data.id,
-            project_uid=self.project_data.uid,
-        )
+        self.io.overwrite_annotations()
 
     def remove_project(self):
-        self.io.remove_project(project_id=self.project_data.id)
+        self.io.remove_project()
 
     def complete_annotation(self, root: tk.Tk): 
         self.logic.save_image()
         self.logic.save_state()
         self.logic.ready_for_export = True 
-        self.io.complete_annotation(annotation_logic=self.logic, root=root)
+        self.io.complete_annotation(duration_hours=self.logic.duration_hours, root=root)

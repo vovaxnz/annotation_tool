@@ -130,9 +130,9 @@ class MainWindow(tk.Tk):
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
-        io = get_io(project_data.mode)
+        io = get_io(project_data)
         if project_data is not None: 
-            io.download_project(project_data=project_data, root=self)
+            io.download_project(root=self)
 
 
     def remove_project(self):
@@ -140,8 +140,8 @@ class MainWindow(tk.Tk):
         ps = ProjectSelector(projects_data, root=self, title="Select project to remove", description="Select project to remove\nfrom your computer. \nThis will remove project files \nfrom your computer, \nbut not from eg-ml")
         project_data: ProjectData = ps.select()
         if project_data is not None: 
-            io = get_io(project_data.mode)
-            io.remove_project(project_id=project_data.id)
+            io = get_io(project_data)
+            io.remove_project()
             messagebox.showinfo("Project removed", f"Project {project_data.id} removed")
             if self.annotation_widget is not None:
                 if self.annotation_widget.project_id == project_data.id:

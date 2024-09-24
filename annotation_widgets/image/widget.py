@@ -74,7 +74,7 @@ class ImageAnnotationWidget(AbstractAnnotationWidget):
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
         if agree:
             root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            self.io.overwrite_annotations(project_id=self.logic.project_id, project_uid=self.logic.project_uid)
+            self.io.overwrite_annotations()
             self.logic.load_image()
             root.destroy()
             self.update_frame = True
