@@ -6,8 +6,9 @@ import tkinter as tk
 from models import ProjectData
  
  
-class AbstractAnnotationWidget(tk.Tk): 
+class AbstractAnnotationWidget(tk.Frame): 
     def __init__(self, root: tk.Tk, io: AbstractAnnotationIO, logic: AbstractAnnotationLogic, project_data: ProjectData):
+        super().__init__(root)
         self.parent=root
         self.io: AbstractAnnotationIO = io
         self.logic: AbstractAnnotationLogic = logic
@@ -15,16 +16,13 @@ class AbstractAnnotationWidget(tk.Tk):
 
         self.close_callback: Callable = None
 
-        # TODO: Check the behaviour
-        self.focus_set() # Set focus to the annotation_widget to receive keyboard events 
-
     @property
     def items_number(self):
         return self.logic.items_number
     
     @property
     def project_id(self):
-        return self.logic.project_id
+        return self.logic.project_data.id
 
     def close(self):
         self.logic.save_item()

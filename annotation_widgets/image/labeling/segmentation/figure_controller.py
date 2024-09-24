@@ -1,3 +1,4 @@
+import cv2
 from annotation_widgets.image.labeling.models import Figure, Label
 from annotation_widgets.image.labeling.segmentation.models import Mask
 from config import ColorBGR

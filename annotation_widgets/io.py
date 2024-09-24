@@ -6,7 +6,6 @@ import tkinter as tk
 
 from api_requests import complete_task
 from db import configure_database
-from enums import AnnotationStage
 from file_processing.file_transfer import upload_file
 from gui_utils import get_loading_window
 from models import ProjectData, Value

@@ -114,6 +114,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
 
     
     def update_canvas(self): 
+        assert self.orig_image is not None
         self.canvas = np.copy(self.orig_image)
 
         if self.make_image_worse:

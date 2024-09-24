@@ -5,7 +5,7 @@ from annotation_widgets.image.labeling.segmentation.figure_controller import Mas
 from enums import AnnotationMode
 
 
-ControllerByMode = {  # TODO: Use Factory
+ControllerByMode = {
     AnnotationMode.OBJECT_DETECTION: BBoxFigureController,
     AnnotationMode.KEYPOINTS: KGroupFigureController,
     AnnotationMode.SEGMENTATION: MaskFigureController

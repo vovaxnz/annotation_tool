@@ -5,18 +5,12 @@ from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
 from api_requests import get_projects_data
-from enums import AnnotationMode
 from exceptions import handle_exception
 from annotation_widgets.widget import AbstractAnnotationWidget
 from gui_utils import IdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window, show_html_window
-from annotation_widgets.widget import remove_project
-from jinja2 import Environment, FileSystemLoader
 
-from tkinter import ttk
-from tkinter import font
 from tkinter import messagebox
 from models import ProjectData
-from annotation_widgets.image.labeling.models import Label
 from config import templates_path
 from config import settings
 
@@ -87,17 +81,15 @@ class MainWindow(tk.Tk):
             self.file_menu.add_command(label="Complete the project", command=self.complete_project)
 
     def set_annotation_widget(self, project_data: ProjectData): 
-        self.annotation_widget: AbstractAnnotationWidget = get_widget(root=self, project_data=project_data)
-        self.annotation_widget.grid(row=0, column=0, sticky="nsew")  # Make Widget expand in all directions
-        self.annotation_widget.set_close_callback(self.destroy)
+        self.annotation_widget: AbstractAnnotationWidget = get_widget(root=self.container, project_data=project_data)
         self.update_menu()
-        self.annotation_widget.add_menu_items(self) # TODO: Test
+        self.annotation_widget.add_menu_items(self) 
 
     def remove_annotation_widget(self):
         if self.annotation_widget is not None:
             self.annotation_widget.close()
             self.annotation_widget = None
-            self.update_menu()
+            self.update_menu(initial=True)
 
     def open_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
@@ -116,7 +108,6 @@ class MainWindow(tk.Tk):
                 self.remove_annotation_widget()
             self.set_annotation_widget(project_data)
             self.title(f"Project {project_data.id}")
-            self.update_menu()
 
     def download_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
@@ -146,7 +137,6 @@ class MainWindow(tk.Tk):
             if self.annotation_widget is not None:
                 if self.annotation_widget.project_id == project_data.id:
                     self.remove_annotation_widget()
-                    self.update_menu(initial=True)
                     self.title(f"Annotation tool")
 
     def complete_project(self):
@@ -155,7 +145,6 @@ class MainWindow(tk.Tk):
             if check_url_rechable(settings.api_url):
                 self.annotation_widget.complete_annotation(root=self)
                 self.remove_annotation_widget()
-                self.update_menu(initial=True)
                 self.title(f"Annotation tool")
             else:
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")

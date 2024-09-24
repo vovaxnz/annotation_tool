@@ -2,7 +2,7 @@ from .gui import AnnotationStatusBar
 from .io import ImageLabelingIO
 from .logic import ImageLabelingLogic
 from .models import Label
-from annotation_widgets.image.widget import ImageAnnotationWidget
+from annotation_widgets.image.widget import AbstractImageAnnotationWidget
 from jinja2 import Environment, FileSystemLoader
 from config import templates_path
 import tkinter as tk
@@ -11,12 +11,12 @@ from gui_utils import show_html_window
 from models import ProjectData
 
 
-class ImageLabelingWidget(ImageAnnotationWidget):
+class ImageLabelingWidget(AbstractImageAnnotationWidget):
     def __init__(self, root: tk.Tk, io: ImageLabelingIO, logic: ImageLabelingLogic, project_data: ProjectData):
         super().__init__(root, io, logic, project_data)
 
     def set_up_status_bar(self):
-        self.status_bar = AnnotationStatusBar(parent=self.container, logic=self.logic)
+        self.status_bar = AnnotationStatusBar(parent=self, logic=self.logic)
 
     def show_classes(self):
         data = [
@@ -52,5 +52,3 @@ class ImageLabelingWidget(ImageAnnotationWidget):
         root.help_menu.add_command(label="Classes", command=self.show_classes)
         root.help_menu.add_command(label="Review Labels", command=self.show_review_labels)
 
-    def initialize(self):
-        print("Initializing Image Labeling Widget with Labeling IO and Logic")

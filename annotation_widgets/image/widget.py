@@ -1,5 +1,6 @@
 
-from .labeling.io import ImageLabelingIO
+from annotation_widgets.io import AbstractAnnotationIO
+from annotation_widgets.logic import AbstractAnnotationLogic
 from .labeling.logic import ImageLabelingLogic
 from .logic import AbstractImageAnnotationLogic
 from annotation_widgets.widget import AbstractAnnotationWidget
@@ -23,23 +24,19 @@ from typing import Tuple
 
 
 
-class ImageAnnotationWidget(AbstractAnnotationWidget):
-    def __init__(self, root: tk.Tk, io: ImageLabelingIO, logic: ImageLabelingLogic, project_data: ProjectData):
+class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
+    def __init__(self, root: tk.Tk, io: AbstractAnnotationIO, logic: AbstractAnnotationLogic, project_data: ProjectData):
         super().__init__(root, io, logic, project_data)
 
-        self.logic: ImageLabelingLogic = logic # TODO: For autocomplete purposes. Remove after moving common logic from ImageLabelingLogic to AbstractAnnotationLogic
-
-        # Create a container frame for better layout control
-        self.container = tk.Frame(self)
-        self.container.pack(side="top", fill="both", expand=True)
+        self.pack(side="top", fill="both", expand=True)
 
         # Use grid layout within the container
-        self.container.grid_rowconfigure(0, weight=1)  # AbstractAnnotationWidget row, make it expandable
-        self.container.grid_columnconfigure(0, weight=1)  # Single column for simplicity
-        self.container.grid_rowconfigure(1, weight=0, minsize=40) # container for StatusBar
+        self.grid_rowconfigure(0, weight=1)  # AbstractAnnotationWidget row, make it expandable
+        self.grid_columnconfigure(0, weight=1)  # Single column for simplicity
+        self.grid_rowconfigure(1, weight=0, minsize=40) # container for StatusBar
 
         # Canvas
-        self.canvas_view = CanvasView(self.container, root=self, logic=self.logic)
+        self.canvas_view = CanvasView(self, root=self, logic=self.logic)
         self.canvas_view.grid(row=0, column=0, sticky="nsew")  # Make CanvasView expand in all directions
 
         # Status bar
@@ -78,8 +75,9 @@ class ImageAnnotationWidget(AbstractAnnotationWidget):
             self.logic.load_item()
             root.destroy()
             self.update_frame = True
-            self.canvas_view.update_canvas()
+            self.schedule_update()
             messagebox.showinfo("Success", "The annotations have been overwritten")
+
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
@@ -370,21 +368,22 @@ class CanvasView(tk.Canvas):
 
             # Convert the OpenCV image to a format suitable for Tkinter
             self.logic.update_canvas()
-            cv_image = cv2.cvtColor(self.logic.canvas, cv2.COLOR_BGR2RGB)
-            cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
-            pil_image = Image.fromarray(cv_image)
-            tk_image = ImageTk.PhotoImage(image=pil_image)
+            if self.logic.canvas is not None:
+                cv_image = cv2.cvtColor(self.logic.canvas, cv2.COLOR_BGR2RGB)
+                cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
+                pil_image = Image.fromarray(cv_image)
+                tk_image = ImageTk.PhotoImage(image=pil_image)
 
-            # Clear the current contents of the canvas
-            self.delete("all")
+                # Clear the current contents of the canvas
+                self.delete("all")
 
-            # Add new image to the canvas
-            self.create_image(0, 0, anchor="nw", image=tk_image)
+                # Add new image to the canvas
+                self.create_image(0, 0, anchor="nw", image=tk_image)
 
-            # Keep a reference to the image to prevent garbage collection
-            self.tk_image = tk_image
+                # Keep a reference to the image to prevent garbage collection
+                self.tk_image = tk_image
 
-            self.update_frame = False
+                self.update_frame = False
 
         self.after(5, self.update_canvas)
 

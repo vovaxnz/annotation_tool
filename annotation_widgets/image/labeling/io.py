@@ -13,8 +13,8 @@ from .bboxes.models import BBox
 from .keypoints.models import KeypointGroup
 from .models import Label, LabeledImage, ReviewLabel
 from .segmentation.models import Mask
-from api_requests import complete_task, get_project_data
-from enums import AnnotationMode, AnnotationStage
+from api_requests import get_project_data
+from enums import AnnotationStage
 from exceptions import MessageBoxException
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper

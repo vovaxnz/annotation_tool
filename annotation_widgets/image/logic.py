@@ -9,11 +9,11 @@ from models import ProjectData
 class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
 
     def __init__(self, data_path: str, project_data: ProjectData):
-        super().__init__(data_path, project_data)
         self.canvas: np.ndarray = None
         self.orig_image: np.ndarray = None
         self.image_changed = False
         self.make_image_worse: bool = False
+        super().__init__(data_path, project_data)
     
     @abstractmethod
     def update_canvas(self): 

@@ -5,7 +5,7 @@ from .image.filtering.widget import ImageFilteringWidget
 from .image.labeling.io import ImageLabelingIO
 from .image.labeling.logic import ImageLabelingLogic
 from .image.labeling.widget import ImageLabelingWidget
-from enums import AnnotationMode, AnnotationStage
+from enums import AnnotationMode
 from .widget import AbstractAnnotationWidget
 from models import ProjectData
 
