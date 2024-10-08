@@ -1,4 +1,7 @@
 from annotation_widgets.io import AbstractAnnotationIO
+from .event_validation.io import EventValidationIO
+from .event_validation.logic import EventValidationLogic
+from .event_validation.widget import EventValidationWidget
 from .image.filtering.io import ImageFilteringIO
 from .image.filtering.logic import ImageFilteringLogic
 from .image.filtering.widget import ImageFilteringWidget
@@ -23,6 +26,8 @@ def get_io(project_data: ProjectData) -> AbstractAnnotationIO:
         return ImageLabelingIO(project_data)
     elif project_data.mode is AnnotationMode.FILTERING:
         return ImageFilteringIO(project_data)
+    elif project_data.mode is AnnotationMode.EVENT_VALIDATION:
+        return EventValidationIO(project_data)
     else:
         raise ValueError(f"Unknown annotation_mode: {project_data.mode}")
 
@@ -50,7 +55,13 @@ def get_widget(root: tk.Tk, project_data: ProjectData) -> AbstractAnnotationWidg
             project_data=project_data
         )
         return ImageFilteringWidget(root, io, logic, project_data)
+    elif project_data.mode is AnnotationMode.EVENT_VALIDATION:
+        io = EventValidationIO(project_data)
+        io.initialize_project(root)
+        logic = EventValidationLogic(
+            data_path=io.pm.project_path,
+            project_data=project_data
+        )
+        return EventValidationWidget(root, io, logic, project_data)
     else:
         raise ValueError(f"Unknown annotation_mode: {project_data.mode}")
-
-

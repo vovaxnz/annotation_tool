@@ -169,7 +169,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
     def load_item(self, next: bool = True):
         self.hide_figures = False
         self.hide_review_labels = False
-        assert 0 <= self.item_id < len(self.img_names), f"The Image ID {self.item_id} is out of range of the images list: {len(self.img_names)}" 
+        assert 0 <= self.item_id < len(self.img_names), f"The Image ID {self.item_id} is out of range of the images list: {len(self.img_names)}"
         img_name = self.img_names[self.item_id]
         self.orig_image = cv2.imread(os.path.join(self.img_dir, img_name))
         self.labeled_image = LabeledImage.get(name=img_name)
@@ -189,7 +189,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         self.controller.take_snapshot()
 
     def save_item(self):
-        if self.image_changed:
+        if self.item_changed:
 
             if self.project_data.stage is AnnotationStage.REVIEW: 
                 # Update only review labels when review
@@ -219,7 +219,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
             self.labeled_image.save()
 
 
-    def change_item(self, item_id: int):
+    def switch_item(self, item_id: int):
         if item_id > len(self.img_names) - 1 or item_id < 0:
             return
         self.save_item()
@@ -236,7 +236,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         self.labeled_image.trash = not self.labeled_image.trash
         self.labeled_image.save()
         self.is_trash = self.labeled_image.trash
-        self.image_changed = True
+        self.item_changed = True
 
     def switch_object_names_visibility(self):
         self.show_label_names = not self.show_label_names
@@ -255,7 +255,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         label = self.labels_by_hotkey.get(label_hotkey)
         if label is not None:
             self.controller.change_label(label)
-            self.image_changed = True
+            self.item_changed = True
 
     def start_selecting_class(self):
         if not self.selecting_class:
@@ -272,22 +272,22 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
                 edge_y=self.controller.cursor_y
             )
             self.controller.change_label(self.available_labels[label_id])
-            self.image_changed = True
+            self.item_changed = True
             self.selecting_class = False
         
     def delete_command(self):
         if self.editing_blocked: return 
         self.controller.delete_command()
-        self.image_changed = True
+        self.item_changed = True
 
     def handle_left_mouse_press(self, x: int, y: int):
         if self.editing_blocked: return
         self.controller.handle_left_mouse_press(x, y)
-        self.image_changed = True
+        self.item_changed = True
 
     def handle_mouse_move(self, x: int, y: int):
         self.controller.handle_mouse_move(x, y)
-        self.image_changed = True
+        self.item_changed = True
 
     def handle_mouse_hover(self, x: int, y: int):
         if self.selecting_class:
@@ -323,7 +323,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
     def paste(self):
         if self.editing_blocked: return
         self.controller.paste()
-        self.image_changed = True
+        self.item_changed = True
 
     def handle_key(self, key: str):
         if key.isdigit(): 
@@ -342,5 +342,3 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
             self.switch_object_size_visibility() 
         elif key.lower() == "s":
             self.make_image_worse = not self.make_image_worse
-
-

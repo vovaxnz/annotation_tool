@@ -1,35 +1,23 @@
-from enum import Enum, auto
 import json
 import os
-import shutil
 import tkinter as tk
-from tkinter import messagebox
-from typing import Dict, List
 
 from annotation_widgets.io import AbstractAnnotationIO
-
-
-from .bboxes.models import BBox
-from .keypoints.models import KeypointGroup
-from .models import Label, LabeledImage, ReviewLabel
-from .segmentation.models import Mask
 from api_requests import get_project_data
 from enums import AnnotationStage
 from exceptions import MessageBoxException
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper
 from gui_utils import get_loading_window
-from models import ProjectData, Value
+from models import Value
 from utils import check_correct_json, get_img_size, open_json, save_json
+from .bboxes.models import BBox
+from .keypoints.models import KeypointGroup
+from .models import Label, LabeledImage, ReviewLabel
+from .segmentation.models import Mask
 
 
 class ImageLabelingIO(AbstractAnnotationIO):
-
-    def initialize_project(self, root: tk.Tk):
-        super().initialize_project(root)
-        loading_window = get_loading_window(text="Loading project...", root=root)
-        self.import_project(overwrite=False)
-        loading_window.destroy()
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. Shows loading window while downloading"""
@@ -283,4 +271,3 @@ class ImageLabelingIO(AbstractAnnotationIO):
         """Don`t remove after first step of annotation in order to not download again before a correction stage"""
         if self.project_data.stage is not AnnotationStage.ANNOTATE:
             self.remove_project()
-

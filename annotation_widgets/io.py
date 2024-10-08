@@ -22,7 +22,10 @@ class AbstractAnnotationIO(ABC):
     def initialize_project(self, root: tk.Tk):
         save_json(self.project_data.to_json(), self.pm.state_path)
         self.download_project(root=root)
-        configure_database(self.pm.db_path)    
+        configure_database(self.pm.db_path)
+        loading_window = get_loading_window(text="Loading project...", root=root)
+        self.import_project(overwrite=False)
+        loading_window.destroy()
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. 

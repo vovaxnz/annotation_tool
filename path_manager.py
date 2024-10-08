@@ -64,7 +64,15 @@ class PathManager():  # TODO: Implement a concrete path manager for each annotat
     @property
     def archive_path(self):
         return os.path.join(self.project_path, f"archive.zip")
-    
+
+    @property
+    def videos_folder_path(self):
+        return os.path.join(self.project_path, f"videos")
+
+    @property
+    def images_folder_path(self):
+        return os.path.join(self.project_path, f"images")
+
     @property
     def video_path(self):
         return os.path.join(self.project_path, f"video.mp4")
@@ -72,7 +80,11 @@ class PathManager():  # TODO: Implement a concrete path manager for each annotat
     @property
     def selected_frames_json_path(self):
         return os.path.join(self.project_path, f"selected_frames.json")
-    
+
+    @property
+    def event_validation_results_json_path(self):
+        return os.path.join(self.project_path, f"event_validation_results.json")
+
     @property
     def state_path(self):
         return os.path.join(self.project_path, f"state.json")
