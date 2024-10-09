@@ -9,7 +9,7 @@ import cv2
 from annotation_widgets.event_validation.models import Event
 from annotation_widgets.event_validation.path_manager import EventValidationPathManager
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from enums import EventViewMode, EventValidationAnswerOptions
+from enums import EventViewMode
 from exceptions import MessageBoxException
 from models import ProjectData, Value
 
@@ -29,13 +29,13 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.view_mode = EventViewMode.IMAGE.name
         self.image_names = [item for item in sorted(os.listdir(os.path.join(data_path, "images")))]
         self.video_names = [item for item in sorted(os.listdir(os.path.join(data_path, "videos")))]
-        self.questions = json.loads(Value.get_value("fields"))  # Preserve the original logic here
+        self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
+        self.questions = list(self.questions_map.keys())
 
         assert len(self.image_names) == len(self.video_names)
 
         self.item_changed = False
         self.event: Event = None
-        self.answers = []
         self.comment = ""
         self.answers = OrderedDict((question, "") for question in self.questions)
         self._on_item_change: Callable = None
@@ -86,7 +86,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     def load_image(self):
         image_name = self.image_names[self.item_id]
-        orig_image = cv2.imread(os.path.join(self.pm.images_folder_path, image_name))
+        orig_image = cv2.imread(os.path.join(self.pm.images_path, image_name))
 
         if orig_image is not None:
             self.orig_image = orig_image
@@ -196,7 +196,8 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     def cycle_answer(self, question: str):
         current_answer = self.answers[question]
-        options = EventValidationAnswerOptions.values()
+        options = list(self.questions_map[question].keys())
+
         try:
             current_idx = options.index(current_answer)
         except ValueError:

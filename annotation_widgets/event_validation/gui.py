@@ -2,7 +2,6 @@ import tkinter as tk
 from collections import OrderedDict
 from tkinter import font, ttk
 
-from enums import EventValidationAnswerOptions
 from .logic import EventValidationLogic
 
 
@@ -99,20 +98,22 @@ class EventValidationSideBar(tk.Frame):
         super().__init__(parent, *args, **kwargs)
         self.logic = logic
         self.parent = parent
-        self.comment_label = tk.Label(self, text="Comment")
-        self.comment_label.pack()
-        self.comment_entry = tk.Entry(self)
-        self.comment_entry.pack()
-
-        self.logic.on_item_change(self.update_display)
-
-        self.update_comment_display()
-
-        self.comment_entry.bind("<Escape>", self.save_comment)
 
         self.question_frames = []
         self.answer_vars = OrderedDict()
+        self.answer_buttons = OrderedDict()
+
+        self.logic.on_item_change(self.update_display)
         self.create_question_widgets()
+
+        self.comment_label = tk.Label(self, text="Comment")
+        self.comment_label.pack(anchor="w", padx=10, pady=2)
+        self.comment_entry = tk.Text(self, wrap="word", height=2, width=40)
+        self.comment_entry.pack(anchor="w", padx=10, pady=2)
+
+        self.comment_entry.bind("<Escape>", self.save_comment)
+
+        self.update_display()
 
     def update_display(self):
         self.update_question_widgets()
@@ -120,25 +121,27 @@ class EventValidationSideBar(tk.Frame):
 
     def update_comment_display(self):
         comment = self.logic.comment
-        self.comment_entry.delete(0, tk.END)
-        self.comment_entry.insert(0, comment)
+        self.comment_entry.delete("1.0", tk.END)
+        self.comment_entry.insert("1.0", comment)
 
     def save_comment(self, event=None):
-        new_comment = self.comment_entry.get()
+        new_comment = self.comment_entry.get("1.0", tk.END).strip()
         self.logic.update_comment(new_comment)
         self.master.canvas_view.focus_set()
 
     def create_question_widgets(self):
         for question in self.logic.questions:
             frame = tk.Frame(self)
-            frame.pack()
-            tk.Label(frame, text=question).pack(anchor='w')
+            frame.pack(anchor="w", padx=10, pady=2)
+            tk.Label(frame, text=question).pack(anchor='w', pady=2)
 
             initial_value = self.logic.answers[question] if self.logic.answers is not None else ""
             answer_var = tk.StringVar(value=initial_value)
             self.answer_vars[question] = answer_var
 
-            for option in EventValidationAnswerOptions.values():
+            self.answer_buttons[question] = []
+
+            for option in self.logic.questions_map[question].keys():  #  List of possible answers per question
                 rb = tk.Radiobutton(
                     frame,
                     text=option,
@@ -146,11 +149,28 @@ class EventValidationSideBar(tk.Frame):
                     value=option,
                     command=lambda q=question, selected=option: self.save_answer(q, selected)
                 )
-                rb.pack(anchor='w')
+                rb.pack(anchor='w', padx=5)
+                self.answer_buttons[question].append(rb)
+            self.apply_color(question, initial_value)
 
     def update_question_widgets(self):
         for question, answer_var in self.answer_vars.items():
             answer_var.set(self.logic.answers.get(question))
+            selected_answer = self.logic.answers.get(question)
+            self.apply_color(question, selected_answer)
 
     def save_answer(self, question, selected_answer):
         self.logic.update_answer(question, selected_answer)
+        self.apply_color(question, selected_answer)
+
+    def apply_color(self, question, selected_answer):
+
+        if question in self.answer_buttons:
+            default_bg = tk.Radiobutton.cget(self, "bg")
+            for rb in self.answer_buttons[question]:
+                rb.config(bg=default_bg)
+
+            if selected_answer in self.logic.questions_map[question]:
+                for rb in self.answer_buttons[question]:
+                    if rb.cget("text") == selected_answer:
+                        rb.config(bg=self.logic.questions_map[question][selected_answer])

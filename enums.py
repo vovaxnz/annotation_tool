@@ -25,16 +25,6 @@ class FigureType(Enum):
     REVIEW_LABEL = "REVIEW_LABEL"
 
 
-class EventValidationAnswerOptions(Enum):
-    TRUE = "TRUE"
-    FALSE = "FALSE"
-    UNRECOGNIZED = "UNRECOGNIZED"
-
-    @classmethod
-    def values(cls):
-        return [i.value for i in cls]
-
-
 class EventViewMode(Enum):
     VIDEO = "VIDEO"
     IMAGE = "IMAGE"

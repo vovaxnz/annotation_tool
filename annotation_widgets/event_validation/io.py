@@ -8,7 +8,7 @@ from annotation_widgets.event_validation.path_manager import EventValidationPath
 from annotation_widgets.io import AbstractAnnotationIO
 from file_processing.file_transfer import FileTransferClient, upload_file
 from file_processing.unzipping import ArchiveUnzipper
-from models import Value, ProjectData
+from models import Value
 from utils import save_json, open_json
 
 
@@ -36,7 +36,15 @@ class EventValidationIO(AbstractAnnotationIO):
 
     def import_project(self, overwrite: bool = False):
         fields = open_json(self.pm.meta_ann_path)
-        Value.update_value("fields", json.dumps(fields), overwrite=False)
+
+        # Converts list structure into tree structure to avoid explicit index usage further in code.
+        fields_tree_data = {}
+
+        for item in fields:
+            answer_color_map = {answer: color for answer, color in zip(item["answers"], item["colors"])}
+            fields_tree_data[item["question"]] = answer_color_map
+
+        Value.update_value("fields", json.dumps(fields_tree_data), overwrite=False)
 
         events = []
         for idx, item in enumerate(sorted(os.listdir(self.pm.images_path))):
@@ -65,10 +73,12 @@ class EventValidationIO(AbstractAnnotationIO):
             }
         }
         """
-        result = {"fields": Value.get_value("fields"), "events": {}}
+        fields = json.loads(Value.get_value("fields"))
+
+        result = {"fields": list(fields.keys()), "events": {}}
 
         for event in Event.all():
-            result["events"][event.uid] = event.custom_fields
+            result["events"][event.uid] = json.loads(event.custom_fields)
 
         save_json(result, output_path)
 
