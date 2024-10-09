@@ -7,16 +7,20 @@ from tkinter import messagebox
 from typing import Dict, List
 
 from annotation_widgets.io import AbstractAnnotationIO
-
+from models import ProjectData
 
 from .models import ClassificationImage
 
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 
 from utils import  save_json
+from .path_manager import FilteringPathManager
 
 
 class ImageFilteringIO(AbstractAnnotationIO):
+
+    def get_path_manager(self, project_id: int):
+        return FilteringPathManager(project_id)
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. Shows loading window while downloading"""

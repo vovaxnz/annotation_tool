@@ -9,15 +9,19 @@ from exceptions import MessageBoxException
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper
 from gui_utils import get_loading_window
-from models import Value
+from models import Value, ProjectData
 from utils import check_correct_json, get_img_size, open_json, save_json
 from .bboxes.models import BBox
 from .keypoints.models import KeypointGroup
 from .models import Label, LabeledImage, ReviewLabel
+from .path_manager import LabelingPathManager
 from .segmentation.models import Mask
 
 
 class ImageLabelingIO(AbstractAnnotationIO):
+
+    def get_path_manager(self, project_id: int):
+        return LabelingPathManager(project_id)
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. Shows loading window while downloading"""

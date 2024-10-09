@@ -3,7 +3,7 @@ import json
 import time
 
 from models import ProjectData, Value
-from path_manager import PathManager
+from path_manager import BasePathManager
 from utils import get_datetime_str
 
 
@@ -19,7 +19,7 @@ class AbstractAnnotationLogic(ABC):
         self.duration_hours = 0
         self.processed_item_ids: set = set()
 
-        self.pm = PathManager(project_id=self.project_data.id)
+        self.pm = self.get_path_manager(project_id=self.project_data.id)
 
         self.load_state()
         self.load_item(next=False)
@@ -38,6 +38,9 @@ class AbstractAnnotationLogic(ABC):
 
     @abstractmethod
     def save_item(self):
+        raise NotImplementedError
+
+    def get_path_manager(self, project_id) -> BasePathManager:
         raise NotImplementedError
 
     def save_state(self):  # TODO: Save values as a batch

@@ -1,24 +1,20 @@
-
-
+import os
 from collections import defaultdict
 from dataclasses import dataclass
-import json
-import math
-import os
-import time
-from typing import Dict, List, Optional
-import numpy as np
-from .figure_controller import ObjectFigureController
-from .models import Figure, Label, LabeledImage, ReviewLabel
+from typing import Dict, List
+
 import cv2
+import numpy as np
 
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from .figure_controller_factory import ControllerByMode
-from .drawing import create_class_selection_wheel, get_selected_sector_id
 from enums import AnnotationMode, AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from models import ProjectData
-from models import Value
+from .drawing import create_class_selection_wheel, get_selected_sector_id
+from .figure_controller import ObjectFigureController
+from .figure_controller_factory import ControllerByMode
+from .models import Figure, Label, LabeledImage, ReviewLabel
+from .path_manager import LabelingPathManager
 
 
 @dataclass
@@ -112,6 +108,8 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
                 return True
         return False
 
+    def get_path_manager(self, project_id) -> LabelingPathManager:
+        return LabelingPathManager(project_id)
     
     def update_canvas(self): 
         assert self.orig_image is not None

@@ -1,21 +1,16 @@
 
-from dataclasses import dataclass
-from enum import Enum, IntEnum
-import json
-import math
-import os
 import time
-from typing import Dict, List, Optional
-import numpy as np
+from dataclasses import dataclass
+from enum import Enum
+
 import cv2
+import numpy as np
 
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-
 from exceptions import MessageBoxException
 from models import ProjectData
 from .models import ClassificationImage
-
-
+from .path_manager import FilteringPathManager
 
 FILTERING_BARCODE_PIXEL_SIZE = 2
 MAX_IMAGE_NAME_LENGTH = 100
@@ -105,7 +100,10 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
             number_of_processed=number_of_processed,
             number_of_items=self.items_number,
         )
-    
+
+    def get_path_manager(self, project_id) -> FilteringPathManager:
+        return FilteringPathManager(project_id)
+
     def load_item(self, next: bool = True):
         if not next:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.item_id)

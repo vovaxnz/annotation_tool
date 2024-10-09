@@ -4,14 +4,18 @@ import tkinter as tk
 from tkinter import messagebox
 
 from annotation_widgets.event_validation.models import Event
+from annotation_widgets.event_validation.path_manager import EventValidationPathManager
 from annotation_widgets.io import AbstractAnnotationIO
 from file_processing.file_transfer import FileTransferClient, upload_file
 from file_processing.unzipping import ArchiveUnzipper
-from models import Value
+from models import Value, ProjectData
 from utils import save_json, open_json
 
 
 class EventValidationIO(AbstractAnnotationIO):
+
+    def get_path_manager(self, project_id: int):
+        return EventValidationPathManager(project_id)
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. Shows loading window while downloading"""
@@ -35,7 +39,7 @@ class EventValidationIO(AbstractAnnotationIO):
         Value.update_value("fields", json.dumps(fields), overwrite=False)
 
         events = []
-        for idx, item in enumerate(sorted(os.listdir(self.pm.images_folder_path))):
+        for idx, item in enumerate(sorted(os.listdir(self.pm.images_path))):
             event_uid = item.split("_")[1].split(".")[0]
             events.append(Event(item_id=idx, uid=event_uid))
 

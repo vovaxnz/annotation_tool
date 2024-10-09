@@ -7,6 +7,7 @@ from typing import Callable
 import cv2
 
 from annotation_widgets.event_validation.models import Event
+from annotation_widgets.event_validation.path_manager import EventValidationPathManager
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 from enums import EventViewMode, EventValidationAnswerOptions
 from exceptions import MessageBoxException
@@ -60,6 +61,9 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     def video_mode(self) -> bool:
         return self.view_mode == EventViewMode.VIDEO.name
 
+    def get_path_manager(self, project_id) -> EventValidationPathManager:
+        return EventValidationPathManager(project_id)
+
     def load_item(self, next: bool = True):
 
         assert 0 <= self.item_id < len(self.image_names), f"The Image ID {self.item_id} is out of range of the images list: {len(self.image_names)}"
@@ -89,7 +93,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.canvas = orig_image
 
     def set_video_cap(self):
-        video_path = os.path.join(self.pm.videos_folder_path, self.video_names[self.item_id])
+        video_path = os.path.join(self.pm.video_path, self.video_names[self.item_id])
         assert video_path.endswith("mp4")
 
         self.cap = cv2.VideoCapture(video_path)
