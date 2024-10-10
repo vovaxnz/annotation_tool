@@ -1,7 +1,9 @@
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+
 import cv2
 import numpy as np
+
 from annotation_widgets.logic import AbstractAnnotationLogic
 from models import ProjectData
 
@@ -11,7 +13,7 @@ class AbstractImageAnnotationLogic(AbstractAnnotationLogic):
     def __init__(self, data_path: str, project_data: ProjectData):
         self.canvas: np.ndarray = None
         self.orig_image: np.ndarray = None
-        self.image_changed = False
+        self.item_changed = False
         self.make_image_worse: bool = False
         super().__init__(data_path, project_data)
     
