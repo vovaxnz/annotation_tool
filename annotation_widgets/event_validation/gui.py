@@ -19,6 +19,7 @@ class EventValidationStatusBar(tk.Frame):
         self.duration_label = tk.Label(self, bd=1)
 
         # Video frame info label
+        self.preview_mode_label = tk.Label(self, bd=1)
         self.frame_info_label = tk.Label(self, bd=1)
 
         # Initialize labels and separators
@@ -48,7 +49,6 @@ class EventValidationStatusBar(tk.Frame):
         sep7.grid(row=0, column=7, sticky='ns')
 
         self.progress_bar.grid(row=0, column=8, sticky='ew', padx=15)
-        self.columnconfigure(12, weight=1)  # Make progress bar expand
         sep8 = ttk.Separator(self, orient='vertical')
         sep8.grid(row=0, column=9, sticky='ns')
 
@@ -56,9 +56,14 @@ class EventValidationStatusBar(tk.Frame):
         sep9 = ttk.Separator(self, orient='vertical')
         sep9.grid(row=0, column=11, sticky='ns')
 
-        # Video Frames info label (initially hidden)
-        self.frame_info_label.grid(row=0, column=12, sticky='ew', padx=15)
+        self.preview_mode_label.grid(row=0, column=12, sticky='ew', padx=15)
+        sep10 = ttk.Separator(self, orient='vertical')
+        sep10.grid(row=0, column=13, sticky='ns')
 
+        # Video Frames info label (initially hidden)
+        self.frame_info_label.grid(row=0, column=14, sticky='ew', padx=15)
+
+        self.columnconfigure(8, weight=1)  # Make progress bar expand
 
     def on_resize(self, event):
         # Calculate an appropriate font size based on the current width
@@ -67,7 +72,7 @@ class EventValidationStatusBar(tk.Frame):
 
         # Set the new font to all labels and progress bar
         for widget in [self.mode_label, self.item_id_label, self.speed_label, self.processed_label, self.duration_label,
-                       self.frame_info_label]:
+                       self.preview_mode_label, self.frame_info_label]:
             widget.config(font=label_font)
 
     def update_status(self):
@@ -82,6 +87,8 @@ class EventValidationStatusBar(tk.Frame):
         self.processed_label.config(text=f"Position: {position_percent} % ({status_data.item_id + 1}/{status_data.number_of_items})")
         self.progress_bar["value"] = position_percent
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
+
+        self.preview_mode_label.config(text=f"Preview mode: {self.logic.view_mode}")
 
         if self.logic.video_mode:
             self.frame_info_label.config(text=f"Frame info: {self.logic.current_frame_number + 1} / {self.logic.number_of_frames}")

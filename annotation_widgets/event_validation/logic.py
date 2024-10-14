@@ -33,7 +33,6 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self._video_mode_only = True if not self.image_names else False
         self.set_view_mode()
 
-        messagebox.showinfo("Error", f"VIDEO MODE ONLY: {self._video_mode_only}, VIEW_MODE: {self._view_mode}")
         self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
         self.questions = list(self.questions_map.keys())
 
@@ -51,7 +50,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         super().__init__(data_path=data_path, project_data=project_data)
 
     def set_view_mode(self):
-        self._view_mode = EventViewMode.IMAGE.name if not self._video_mode_only else EventViewMode.VIDEO.name
+        self.view_mode = EventViewMode.IMAGE.name if not self._video_mode_only else EventViewMode.VIDEO.name
 
     @staticmethod
     def _get_image_names(data_path: str) -> list:
@@ -80,7 +79,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     @property
     def video_mode(self) -> bool:
-        return self._video_mode_only or self._view_mode == EventViewMode.VIDEO.name
+        return self._video_mode_only or self.view_mode == EventViewMode.VIDEO.name
 
     def get_path_manager(self, project_id) -> EventValidationPathManager:
         return EventValidationPathManager(project_id)
@@ -143,10 +142,10 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     def switch_mode(self):
         if not self.video_mode:
-            self._view_mode = EventViewMode.VIDEO.name
+            self.view_mode = EventViewMode.VIDEO.name
             self.load_video_frame(frame_number=self.current_frame_number)
         else:
-            self._view_mode = EventViewMode.IMAGE.name
+            self.view_mode = EventViewMode.IMAGE.name
             self.load_image()
 
     def switch_item(self, item_id: int):
