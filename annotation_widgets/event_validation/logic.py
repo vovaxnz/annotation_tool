@@ -2,6 +2,7 @@ import json
 import os
 from collections import OrderedDict
 from dataclasses import dataclass
+from tkinter import messagebox
 from typing import Callable
 
 import cv2
@@ -26,13 +27,20 @@ class EventValidationStatusData:
 class EventValidationLogic(AbstractImageAnnotationLogic):
     def __init__(self, data_path: str, project_data: ProjectData):
 
-        self.view_mode = EventViewMode.IMAGE.name
-        self.image_names = [item for item in sorted(os.listdir(os.path.join(data_path, "images")))]
-        self.video_names = [item for item in sorted(os.listdir(os.path.join(data_path, "videos")))]
+        self.image_names = self._get_image_names(data_path)
+        self.video_names = self._get_video_names(data_path)
+
+        self._video_mode_only = True if not self.image_names else False
+        self.set_view_mode()
+
         self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
         self.questions = list(self.questions_map.keys())
 
-        assert len(self.image_names) == len(self.video_names)
+        if not self._video_mode_only:
+            try:
+                assert len(self.image_names) == len(self.video_names)
+            except AssertionError:
+                messagebox.showinfo("Error", "Project might be broken. Number of images and videos differ.")
 
         self.item_changed = False
         self.event: Event = None
@@ -41,10 +49,22 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self._on_item_change: Callable = None
         super().__init__(data_path=data_path, project_data=project_data)
 
+    def set_view_mode(self):
+        self.view_mode = EventViewMode.IMAGE.name if not self._video_mode_only else EventViewMode.VIDEO.name
+
+    @staticmethod
+    def _get_image_names(data_path: str) -> list:
+        images_path = os.path.join(data_path, "images")
+        return [item for item in sorted(os.listdir(images_path))] if os.path.exists(images_path) else []
+
+    @staticmethod
+    def _get_video_names(data_path: str) -> list:
+        videos_path = os.path.join(data_path, "videos")
+        return [item for item in sorted(os.listdir(videos_path))] if os.path.exists(videos_path) else []
 
     @property
     def items_number(self) -> int:
-        return len(self.image_names)
+        return len(self.video_names)
 
     @property
     def status_data(self) -> EventValidationStatusData:
@@ -59,21 +79,26 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     @property
     def video_mode(self) -> bool:
-        return self.view_mode == EventViewMode.VIDEO.name
+        return self._video_mode_only or self.view_mode == EventViewMode.VIDEO.name
 
     def get_path_manager(self, project_id) -> EventValidationPathManager:
         return EventValidationPathManager(project_id)
 
     def load_item(self, next: bool = True):
 
-        assert 0 <= self.item_id < len(self.image_names), f"The Image ID {self.item_id} is out of range of the images list: {len(self.image_names)}"
+        assert 0 <= self.item_id < self.items_number, f"The Image ID {self.item_id} is out of range of the images list: {self.items_number}"
 
-        self.view_mode = EventViewMode.IMAGE.name
-        self.load_image()
+        self.set_view_mode()
         self.set_video_cap()
+
         self.event = Event.get(item_id=self.item_id)
         self.answers = self.get_default_answers(event=self.event)
         self.comment = self.set_sidebar_comment(event=self.event)
+
+        if self._video_mode_only:
+            self.load_video_frame(frame_number=0)
+        else:
+            self.load_image()
 
         if self._on_item_change:
             self._on_item_change()
@@ -172,10 +197,8 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.backward()
         elif key.lower() == "w":
             self.forward()
-        elif key.lower() == "e":  # TODO: To be confirmed
-            pass
         elif key.lower() == "a":
-            if self.video_mode:
+            if self.video_mode and not self._video_mode_only:
                 self.switch_mode()
         elif key.lower() == "s":
             if not self.video_mode:
