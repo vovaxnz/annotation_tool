@@ -6,13 +6,17 @@ from tkinter import messagebox
 from annotation_widgets.event_validation.models import Event
 from annotation_widgets.event_validation.path_manager import EventValidationPathManager
 from annotation_widgets.io import AbstractAnnotationIO
-from file_processing.file_transfer import FileTransferClient, upload_file
+from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper
-from models import Value
+from models import ProjectData, Value
 from utils import save_json, open_json
 
 
 class EventValidationIO(AbstractAnnotationIO):
+
+    def __init__(self, project_data: ProjectData):
+        self.project_data: ProjectData = project_data
+        self.pm: EventValidationPathManager = self.get_path_manager(project_data.id)
 
     def get_path_manager(self, project_id: int):
         return EventValidationPathManager(project_id)
@@ -26,13 +30,17 @@ class EventValidationIO(AbstractAnnotationIO):
                 file_name=os.path.basename(self.pm.archive_path),
                 save_path=self.pm.archive_path,
             )
-        self.unzip_project_archive(root=root)
+            download_file(
+                uid=self.project_data.uid,
+                file_name=os.path.basename(self.pm.meta_ann_path),
+                save_path=self.pm.meta_ann_path,
+            )
+        if not os.path.isdir(self.pm.videos_path):
+            assert os.path.isfile(self.pm.archive_path)
+            au = ArchiveUnzipper(window_title="Unzip progress", root=root)
+            au.unzip(self.pm.archive_path, self.pm.videos_path)
 
-    def unzip_project_archive(self, root: tk.Tk):
-        au = ArchiveUnzipper(window_title="Unzip progress", root=root)
-        au.unzip(self.pm.archive_path, self.pm.project_path)
-        if os.path.isfile(self.pm.archive_path):
-            os.remove(self.pm.archive_path)
+
 
     def import_project(self, overwrite: bool = False):
         fields = open_json(self.pm.meta_ann_path)

@@ -13,7 +13,7 @@ class EventValidationPathManager(BasePathManager):
         return os.path.join(self.project_path, f"archive.zip")
 
     @property
-    def video_path(self):
+    def videos_path(self):
         return os.path.join(self.project_path, f"videos")
 
     @property

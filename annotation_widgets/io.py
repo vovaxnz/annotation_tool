@@ -17,7 +17,7 @@ class AbstractAnnotationIO(ABC):
     
     def __init__(self, project_data: ProjectData):
         self.project_data: ProjectData = project_data
-        self.pm = self.get_path_manager(project_data.id)
+        self.pm: BasePathManager = self.get_path_manager(project_data.id)
 
     def initialize_project(self, root: tk.Tk):
         save_json(self.project_data.to_json(), self.pm.state_path)
