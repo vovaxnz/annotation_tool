@@ -118,7 +118,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.canvas = orig_image
 
     def set_video_cap(self):
-        video_path = os.path.join(self.pm.video_path, self.video_names[self.item_id])
+        video_path = os.path.join(self.pm.videos_path, self.video_names[self.item_id])
         assert video_path.endswith("mp4")
 
         self.cap = cv2.VideoCapture(video_path)

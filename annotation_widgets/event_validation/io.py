@@ -55,7 +55,7 @@ class EventValidationIO(AbstractAnnotationIO):
         Value.update_value("fields", json.dumps(fields_tree_data), overwrite=False)
 
         events = []
-        for idx, item in enumerate(sorted(os.listdir(self.pm.video_path))):
+        for idx, item in enumerate(sorted(os.listdir(self.pm.videos_path))):
             event_uid = item.split("_")[1].split(".")[0]
             events.append(Event(item_id=idx, uid=event_uid))
 
