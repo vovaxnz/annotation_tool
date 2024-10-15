@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import tkinter as tk
 from tkinter import messagebox
 
@@ -55,9 +56,12 @@ class EventValidationIO(AbstractAnnotationIO):
         Value.update_value("fields", json.dumps(fields_tree_data), overwrite=False)
 
         events = []
+        pattern = r'event-(?P<uid>[a-f0-9\-]+)\.[a-z0-9]+$'
+
         for idx, item in enumerate(sorted(os.listdir(self.pm.videos_path))):
-            event_uid = item.split("_")[1].split(".")[0]
-            events.append(Event(item_id=idx, uid=event_uid))
+            match = re.search(pattern, str(item))
+            if match:
+                events.append(Event(item_id=idx, uid=match.group("uid")))
 
         Event.save_new_in_bulk(events)
 
