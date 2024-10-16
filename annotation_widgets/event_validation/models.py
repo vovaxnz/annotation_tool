@@ -51,7 +51,7 @@ class Event(Base):
         session.commit()
 
     @property
-    def sidebar_values(self) -> dict:
+    def validation_values(self) -> dict:
         sidebar_values = {}
         if self.custom_fields:
             sidebar_values["answers"] = json.loads(self.custom_fields)

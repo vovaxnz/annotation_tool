@@ -2,10 +2,9 @@ import tkinter as tk
 
 from annotation_widgets.widget import AbstractAnnotationWidget
 from models import ProjectData
-from .gui import EventValidationStatusBar, EventValidationSideBar
+from .gui import EventValidationStatusBar, EventValidationSideBar, BaseCanvasView
 from .io import EventValidationIO
 from .logic import EventValidationLogic
-from ..image.canvas import BaseCanvasView
 
 
 class EventValidationWidget(AbstractAnnotationWidget):
@@ -31,7 +30,7 @@ class EventValidationWidget(AbstractAnnotationWidget):
         # Status Bar
         self.set_up_status_bar()
         assert self.status_bar is not None
-        self.status_bar.grid(row=1, column=0, sticky="nsew")
+        self.status_bar.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
     def set_up_side_bar(self):
         self.side_bar = EventValidationSideBar(self, logic=self.logic)

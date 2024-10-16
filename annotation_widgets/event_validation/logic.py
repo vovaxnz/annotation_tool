@@ -96,7 +96,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.comment = self.set_sidebar_comment(event=self.event)
 
         if self._video_mode_only:
-            self.load_video_frame(frame_number=0)
+            self.load_video_frame()
         else:
             self.load_image()
 
@@ -127,26 +127,22 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         if not self.cap.isOpened():
             raise MessageBoxException(f"Error opening video file {video_path}")
 
-    def load_video_frame(self, frame_number: int):
-        if frame_number > self.number_of_frames - 1 or frame_number < 0:
+    def load_video_frame(self, frame_number: int = None):
+        if ((frame_number is None and self.current_frame_number >= self.number_of_frames - 1) or
+                (frame_number is not None and frame_number < 0)):
             return
 
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+        if frame_number is not None:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+            self.current_frame_number = frame_number
+        else:
+            self.current_frame_number += 1
 
         ret, frame = self.cap.read()
+
         if ret:
             self.orig_image = frame
             self.canvas = frame
-
-        self.current_frame_number = frame_number
-
-    def switch_mode(self):
-        if not self.video_mode:
-            self.view_mode = EventViewMode.VIDEO.name
-            self.load_video_frame(frame_number=self.current_frame_number)
-        else:
-            self.view_mode = EventViewMode.IMAGE.name
-            self.load_image()
 
     def switch_item(self, item_id: int):
         if item_id > self.items_number - 1 or item_id < 0:
@@ -161,13 +157,13 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.save_state()
 
     def video_forward(self):
-        self.load_video_frame(frame_number=self.current_frame_number+1)
+        self.load_video_frame()
 
     def video_backward(self):
         self.load_video_frame(frame_number=self.current_frame_number-1)
 
     def get_default_answers(self, event: Event):
-        stored_answers = event.sidebar_values.get("answers")
+        stored_answers = event.validation_values.get("answers")
         if stored_answers:
             answers = OrderedDict(
                 (question, stored_answers[idx] if idx < len(stored_answers) else "")
@@ -179,7 +175,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     @staticmethod
     def set_sidebar_comment(event: Event):
-        return event.sidebar_values.get("comment")
+        return event.validation_values.get("comment")
 
     def on_item_change(self, callback: Callable):
         self._on_item_change = callback
@@ -197,12 +193,14 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.backward()
         elif key.lower() == "w":
             self.forward()
-        elif key.lower() == "a":
+        elif key.lower() == "a":  # Switch to IMAGE mode
             if self.video_mode and not self._video_mode_only:
-                self.switch_mode()
-        elif key.lower() == "s":
+                self.view_mode = EventViewMode.IMAGE.name
+                self.load_image()
+        elif key.lower() == "s":  # Switch to VIDEO mode
             if not self.video_mode:
-                self.switch_mode()
+                self.view_mode = EventViewMode.VIDEO.name
+                self.load_video_frame(frame_number=self.current_frame_number)
         elif key.lower() == "z":
             if self.video_mode:
                 self.video_backward()
