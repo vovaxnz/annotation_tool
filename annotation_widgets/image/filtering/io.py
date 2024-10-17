@@ -50,6 +50,6 @@ class ImageFilteringIO(AbstractAnnotationIO):
                     result["ids"].append(limage.item_id)
         save_json(result, output_path) 
 
-    def _upload_annoation_results(self):
+    def _upload_annotation_results(self):
         self._export_selected_frames(output_path=self.pm.selected_frames_json_path)
         upload_file(self.project_data.uid, self.pm.selected_frames_json_path)
