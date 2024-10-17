@@ -9,7 +9,7 @@ from db import configure_database
 from file_processing.file_transfer import upload_file
 from gui_utils import get_loading_window
 from models import ProjectData, Value
-from path_manager import PathManager
+from path_manager import BasePathManager
 from utils import save_json
 
 
@@ -17,12 +17,19 @@ class AbstractAnnotationIO(ABC):
     
     def __init__(self, project_data: ProjectData):
         self.project_data: ProjectData = project_data
-        self.pm = PathManager(project_data.id) 
+        self.pm: BasePathManager = self.get_path_manager(project_data.id)
 
     def initialize_project(self, root: tk.Tk):
         save_json(self.project_data.to_json(), self.pm.state_path)
         self.download_project(root=root)
-        configure_database(self.pm.db_path)    
+        configure_database(self.pm.db_path)
+        loading_window = get_loading_window(text="Loading project...", root=root)
+        self.import_project(overwrite=False)
+        loading_window.destroy()
+
+    def get_path_manager(self, project_id: int):
+        """Returns BasePathManager class"""
+        raise NotImplementedError()
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. 

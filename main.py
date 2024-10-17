@@ -182,16 +182,13 @@ class MainWindow(tk.Tk):
         template_path = os.path.join(templates_path, "hotkeys.html")
         with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        show_html_window(title="Hotkeys", html_content=html_content)
+        show_html_window(self, title="Hotkeys", html_content=html_content)
 
     def show_how(self):
         template_path = os.path.join(templates_path, "how.html")
         with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        show_html_window(title="How to use this tool?", html_content=html_content)
+        show_html_window(self, title="How to use this tool?", html_content=html_content)
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
-
-
-
