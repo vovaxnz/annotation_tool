@@ -1,6 +1,8 @@
+import json
 import time
 import tkinter as tk
 from collections import OrderedDict
+from collections.abc import Callable
 from tkinter import font, ttk
 
 import cv2
@@ -9,14 +11,16 @@ from PIL import Image, ImageTk
 from pynput.keyboard import Listener
 
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
+from enums import EventViewMode
 from exceptions import handle_exception
-from .logic import EventValidationLogic
+from models import Value
 
 
 class EventValidationStatusBar(tk.Frame):
-    def __init__(self, parent, logic: EventValidationLogic, **kw):
+    def __init__(self, parent, get_status_data_callback: Callable, **kw):
         super().__init__(parent, **kw)
-        self.logic: EventValidationLogic = logic
+
+        self.get_status_data = get_status_data_callback
 
         # Create labels within the status bar
         self.mode_label = tk.Label(self, bd=1)
@@ -84,7 +88,7 @@ class EventValidationStatusBar(tk.Frame):
             widget.config(font=label_font)
 
     def update_status(self):
-        status_data = self.logic.status_data
+        status_data = self.get_status_data()
 
         # Update labels
         self.mode_label.config(text=f"Mode: Event Validation")
@@ -96,10 +100,10 @@ class EventValidationStatusBar(tk.Frame):
         self.progress_bar["value"] = position_percent
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
 
-        self.preview_mode_label.config(text=f"Preview mode: {self.logic.view_mode}")
+        self.preview_mode_label.config(text=f"Preview mode: {status_data.view_mode}")
 
-        if self.logic.video_mode:
-            self.frame_info_label.config(text=f"Frame info: {self.logic.current_frame_number + 1} / {self.logic.number_of_frames}")
+        if status_data.view_mode == EventViewMode.VIDEO.name:
+            self.frame_info_label.config(text=f"Frame info: {status_data.current_frame_number + 1} / {status_data.number_of_frames}")
             self.frame_info_label.grid()
         else:
             self.frame_info_label.grid_remove()
@@ -109,16 +113,18 @@ class EventValidationStatusBar(tk.Frame):
 
 
 class EventValidationSideBar(tk.Frame):
-    def __init__(self, parent, logic, *args, **kwargs):
+    def __init__(self, parent, on_save_comment_callback: Callable, on_save_answer_callback: Callable, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        self.logic = logic
         self.parent = parent
 
-        self.question_frames = []
+        self.on_save_comment_callback = on_save_comment_callback
+        self.on_save_answer_callback = on_save_answer_callback
+
+        self.questions_map = json.loads(Value.get_value("fields"))
+
         self.answer_vars = OrderedDict()
         self.answer_buttons = OrderedDict()
 
-        self.logic.on_item_change(self.update_display)
         self.create_question_widgets()
 
         self.comment_label = tk.Label(self, text="Comment")
@@ -128,35 +134,34 @@ class EventValidationSideBar(tk.Frame):
 
         self.comment_entry.bind("<Escape>", self.save_comment)
 
-        self.update_display()
 
-    def update_display(self):
-        self.update_question_widgets()
-        self.update_comment_display()
+    def update_display(self, answers, comment):
+        self.update_question_widgets(answers)
+        self.update_comment_display(comment)
 
-    def update_comment_display(self):
-        comment = self.logic.comment
+    def update_comment_display(self, comment):
         self.comment_entry.delete("1.0", tk.END)
         self.comment_entry.insert("1.0", comment)
 
     def save_comment(self, event=None):
         new_comment = self.comment_entry.get("1.0", tk.END).strip()
-        self.logic.update_comment(new_comment)
+        if self.on_save_comment_callback:
+            self.on_save_comment_callback(new_comment)
         self.master.canvas_view.focus_set()
 
-    def create_question_widgets(self):
-        for idx, question in enumerate(self.logic.questions):
+    def create_question_widgets(self, answers=None):
+        for idx, question in enumerate(self.questions_map.keys()):
             frame = tk.Frame(self)
             frame.pack(anchor="w", padx=10, pady=2)
             question_text = f"[{idx + 1}] {question}"
             tk.Label(frame, text=question_text).pack(anchor='w', pady=2)
-            initial_value = self.logic.answers[question] if self.logic.answers is not None else ""
+            initial_value = answers[question] if answers is not None else ""
             answer_var = tk.StringVar(value=initial_value)
             self.answer_vars[question] = answer_var
 
             self.answer_buttons[question] = []
 
-            for option in self.logic.questions_map[question].keys():  #  List of possible answers per question
+            for option in self.questions_map[question].keys():  #  List of possible answers per question
                 rb = tk.Radiobutton(
                     frame,
                     text=option,
@@ -168,14 +173,15 @@ class EventValidationSideBar(tk.Frame):
                 self.answer_buttons[question].append(rb)
             self.apply_color(question, initial_value)
 
-    def update_question_widgets(self):
-        for question, answer_var in self.answer_vars.items():
-            answer_var.set(self.logic.answers.get(question))
-            selected_answer = self.logic.answers.get(question)
-            self.apply_color(question, selected_answer)
+    def update_question_widgets(self, answers):
+        for question in self.questions_map.keys():
+            if question in self.answer_vars:
+                self.answer_vars[question].set(answers[question])
+            self.apply_color(question, answers.get(question))
 
     def save_answer(self, question, selected_answer):
-        self.logic.update_answer(question, selected_answer)
+        if self.on_save_answer_callback:
+            self.on_save_answer_callback(question, selected_answer)
         self.apply_color(question, selected_answer)
 
     def apply_color(self, question, selected_answer):
@@ -185,10 +191,10 @@ class EventValidationSideBar(tk.Frame):
             for rb in self.answer_buttons[question]:
                 rb.config(bg=default_bg)
 
-            if selected_answer in self.logic.questions_map[question]:
+            if selected_answer in self.questions_map[question]:
                 for rb in self.answer_buttons[question]:
                     if rb.cget("text") == selected_answer:
-                        rb.config(bg=self.logic.questions_map[question][selected_answer])
+                        rb.config(bg=self.questions_map[question][selected_answer])
 
 
 class BaseCanvasView(tk.Canvas):

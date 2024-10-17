@@ -22,6 +22,9 @@ class EventValidationStatusData:
     annotation_hours: float
     number_of_processed: int
     number_of_items: int
+    view_mode: str
+    number_of_frames: float
+    current_frame_number: int
 
 
 class EventValidationLogic(AbstractImageAnnotationLogic):
@@ -75,6 +78,9 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             annotation_hours=round(self.duration_hours, 2),
             number_of_processed=number_of_processed,
             number_of_items=self.items_number,
+            view_mode=self.view_mode,
+            number_of_frames=self.number_of_frames,
+            current_frame_number=self.current_frame_number,
         )
 
     @property
@@ -96,7 +102,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.comment = self.set_sidebar_comment(event=self.event)
 
         if self._video_mode_only:
-            self.load_video_frame()
+            self.load_video_frame(frame_number=0)
         else:
             self.load_image()
 
@@ -217,7 +223,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
     def cycle_answer(self, question: str):
         current_answer = self.answers[question]
-        options = list(self.questions_map[question].keys())
+        options = list(self.questions_map[question].keys())  # Get list of answers per selected question
 
         try:
             current_idx = options.index(current_answer)

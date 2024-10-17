@@ -32,8 +32,23 @@ class EventValidationWidget(AbstractAnnotationWidget):
         assert self.status_bar is not None
         self.status_bar.grid(row=1, column=0, columnspan=2, sticky="nsew")
 
+        self.logic.on_item_change(self.update_sidebar_display)
+        self.update_sidebar_display()
+
     def set_up_side_bar(self):
-        self.side_bar = EventValidationSideBar(self, logic=self.logic)
+        self.side_bar = EventValidationSideBar(self, on_save_comment_callback=self.save_comment, on_save_answer_callback=self.save_answer)
 
     def set_up_status_bar(self):
-        self.status_bar = EventValidationStatusBar(self, logic=self.logic)
+        self.status_bar = EventValidationStatusBar(self, get_status_data_callback=lambda: self.logic.status_data)
+
+    def update_sidebar_display(self):
+        self.side_bar.update_display(
+            comment=self.logic.comment,
+            answers=self.logic.answers
+        )
+
+    def save_comment(self, new_comment):
+        self.logic.update_comment(new_comment)
+
+    def save_answer(self, question, selected_answer):
+        self.logic.update_answer(question, selected_answer)
