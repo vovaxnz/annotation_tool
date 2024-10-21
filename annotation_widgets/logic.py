@@ -3,7 +3,7 @@ import json
 import time
 
 from models import ProjectData, Value
-from path_manager import PathManager
+from path_manager import BasePathManager
 from utils import get_datetime_str
 
 
@@ -19,7 +19,7 @@ class AbstractAnnotationLogic(ABC):
         self.duration_hours = 0
         self.processed_item_ids: set = set()
 
-        self.pm = PathManager(project_id=self.project_data.id)
+        self.pm = self.get_path_manager(project_id=self.project_data.id)
 
         self.load_state()
         self.load_item(next=False)
@@ -40,6 +40,9 @@ class AbstractAnnotationLogic(ABC):
     def save_item(self):
         raise NotImplementedError
 
+    def get_path_manager(self, project_id) -> BasePathManager:
+        raise NotImplementedError
+
     def save_state(self):  # TODO: Save values as a batch
         Value.update_value("item_id", self.item_id)
         Value.update_value("duration_hours", self.duration_hours)
@@ -52,7 +55,7 @@ class AbstractAnnotationLogic(ABC):
             self.item_id = 0
             self.duration_hours = 0
             self.processed_item_ids = set()
-            self.image_changed = True
+            self.item_changed = True
         else:
             item_id = Value.get_value("item_id")
             self.item_id = int(item_id) if item_id is not None else self.item_id
@@ -63,7 +66,7 @@ class AbstractAnnotationLogic(ABC):
             processed_item_ids = Value.get_value("processed_item_ids")
             self.processed_item_ids = set(json.loads(processed_item_ids)) if processed_item_ids is not None else self.processed_item_ids
 
-            self.image_changed = False
+            self.item_changed = False
         
         assert self.item_id < self.items_number, f"Incorrect item_id {self.item_id}. The number of items is {self.items_number}"
 
@@ -76,18 +79,18 @@ class AbstractAnnotationLogic(ABC):
         self.duration_hours += step_duration / 3600
 
     @abstractmethod
-    def change_item(self, item_id: int):
+    def switch_item(self, item_id: int):
         """Switch to image by id"""
         raise NotImplementedError
 
     def forward(self):
-        self.change_item(item_id=self.item_id+1)
+        self.switch_item(item_id=self.item_id+1)
         
     def backward(self):
-        self.change_item(item_id=self.item_id-1)
+        self.switch_item(item_id=self.item_id-1)
 
     def go_to_id(self, item_id: int):
-        self.change_item(item_id=item_id)
+        self.switch_item(item_id=item_id)
 
     def handle_left_mouse_press(self, x: int, y: int):
         pass
