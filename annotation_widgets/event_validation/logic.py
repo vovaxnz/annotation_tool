@@ -1,5 +1,6 @@
 import json
 import os
+import tkinter as tk
 from collections import OrderedDict
 from dataclasses import dataclass
 from tkinter import messagebox
@@ -34,6 +35,8 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.video_names = self._get_video_names(data_path)
 
         self._video_mode_only = True if not self.image_names else False
+        self._on_item_change: Callable = None
+        self._on_view_mode_change: Callable = None
         self.set_view_mode()
 
         self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
@@ -49,11 +52,22 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.event: Event = None
         self.comment = ""
         self.answers = OrderedDict((question, "") for question in self.questions)
-        self._on_item_change: Callable = None
+        self.frames = []
+        self.current_frame_var = tk.IntVar(value=0)
         super().__init__(data_path=data_path, project_data=project_data)
 
     def set_view_mode(self):
         self.view_mode = EventViewMode.IMAGE.name if not self._video_mode_only else EventViewMode.VIDEO.name
+
+    @property
+    def view_mode(self):
+        return self._view_mode
+
+    @view_mode.setter
+    def view_mode(self, mode):
+        self._view_mode = mode
+        if self._on_view_mode_change is not None:
+            self._on_view_mode_change()
 
     @staticmethod
     def _get_image_names(data_path: str) -> list:
@@ -129,26 +143,30 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         self.cap = cv2.VideoCapture(video_path)
         self.current_frame_number = 0
-        self.number_of_frames = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        self.number_of_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if not self.cap.isOpened():
             raise MessageBoxException(f"Error opening video file {video_path}")
 
+        self.frames.clear()
+
+        for frame_number in range(int(self.number_of_frames)):
+            ret, frame = self.cap.read()
+            if ret:
+                self.frames.append(frame)
+            else:
+                break
+        self.cap.release()
+
     def load_video_frame(self, frame_number: int = None):
-        if ((frame_number is None and self.current_frame_number >= self.number_of_frames - 1) or
-                (frame_number is not None and frame_number < 0)):
-            return
-
-        if frame_number is not None:
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
-            self.current_frame_number = frame_number
+        if frame_number is None:
+            self.current_frame_number = min(self.current_frame_number + 1, self.number_of_frames - 1)
         else:
-            self.current_frame_number += 1
+            self.current_frame_number = max(0, min(frame_number, self.number_of_frames - 1))
 
-        ret, frame = self.cap.read()
-
-        if ret:
-            self.orig_image = frame
-            self.canvas = frame
+        if 0 <= self.current_frame_number < self.number_of_frames:
+            self.orig_image = self.frames[self.current_frame_number]
+            self.canvas = self.orig_image
+            self.current_frame_var.set(self.current_frame_number)
 
     def switch_item(self, item_id: int):
         if item_id > self.items_number - 1 or item_id < 0:
@@ -186,6 +204,9 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     def on_item_change(self, callback: Callable):
         self._on_item_change = callback
 
+    def on_view_mode_change(self, callback: Callable):
+        self._on_view_mode_change = callback
+
     def update_comment(self, new_comment: str):
         self.comment = new_comment
         self.item_changed = True
@@ -215,11 +236,12 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
                 self.video_forward()
 
         elif key.isdigit():
-            question_idx = int(key) - 1
-            question = self.questions[question_idx]
-            self.cycle_answer(question)
-            if self._on_item_change:
-                self._on_item_change()
+            if len(self.questions) >= int(key):
+                question_idx = int(key) - 1
+                question = self.questions[question_idx]
+                self.cycle_answer(question)
+                if self._on_item_change:
+                    self._on_item_change()
 
     def cycle_answer(self, question: str):
         current_answer = self.answers[question]
