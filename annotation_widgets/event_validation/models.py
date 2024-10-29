@@ -11,21 +11,17 @@ class Event(Base):
 
     id = Column(Integer, primary_key=True)
     uid = Column(String, nullable=False, unique=True)
-    item_id = Column(Integer, nullable=True)
     comment = Column(String, nullable=True)
     custom_fields = Column(String, nullable=True)
 
-    def __init__(self, item_id, uid):
-        self.item_id = item_id
+    def __init__(self, uid):
         self.uid = uid
 
     @classmethod
-    def get(cls, uid: str = None, item_id: int = None):
+    def get(cls, uid: str):
         session = get_session()
         if uid is not None:
             return session.query(cls).filter(cls.uid == uid).first()
-        elif item_id is not None:
-            return session.query(cls).filter(cls.item_id == item_id).first()
 
     @classmethod
     def all(cls) -> List["Event"]:
