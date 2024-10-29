@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import tkinter as tk
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         self.image_names = self._get_image_names(data_path)
         self.video_names = self._get_video_names(data_path)
+        self.event_uids = self._get_event_uids()
 
         self._video_mode_only = True if not self.image_names else False
         self._on_item_change: Callable = None
@@ -79,6 +81,15 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         videos_path = os.path.join(data_path, "videos")
         return [item for item in sorted(os.listdir(videos_path))] if os.path.exists(videos_path) else []
 
+    def _get_event_uids(self) -> tuple:
+        pattern = r'event-(?P<uid>[a-f0-9\-]+)\.[a-z0-9]+$'
+        uids = []
+        for item in self.video_names:
+            match = re.search(pattern, str(item))
+            if match:
+                uids.append(match.group('uid'))
+        return tuple(uids)
+
     @property
     def items_number(self) -> int:
         return len(self.video_names)
@@ -111,7 +122,8 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.set_view_mode()
         self.set_video_cap()
 
-        self.event = Event.get(item_id=self.item_id)
+        item_uid = self.event_uids[self.item_id]
+        self.event = Event.get(uid=item_uid)
         self.answers = self.get_default_answers(event=self.event)
         self.comment = self.set_sidebar_comment(event=self.event)
 
@@ -168,7 +180,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.canvas = self.orig_image
             self.current_frame_var.set(self.current_frame_number)
 
-    def switch_item(self, item_id: int):
+    def switch_item(self, item_id: int) -> None:
         if item_id > self.items_number - 1 or item_id < 0:
             return
 
@@ -186,7 +198,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     def video_backward(self):
         self.load_video_frame(frame_number=self.current_frame_number-1)
 
-    def get_default_answers(self, event: Event):
+    def get_default_answers(self, event: Event) -> OrderedDict:
         stored_answers = event.validation_values.get("answers")
         if stored_answers:
             answers = OrderedDict(
@@ -198,20 +210,20 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         return answers
 
     @staticmethod
-    def set_sidebar_comment(event: Event):
+    def set_sidebar_comment(event: Event) -> str:
         return event.validation_values.get("comment")
 
-    def on_item_change(self, callback: Callable):
+    def on_item_change(self, callback: Callable) -> None:
         self._on_item_change = callback
 
     def on_view_mode_change(self, callback: Callable):
         self._on_view_mode_change = callback
 
-    def update_comment(self, new_comment: str):
+    def update_comment(self, new_comment: str) -> None:
         self.comment = new_comment
         self.item_changed = True
 
-    def update_answer(self, question: str, selected_answer: str):
+    def update_answer(self, question: str, selected_answer: str) -> None:
         self.answers[question] = selected_answer
         self.item_changed = True
 
@@ -243,7 +255,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
                 if self._on_item_change:
                     self._on_item_change()
 
-    def cycle_answer(self, question: str):
+    def cycle_answer(self, question: str) -> None:
         current_answer = self.answers[question]
         options = list(self.questions_map[question].keys())  # Get list of answers per selected question
 

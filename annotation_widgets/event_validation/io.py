@@ -39,8 +39,7 @@ class EventValidationIO(AbstractAnnotationIO):
         if not os.path.isdir(self.pm.videos_path):
             assert os.path.isfile(self.pm.archive_path)
             au = ArchiveUnzipper(window_title="Unzip progress", root=root)
-            au.unzip(self.pm.archive_path, self.pm.videos_path)
-
+            au.unzip(self.pm.archive_path, self.pm.project_path)
 
 
     def import_project(self, overwrite: bool = False):
@@ -58,10 +57,10 @@ class EventValidationIO(AbstractAnnotationIO):
         events = []
         pattern = r'event-(?P<uid>[a-f0-9\-]+)\.[a-z0-9]+$'
 
-        for idx, item in enumerate(sorted(os.listdir(self.pm.videos_path))):
+        for item in sorted(os.listdir(self.pm.videos_path)):
             match = re.search(pattern, str(item))
             if match:
-                events.append(Event(item_id=idx, uid=match.group("uid")))
+                events.append(Event(uid=match.group("uid")))
 
         Event.save_new_in_bulk(events)
 
