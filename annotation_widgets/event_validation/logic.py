@@ -55,7 +55,9 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.comment = ""
         self.answers = OrderedDict((question, "") for question in self.questions)
         self.frames = []
-        self.current_frame_var = tk.IntVar(value=0)
+        self.number_of_frames = 0
+        self.current_frame_number = 0
+        self.current_frame_var = tk.IntVar(value=1)
         super().__init__(data_path=data_path, project_data=project_data)
 
     def set_view_mode(self):
@@ -147,19 +149,19 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         if orig_image is not None:
             self.orig_image = orig_image
-            self.canvas = orig_image
+            self.update_canvas()
 
     def set_video_cap(self):
         video_path = os.path.join(self.pm.videos_path, self.video_names[self.item_id])
         assert video_path.endswith("mp4")
 
-        self.cap = cv2.VideoCapture(video_path)
+        self.frames.clear()
         self.current_frame_number = 0
+
+        self.cap = cv2.VideoCapture(video_path)
         self.number_of_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if not self.cap.isOpened():
             raise MessageBoxException(f"Error opening video file {video_path}")
-
-        self.frames.clear()
 
         for frame_number in range(int(self.number_of_frames)):
             ret, frame = self.cap.read()
@@ -170,15 +172,19 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.cap.release()
 
     def load_video_frame(self, frame_number: int = None):
-        if frame_number is None:
-            self.current_frame_number = min(self.current_frame_number + 1, self.number_of_frames - 1)
-        else:
-            self.current_frame_number = max(0, min(frame_number, self.number_of_frames - 1))
 
-        if 0 <= self.current_frame_number < self.number_of_frames:
-            self.orig_image = self.frames[self.current_frame_number]
-            self.canvas = self.orig_image
-            self.current_frame_var.set(self.current_frame_number)
+        if frame_number is not None:
+            if frame_number < 0 or frame_number > self.number_of_frames - 1:
+                return
+            self.current_frame_number = frame_number
+        else:
+            if self.current_frame_number >= self.number_of_frames - 1:
+                return
+            self.current_frame_number += 1
+
+        self.orig_image = self.frames[self.current_frame_number]
+        self.current_frame_var.set(self.current_frame_number + 1)
+        self.update_canvas()
 
     def switch_item(self, item_id: int) -> None:
         if item_id > self.items_number - 1 or item_id < 0:
@@ -269,4 +275,4 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.update_answer(question, next_answer)
 
     def update_canvas(self):
-        pass
+        self.canvas = self.orig_image

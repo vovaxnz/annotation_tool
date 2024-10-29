@@ -72,9 +72,6 @@ class EventValidationStatusBar(tk.Frame):
         sep10 = ttk.Separator(self, orient='vertical')
         sep10.grid(row=0, column=13, sticky='ns')
 
-        # Video Frames info label (initially hidden)
-        self.frame_info_label.grid(row=0, column=14, sticky='ew', padx=15)
-
         self.columnconfigure(8, weight=1)  # Make progress bar expand
 
     def on_resize(self, event):
@@ -84,7 +81,7 @@ class EventValidationStatusBar(tk.Frame):
 
         # Set the new font to all labels and progress bar
         for widget in [self.mode_label, self.item_id_label, self.speed_label, self.processed_label, self.duration_label,
-                       self.preview_mode_label, self.frame_info_label]:
+                       self.preview_mode_label]:
             widget.config(font=label_font)
 
     def update_status(self):
@@ -101,12 +98,6 @@ class EventValidationStatusBar(tk.Frame):
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
 
         self.preview_mode_label.config(text=f"Preview mode: {status_data.view_mode}")
-
-        if status_data.view_mode == EventViewMode.VIDEO.name:
-            self.frame_info_label.config(text=f"Frame info: {status_data.current_frame_number + 1} / {status_data.number_of_frames}")
-            self.frame_info_label.grid()
-        else:
-            self.frame_info_label.grid_remove()
 
         # Schedule the next update
         self.after(10, self.update_status)
@@ -195,6 +186,62 @@ class EventValidationSideBar(tk.Frame):
                 for rb in self.answer_buttons[question]:
                     if rb.cget("text") == selected_answer:
                         rb.config(bg=self.questions_map[question][selected_answer])
+
+
+class VideoFrameSlider(tk.Frame):
+    def __init__(self, parent, from_, to, callback=None, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+        self.callback = callback
+        self.is_playing = False
+
+        button_frame = tk.Frame(self)
+        button_frame.pack(side="left", padx=10, pady=5, anchor="s")
+
+        # Play/Pause Button
+        self.play_button = tk.Button(button_frame, text="▶", width=3, font=("Arial", 10), command=self.toggle_play_pause)
+        self.play_button.pack(side="left", padx=(0, 5), anchor="s")
+
+        # Stop Button
+        self.stop_button = tk.Button(button_frame, text="■", width=3, font=("Arial", 10), command=self.stop)
+        self.stop_button.pack(side="left", padx=(5, 0), anchor="s")
+
+        # Slider
+        self.slider = tk.Scale(self, from_=from_, to=to, orient="horizontal", command=self.on_slider_change, length=500, sliderlength=30, width=20)
+        self.slider.pack(side="right", fill="x", expand=True, padx=(10, 10), anchor="n")
+
+
+    def on_slider_change(self, value):
+        if self.callback is not None:
+            self.callback(value)
+
+    def toggle_play_pause(self):
+        self.is_playing = not self.is_playing
+
+        if self.is_playing:
+            self.play()
+        else:
+            self.pause()
+        self.master.handle_play_pause(self.is_playing)
+
+    def play(self):
+        self.is_playing = True
+        self.play_button.config(text="II")
+
+    def pause(self):
+        self.is_playing = False
+        self.play_button.config(text="▶")
+
+    def stop(self):
+        self.is_playing = False
+        self.pause()
+        self.master.handle_stop()
+
+    def show(self):
+        self.grid()
+
+    def hide(self):
+        self.grid_remove()
 
 
 class BaseCanvasView(tk.Canvas):
