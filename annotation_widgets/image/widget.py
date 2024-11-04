@@ -1,27 +1,23 @@
 
-from annotation_widgets.io import AbstractAnnotationIO
-from annotation_widgets.logic import AbstractAnnotationLogic
-from .labeling.logic import ImageLabelingLogic
-from .logic import AbstractImageAnnotationLogic
-from annotation_widgets.widget import AbstractAnnotationWidget
-from exceptions import handle_exception
-from gui_utils import get_loading_window
-from models import ProjectData
-from utils import check_url_rechable
-from config import settings
-
+import time
+import tkinter as tk
+from tkinter import messagebox
+from typing import Tuple
 
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
 from pynput.keyboard import Listener
 
-
-import time
-import tkinter as tk
-from tkinter import messagebox
-from typing import Tuple
-
+from annotation_widgets.io import AbstractAnnotationIO
+from annotation_widgets.logic import AbstractAnnotationLogic
+from annotation_widgets.widget import AbstractAnnotationWidget
+from config import settings
+from exceptions import handle_exception
+from gui_utils import get_loading_window
+from models import ProjectData
+from utils import check_url_rechable
+from .logic import AbstractImageAnnotationLogic
 
 
 class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
@@ -282,6 +278,7 @@ class CanvasView(tk.Canvas):
             self.update_frame = True
             self.logic.update_time_counter("keyboard")
             return
+
         if event.char.lower() == "w" or event.char.lower() == "p":
             if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
                 return
@@ -290,6 +287,7 @@ class CanvasView(tk.Canvas):
                 self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
             self.update_frame = True
+
         elif event.char.lower() == "q" or event.char.lower() == "o":
             if time.time() - self.last_key_press_time < self.min_time_between_frame_change:
                 return
@@ -298,6 +296,7 @@ class CanvasView(tk.Canvas):
                 self.fit_image()
             self.scale_event_wrapper(self.handle_mouse_hover)(event)
             self.update_frame = True
+
         elif event.char.lower() == "f":
             self.fit_image()
         else:

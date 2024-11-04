@@ -1,21 +1,16 @@
 
-from dataclasses import dataclass
-from enum import Enum, IntEnum
-import json
-import math
-import os
 import time
-from typing import Dict, List, Optional
-import numpy as np
+from dataclasses import dataclass
+from enum import Enum
+
 import cv2
+import numpy as np
 
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-
 from exceptions import MessageBoxException
 from models import ProjectData
 from .models import ClassificationImage
-
-
+from .path_manager import FilteringPathManager
 
 FILTERING_BARCODE_PIXEL_SIZE = 2
 MAX_IMAGE_NAME_LENGTH = 100
@@ -105,7 +100,10 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
             number_of_processed=number_of_processed,
             number_of_items=self.items_number,
         )
-    
+
+    def get_path_manager(self, project_id) -> FilteringPathManager:
+        return FilteringPathManager(project_id)
+
     def load_item(self, next: bool = True):
         if not next:
             self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.item_id)
@@ -128,10 +126,10 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
         self.update_canvas()
 
     def save_item(self):
-        if self.image_changed:
+        if self.item_changed:
             self.labeled_image.save()
 
-    def change_item(self, item_id: int):
+    def switch_item(self, item_id: int):
         if item_id > self.items_number - 1 or item_id < 0:
             return
         time.sleep(self.delay.value)
@@ -145,7 +143,7 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
 
     def select_image(self):
         self.labeled_image.selected = not self.labeled_image.selected
-        self.image_changed = True
+        self.item_changed = True
 
     def handle_key(self, key: str):
         if key.lower() == "d" or key.lower() == "k":
@@ -167,14 +165,14 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
         cimages = ClassificationImage.all_selected()
         for cimage in cimages:
             if cimage.item_id > self.item_id:
-                self.change_item(item_id=cimage.item_id)
+                self.switch_item(item_id=cimage.item_id)
                 break
 
     def go_to_previous_selected(self):
         cimages = ClassificationImage.all_selected()
         for cimage in reversed(list(cimages)):
             if cimage.item_id < self.item_id:
-                self.change_item(item_id=cimage.item_id)
+                self.switch_item(item_id=cimage.item_id)
                 break
 
     def update_canvas(self):
