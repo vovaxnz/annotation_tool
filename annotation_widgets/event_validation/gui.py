@@ -32,7 +32,7 @@ class EventValidationStatusBar(tk.Frame):
 
         # Video frame info label
         self.preview_mode_label = tk.Label(self, bd=1)
-        self.frame_info_label = tk.Label(self, bd=1)
+        self.frame_info_label = tk.Label(self, bd=1) # This widget is unused
 
         # Initialize labels and separators
         self.initialize_labels_and_separators()
@@ -248,7 +248,7 @@ class BaseCanvasView(tk.Canvas):
     """
     Class Contains base functionality of displaying Images in window.
     """
-    def __init__(self, parent: tk.Tk, root: tk.Tk, logic: AbstractImageAnnotationLogic):
+    def __init__(self, parent: tk.Tk, root: tk.Tk, logic: AbstractImageAnnotationLogic): # Don't pass logic class here, use only callbacks to set or obtain values.
         super().__init__(parent, bg="black")
 
         self.logic = logic
