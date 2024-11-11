@@ -4,7 +4,7 @@ from typing import Callable, List
 from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
-from api_requests import get_projects_data
+from api_requests import get_projects_data, get_completed_projects_data
 from exceptions import handle_exception
 from annotation_widgets.widget import AbstractAnnotationWidget
 from gui_utils import IdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window, show_html_window
@@ -149,6 +149,23 @@ class MainWindow(tk.Tk):
             else:
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
 
+    def remove_completed_projects(self):
+        local_projects_data = get_local_projects_data()
+        if local_projects_data:
+            portal_projects_uids = get_completed_projects_data()
+
+            if portal_projects_uids:
+                local_projects_to_remove = [item for item in local_projects_data if item.uid in portal_projects_uids]
+
+                local_projects_ids_str = ", ".join([str(item.id) for item in local_projects_to_remove])
+                agree = messagebox.askokcancel("Completed projects deletion", "Do you want to remove completed projects from your device")
+                if agree:
+                    for project_data in local_projects_to_remove:
+                        io = get_io(project_data)
+                        io.remove_project()
+
+                    messagebox.showinfo("Projects removed", f"The projects {local_projects_ids_str} were removed")
+
     def open_settings(self):
         SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update())
         
@@ -161,6 +178,7 @@ class MainWindow(tk.Tk):
     def on_window_close(self):
         if self.annotation_widget is not None:
             self.annotation_widget.close()
+        self.remove_completed_projects()
         self.destroy()
 
     def update_tool(self):
@@ -192,6 +210,3 @@ class MainWindow(tk.Tk):
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
-
-
-

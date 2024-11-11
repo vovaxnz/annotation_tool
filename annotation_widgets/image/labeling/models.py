@@ -7,7 +7,7 @@ from enums import FigureType
 import json
 import cv2
 import numpy as np
-from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
+from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect, func
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple, Dict
 from config import settings
@@ -21,6 +21,7 @@ class LabeledImage(Base):
     height = Column(Integer)
     width = Column(Integer)
     trash = Column(Boolean, default=False)
+    visible = Column(Boolean, nullable=True, default=True)
 
     bboxes = relationship("BBox", back_populates="image")
     kgroups = relationship("KeypointGroup", back_populates="image")
@@ -36,6 +37,12 @@ class LabeledImage(Base):
     def all(cls) -> List["LabeledImage"]:
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
+
+    @classmethod
+    def total_review_labels(cls) -> int:
+        session = get_session()
+        total = session.query(func.count(ReviewLabel.id)).outerjoin(cls.review_labels).scalar()
+        return int(total)
 
     def __init__(self, name, height, width):
         self.name = name
@@ -70,6 +77,13 @@ class LabeledImage(Base):
     def clear_review_labels(self):
         for review_label in self.review_labels:
             review_label.delete()
+
+    @classmethod
+    def update_visibility(cls, keep_visible_list: List[int]):
+        if keep_visible_list:
+            session = get_session()
+            session.query(cls).filter(cls.id.notin_(keep_visible_list)).update({"visible": False})
+            session.commit()
 
 
 class Label(Base):
@@ -359,5 +373,3 @@ class ReviewLabel(Figure):
 
     def serialize(self) -> Dict:
         return {"x": self.x, "y": self.y, "label": self.label}
-
-

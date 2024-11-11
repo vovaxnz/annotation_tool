@@ -6,6 +6,7 @@ import tkinter as tk
 
 from api_requests import complete_task
 from db import configure_database
+from enums import AnnotationStage
 from file_processing.file_transfer import upload_file
 from gui_utils import get_loading_window
 from models import ProjectData, Value
@@ -18,11 +19,13 @@ class AbstractAnnotationIO(ABC):
     def __init__(self, project_data: ProjectData):
         self.project_data: ProjectData = project_data
         self.pm = PathManager(project_data.id) 
+        self.local_stage: AnnotationStage = None
 
     def initialize_project(self, root: tk.Tk):
         save_json(self.project_data.to_json(), self.pm.state_path)
+        configure_database(self.pm.db_path)
+        self.local_stage = Value.get_value(name="annotation_stage")
         self.download_project(root=root)
-        configure_database(self.pm.db_path)    
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. 

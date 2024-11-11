@@ -1,4 +1,7 @@
+from json import JSONDecodeError
 from typing import List, Tuple
+from urllib.error import HTTPError
+
 import requests
 from config import settings
 from enums import AnnotationMode, AnnotationStage
@@ -63,3 +66,18 @@ def complete_task(project_uid: int, duration_hours: float):
         except:
             message = f"Internal Server Error with project uid {project_uid}"
         raise MessageBoxException(message)
+
+
+def get_completed_projects_data() -> List[str]:
+    url = f'{settings.api_url}/api/annotation/completed_projects_data/'
+
+    data = {'user_token': settings.token}
+
+    projects_data = []
+
+    try:
+        response = requests.post(url, json=data)
+        response.raise_for_status()
+        return response.json().get("projects_uids", [])
+    except (HTTPError, JSONDecodeError) as e:
+        pass

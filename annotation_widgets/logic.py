@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import json
 import time
 
+from enums import AnnotationStage
 from models import ProjectData, Value
 from path_manager import PathManager
 from utils import get_datetime_str
@@ -40,11 +41,10 @@ class AbstractAnnotationLogic(ABC):
     def save_item(self):
         raise NotImplementedError
 
-    def save_state(self):  # TODO: Save values as a batch
+    def save_state(self, update_stage: bool = True):  # TODO: Save values as a batch
         Value.update_value("item_id", self.item_id)
         Value.update_value("duration_hours", self.duration_hours)
         Value.update_value("processed_item_ids", list(self.processed_item_ids))
-        Value.update_value("annotation_stage", self.project_data.stage.name)
 
     def load_state(self):
         annotation_stage_name = Value.get_value("annotation_stage")
@@ -52,6 +52,7 @@ class AbstractAnnotationLogic(ABC):
             self.item_id = 0
             self.duration_hours = 0
             self.processed_item_ids = set()
+            Value.update_value("annotation_stage", self.project_data.stage.name)
             self.image_changed = True
         else:
             item_id = Value.get_value("item_id")

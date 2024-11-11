@@ -3,7 +3,6 @@ import json
 import os
 import shutil
 import tkinter as tk
-from tkinter import messagebox
 from typing import Dict, List
 
 from annotation_widgets.io import AbstractAnnotationIO
@@ -28,7 +27,10 @@ class ImageLabelingIO(AbstractAnnotationIO):
     def initialize_project(self, root: tk.Tk):
         super().initialize_project(root)
         loading_window = get_loading_window(text="Loading project...", root=root)
-        self.import_project(overwrite=False)
+        if self.project_data.stage is AnnotationStage.REVIEW and self.local_stage == AnnotationStage.SENT_FOR_CORRECTION.name:
+            self.import_project(overwrite=True)
+        else:
+            self.import_project(overwrite=False)
         loading_window.destroy()
 
     def download_project(self, root: tk.Tk):
@@ -47,14 +49,19 @@ class ImageLabelingIO(AbstractAnnotationIO):
                 file_name=os.path.basename(self.pm.figures_ann_path),
                 save_path=self.pm.figures_ann_path,
             )
+        elif self.project_data.stage is AnnotationStage.REVIEW and self.local_stage == AnnotationStage.SENT_FOR_CORRECTION.name:
+            download_file(
+                uid=self.project_data.uid,
+                file_name=os.path.basename(self.pm.figures_ann_path),
+                save_path=self.pm.figures_ann_path,
+            )
 
-        if self.project_data.stage is AnnotationStage.CORRECTION:
-            if not check_correct_json(self.pm.review_ann_path):
-                download_file(
-                    uid=self.project_data.uid,
-                    file_name=os.path.basename(self.pm.review_ann_path),
-                    save_path=self.pm.review_ann_path,
-                )
+        if self.project_data.stage is AnnotationStage.CORRECTION and self.local_stage == AnnotationStage.SENT_FOR_REVIEW.name:
+            download_file(
+                uid=self.project_data.uid,
+                file_name=os.path.basename(self.pm.review_ann_path),
+                save_path=self.pm.review_ann_path,
+            )
 
         img_ann_number = len(open_json(self.pm.figures_ann_path))
         if os.path.isdir(self.pm.images_path):
@@ -108,8 +115,7 @@ class ImageLabelingIO(AbstractAnnotationIO):
         }
         """
         # Set current image id to 0
-        Value.update_value("item_id", 0, overwrite=False)
-
+        Value.update_value("item_id", 0, overwrite=overwrite)
         figures_data = open_json(self.pm.figures_ann_path )
         meta_data = open_json(self.pm.meta_ann_path)
 
@@ -199,22 +205,42 @@ class ImageLabelingIO(AbstractAnnotationIO):
         # Review labels
         if os.path.isfile(self.pm.review_ann_path ):
             review_data = open_json(self.pm.review_ann_path )
+
             limages = list()
+            image_visibility_set = set()
             for img_name in os.listdir(self.pm.images_path):
                 image = LabeledImage.get(name=img_name)
-                if len(image.review_labels) > 0:
-                    continue
-                review_data_for_image = review_data.get(image.name)
-                if review_data_for_image is not None:
-                    for review_label_dict in review_data_for_image:
-                        rl = ReviewLabel(
-                            x=review_label_dict["x"],
-                            y=review_label_dict["y"],
-                            label=review_label_dict["label"],
-                        )
+                review_data_for_image = review_data.get(img_name, [])
+
+                if overwrite:
+                    image.clear_review_labels()
+
+                    if review_data_for_image:
+                        image_visibility_set.add(image.id)
+
+                    for item in review_data_for_image:
+                        rl = ReviewLabel(x=item["x"], y=item["y"], label=item["label"])
+                        image.review_labels.append(rl)
+
+                    limages.append(image)
+
+                elif self.project_data.stage is AnnotationStage.REVIEW:
+                    if review_data_for_image:
+                        image_visibility_set.add(image.id)
+
+                elif self.project_data.stage is AnnotationStage.CORRECTION:
+                    if self.local_stage == AnnotationStage.SENT_FOR_REVIEW.name:
+                        image.clear_review_labels()
+                    elif len(image.review_labels) > 0:
+                        continue
+
+                    for item in review_data_for_image:
+                        rl = ReviewLabel(x=item["x"], y=item["y"], label=item["label"])
                         image.review_labels.append(rl)
                     limages.append(image)
+
             LabeledImage.save_batch(limages)
+            LabeledImage.update_visibility(list(image_visibility_set))
 
     def _export_figures(self, figures_ann_path: str):
         figures_dict = dict()
@@ -251,7 +277,7 @@ class ImageLabelingIO(AbstractAnnotationIO):
             file_name=os.path.basename(self.pm.figures_ann_path), 
             save_path=self.pm.figures_ann_path, 
         )
-        if annotation_stage is AnnotationStage.CORRECTION:
+        if annotation_stage in [AnnotationStage.CORRECTION, AnnotationStage.REVIEW]:
             download_file(
                 uid=project_uid, 
                 file_name=os.path.basename(self.pm.review_ann_path), 
@@ -267,20 +293,21 @@ class ImageLabelingIO(AbstractAnnotationIO):
         img_number = len(os.listdir(self.pm.images_path))
 
         if img_number != img_ann_number:
-            raise MessageBoxException(f"The project {project_id} has a different number of images and annotations. Re-lauch application to download again or, if that doesn't help, ask to fix the project")
+            raise MessageBoxException(f"The project {project_id} has a different number of images and annotations. Re-launch application to download again or, if that doesn't help, ask to fix the project")
 
         self.import_project(overwrite=True)
 
     def _upload_annotation_results(self):
         if self.project_data.stage in [AnnotationStage.ANNOTATE, AnnotationStage.CORRECTION]:
             self._export_figures(figures_ann_path=self.pm.figures_ann_path)
+            Value.update_value("annotation_stage", AnnotationStage.SENT_FOR_REVIEW.name)
             upload_file(self.project_data.uid, self.pm.figures_ann_path)
         elif self.project_data.stage is AnnotationStage.REVIEW:
             self._export_review(review_ann_path=self.pm.review_ann_path)
+            Value.update_value("annotation_stage", AnnotationStage.SENT_FOR_CORRECTION.name, overwrite=True)
             upload_file(self.project_data.uid, self.pm.review_ann_path)
 
     def _remove_after_completion(self):
         """Don`t remove after first step of annotation in order to not download again before a correction stage"""
-        if self.project_data.stage is not AnnotationStage.ANNOTATE:
+        if self.project_data.stage is AnnotationStage.REVIEW and LabeledImage.total_review_labels() == 0:
             self.remove_project()
-
