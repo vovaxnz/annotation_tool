@@ -94,6 +94,8 @@ class MainWindow(tk.Tk):
     def open_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
         
+        projects_data = get_projects_data()
+
         try:
             projects_data = get_projects_data()
         except:
