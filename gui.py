@@ -127,11 +127,11 @@ class MainWindow(tk.Tk):
         
         projects_data = get_projects_data()
 
-        # try:
-        #     projects_data = get_projects_data()
-        # except:
-        #     messagebox.showinfo("Error", "Unable to reach a web service. You`ll be shown only already downloaded projects.")
-        #     projects_data = get_local_projects_data()
+        try:
+            projects_data = get_projects_data()
+        except:
+            messagebox.showinfo("Error", "Unable to reach a web service. You`ll be shown only already downloaded projects.")
+            projects_data = get_local_projects_data()
     
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
