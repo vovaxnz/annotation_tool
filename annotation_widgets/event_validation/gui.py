@@ -214,7 +214,7 @@ class VideoFrameSlider(tk.Frame):
 
     def on_slider_change(self, value):
         if self.on_change_callback is not None:
-            self.on_change_callback(value)
+            self.on_change_callback(int(value))
 
     def toggle_play_pause(self):
         if self.on_play_pause_callback is not None:
