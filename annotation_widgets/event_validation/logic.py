@@ -31,18 +31,12 @@ class EventValidationStatusData:
 class EventValidationLogic(AbstractImageAnnotationLogic):
     def __init__(self, data_path: str, project_data: ProjectData):
 
-        self.image_names = self._get_image_names(data_path)
-        self.video_names = self._get_video_names(data_path)
+        self.pm: EventValidationPathManager = self.get_path_manager(data_path)
+        self.image_names = [item for item in sorted(os.listdir(self.pm.images_path))] if os.path.exists(self.pm.images_path) else []
+        self.video_names = [item for item in sorted(os.listdir(self.pm.videos_path))] if os.path.exists(self.pm.videos_path) else []
 
+        # View mode related logic init
         self._video_mode_only = True if not self.image_names else False
-        self._on_item_change: Callable = None
-        self._on_view_mode_change: Callable = None
-        self._on_frame_change: Callable = None
-
-        self.set_view_mode()
-
-        self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
-        self.questions = list(self.questions_map.keys())
 
         if not self._video_mode_only:
             try:
@@ -52,10 +46,24 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         self.item_changed = False
         self.event: Event = None
+
+        self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
+        self.questions = list(self.questions_map.keys())
+
         self.comment = ""
         self.answers = OrderedDict((question, "") for question in self.questions)
+
+        self.item_id = 0
         self.frames = []
         self.current_frame_number = 0
+
+        # Callbacks init
+        self._on_item_change: Callable = None
+        self._on_view_mode_change: Callable = None
+        self._on_frame_change: Callable = None
+
+        # Set view mode
+        self.set_view_mode()
         super().__init__(data_path=data_path, project_data=project_data)
 
     def set_view_mode(self):
@@ -72,19 +80,10 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     @view_mode.setter
     def view_mode(self, mode: str):
         self._view_mode = mode
+        if self.video_mode:
+            self.set_video_cap()
         if self._on_view_mode_change is not None:
             self._on_view_mode_change()
-
-    @staticmethod
-    def _get_image_names(data_path: str) -> list:
-        images_path = os.path.join(data_path, "images")
-        return [item for item in sorted(os.listdir(images_path))] if os.path.exists(images_path) else []
-
-    @staticmethod
-    def _get_video_names(data_path: str) -> list:
-        videos_path = os.path.join(data_path, "videos")
-        return [item for item in sorted(os.listdir(videos_path))] if os.path.exists(videos_path) else []
-
 
     @staticmethod
     def _get_uid_from_name(name) -> Optional[str]:
@@ -92,7 +91,6 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         match = re.search(pattern, name)
         if match:
             return match.group('uid')
-
 
     @property
     def items_number(self) -> int:
@@ -124,7 +122,6 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         assert 0 <= self.item_id < self.items_number, f"The Image ID {self.item_id} is out of range of the images list: {self.items_number}"
 
         self.set_view_mode()
-        self.set_video_cap()
 
         item_uid = self._get_uid_from_name(self.video_names[self.item_id])
         if item_uid is None:
@@ -135,6 +132,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.comment = self.set_sidebar_comment(event=self.event)
 
         if self._video_mode_only:
+            self.set_video_cap()
             self.load_video_frame(frame_number=0)
         else:
             self.load_image()
@@ -183,20 +181,14 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     def load_video_frame(self, frame_number: int = None) -> None:
 
         if frame_number is not None:
-        
             # Don't load frame if frame number is out of video frame range
-
             if frame_number < 0 or frame_number > self.number_of_frames - 1:
                 return
             self.current_frame_number = frame_number
         else:
-        
             # Don't load frame if frame number is out of video frame range
             if self.current_frame_number >= self.number_of_frames - 1:
-
-                return 
-            
-
+                return
             self.current_frame_number += 1
 
         self.orig_image = self.frames[self.current_frame_number]

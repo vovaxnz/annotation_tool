@@ -83,7 +83,7 @@ class EventValidationWidget(AbstractAnnotationWidget):
         if self.logic.view_mode == EventViewMode.VIDEO.name:
             self.slider_widget.show()
             self.slider_widget.slider.config(to=self.logic.number_of_frames)
-            self.slider_widget.slider.set(self.ui_current_frame_number)
+            self.update_slider_position()
         else:
             self.slider_widget.hide()
 
@@ -112,7 +112,7 @@ class EventValidationWidget(AbstractAnnotationWidget):
 
         if self.is_playing:
             self.logic.video_forward()
-            self.slider_widget.slider.set(self.ui_current_frame_number)
+            self.update_slider_position()
             self.canvas_view.update_frame = True
             self.after(10, self.play_video)
 
