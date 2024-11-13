@@ -150,7 +150,7 @@ class MainWindow(tk.Tk):
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
 
     def open_settings(self):
-        SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update())
+        SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update() if self.annotation_widget is not None else None)
         
     def go_to_id(self):
         form = IdForm(root=self, max_id=self.annotation_widget.items_number) 
