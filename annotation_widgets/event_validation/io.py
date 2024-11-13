@@ -79,7 +79,10 @@ class EventValidationIO(AbstractAnnotationIO):
                 "Status (TP/FP)"
             ],
             "events" {
-                "76a4365d-25cb-4403-a76e-cfe70016a8e7": ["True", None, "TP"],
+                "76a4365d-25cb-4403-a76e-cfe70016a8e7": {
+                    "answers": ["True", None, "TP"],
+                    "comment": "..."
+                }
                 ...
             }
         }
@@ -89,7 +92,10 @@ class EventValidationIO(AbstractAnnotationIO):
         result = {"fields": list(fields.keys()), "events": {}}
 
         for event in Event.all():
-            result["events"][event.uid] = json.loads(event.custom_fields)
+            result["events"][event.uid] = {
+                "answers": json.loads(event.custom_fields),
+                "comment": event.comment
+            }
 
         save_json(result, output_path)
 

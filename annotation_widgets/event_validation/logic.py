@@ -127,6 +127,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         if item_uid is None:
             return
         self.event = Event.get(uid=item_uid)
+        assert self.event is not None, f"Event not found: {self.video_names[self.item_id]}, {item_uid}"
         self.answers = self.get_default_answers(event=self.event)
         self.comment = self.set_sidebar_comment(event=self.event)
 
