@@ -121,8 +121,8 @@ class MainWindow(tk.Tk):
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
-        io = get_io(project_data)
         if project_data is not None: 
+            io = get_io(project_data)
             io.download_project(root=self)
 
 
