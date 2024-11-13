@@ -73,8 +73,8 @@ class EventValidationWidget(AbstractAnnotationWidget):
                                               on_stop_callback=self.handle_stop)
         self.slider_widget.grid(row=1, column=0, sticky="nsew")
 
-    def on_slider_change(self, val):
-        frame_number = int(val) - 1
+    def on_slider_change(self, val: int):
+        frame_number = val - 1
         self.logic.load_video_frame(frame_number=frame_number)
         self.canvas_view.update_frame = True
 
