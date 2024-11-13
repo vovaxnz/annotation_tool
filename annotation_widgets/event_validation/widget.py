@@ -47,6 +47,15 @@ class EventValidationWidget(AbstractAnnotationWidget):
         self.logic.set_on_frame_change_callback(self.update_slider_position)
         self.update_widgets_display()
 
+        self.bind_all("<Button-1>", self.handle_left_mouse_press)
+        self.bind_all("<Button-3>", self.handle_right_mouse_press)
+
+    def handle_right_mouse_press(self, event: tk.Event):
+        self.logic.update_time_counter("rmp")
+
+    def handle_left_mouse_press(self, event: tk.Event):
+        self.logic.update_time_counter("lmp")
+
     def set_up_side_bar(self):
         self.side_bar = EventValidationSideBar(self, on_save_comment_callback=self.save_comment, on_save_answer_callback=self.save_answer)
 
