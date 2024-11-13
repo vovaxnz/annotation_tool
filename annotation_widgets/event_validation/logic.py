@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import tkinter as tk
 from collections import OrderedDict
 from dataclasses import dataclass
 from tkinter import messagebox
@@ -39,6 +38,8 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self._video_mode_only = True if not self.image_names else False
         self._on_item_change: Callable = None
         self._on_view_mode_change: Callable = None
+        self._on_frame_change: Callable = None
+
         self.set_view_mode()
 
         self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
@@ -55,20 +56,22 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.comment = ""
         self.answers = OrderedDict((question, "") for question in self.questions)
         self.frames = []
-        self.number_of_frames = 0
         self.current_frame_number = 0
-        self.current_frame_var = tk.IntVar(value=1)
         super().__init__(data_path=data_path, project_data=project_data)
 
     def set_view_mode(self):
         self.view_mode = EventViewMode.IMAGE.name if not self._video_mode_only else EventViewMode.VIDEO.name
 
     @property
-    def view_mode(self):
+    def number_of_frames(self) -> int:
+        return len(self.frames)
+
+    @property
+    def view_mode(self) -> str:
         return self._view_mode
 
     @view_mode.setter
-    def view_mode(self, mode):
+    def view_mode(self, mode: str):
         self._view_mode = mode
         if self._on_view_mode_change is not None:
             self._on_view_mode_change()
@@ -151,7 +154,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.orig_image = orig_image
             self.update_canvas()
 
-    def set_video_cap(self):
+    def set_video_cap(self, frames_limit: int = 1000):
         video_path = os.path.join(self.pm.videos_path, self.video_names[self.item_id])
         assert video_path.endswith("mp4")
 
@@ -159,15 +162,19 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.current_frame_number = 0
 
         self.cap = cv2.VideoCapture(video_path)
-        self.number_of_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
         if not self.cap.isOpened():
             raise MessageBoxException(f"Error opening video file {video_path}")
 
-        for frame_number in range(int(self.number_of_frames)):
+        counter = 0
+        while True:
             ret, frame = self.cap.read()
             if ret:
                 self.frames.append(frame)
+                counter += 1
             else:
+                break
+            if counter > frames_limit:
                 break
         self.cap.release()
 
@@ -183,8 +190,8 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.current_frame_number += 1
 
         self.orig_image = self.frames[self.current_frame_number]
-        self.current_frame_var.set(self.current_frame_number + 1)
         self.update_canvas()
+        self.on_frame_change()
 
     def switch_item(self, item_id: int) -> None:
         if item_id > self.items_number - 1 or item_id < 0:
@@ -219,11 +226,18 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     def set_sidebar_comment(event: Event) -> str:
         return event.validation_values.get("comment")
 
-    def on_item_change(self, callback: Callable) -> None:
+    def set_on_item_change_callback(self, callback: Callable) -> None:
         self._on_item_change = callback
 
-    def on_view_mode_change(self, callback: Callable):
+    def set_on_view_mode_change_callback(self, callback: Callable):
         self._on_view_mode_change = callback
+
+    def set_on_frame_change_callback(self, callback: Callable):
+        self._on_frame_change = callback
+
+    def on_frame_change(self):
+        if self._on_frame_change:
+            self._on_frame_change()
 
     def update_comment(self, new_comment: str) -> None:
         self.comment = new_comment

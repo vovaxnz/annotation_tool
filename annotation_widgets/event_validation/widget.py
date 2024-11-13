@@ -20,7 +20,11 @@ class EventValidationWidget(AbstractAnnotationWidget):
         self.grid_rowconfigure(1, weight=0, minsize=40)
 
         # Canvas
-        self.canvas_view = BaseCanvasView(self, root=self, logic=self.logic)
+        self.canvas_view = BaseCanvasView(self, root=self,
+                                          on_update_canvas_callback=self.logic.update_canvas,
+                                          on_handle_key_callback=self.logic.handle_key,
+                                          on_update_time_counter_callback=self.logic.update_time_counter,
+                                          on_get_orig_image_callback=lambda: self.logic.orig_image)
         self.canvas_view.grid(row=0, column=0, sticky="nsew")
 
         # Slider Widget
@@ -38,10 +42,10 @@ class EventValidationWidget(AbstractAnnotationWidget):
         self.status_bar.grid(row=2, column=0, columnspan=2, sticky="nsew")
 
         # Event Hooks
-        self.logic.on_item_change(self.update_widgets_display)
-        self.logic.on_view_mode_change(self.update_slider)
+        self.logic.set_on_item_change_callback(self.update_widgets_display)
+        self.logic.set_on_view_mode_change_callback(self.update_slider)
+        self.logic.set_on_frame_change_callback(self.update_slider_position)
         self.update_widgets_display()
-        # self.update_slider()
 
     def set_up_side_bar(self):
         self.side_bar = EventValidationSideBar(self, on_save_comment_callback=self.save_comment, on_save_answer_callback=self.save_answer)
@@ -64,46 +68,54 @@ class EventValidationWidget(AbstractAnnotationWidget):
 
     def set_up_slider_widget(self):
         self.slider_widget = VideoFrameSlider(self, from_=1, to=self.logic.number_of_frames,
-                                              callback=self.on_slider_change)
+                                              on_change_callback=self.on_slider_change,
+                                              on_play_pause_callback=self.handle_play_pause,
+                                              on_stop_callback=self.handle_stop)
         self.slider_widget.grid(row=1, column=0, sticky="nsew")
-        self.slider_widget.slider.config(variable=self.logic.current_frame_var)
 
     def on_slider_change(self, val):
         frame_number = int(val) - 1
-        # tk.messagebox.showinfo("Error", f"frame_number = {frame_number}, type = {type(frame_number)}, val = {val}")
         self.logic.load_video_frame(frame_number=frame_number)
         self.canvas_view.update_frame = True
 
     def update_slider(self):
-        self.slider_widget.stop()
+        self.slider_widget.set_stop()
         if self.logic.view_mode == EventViewMode.VIDEO.name:
             self.slider_widget.show()
             self.slider_widget.slider.config(to=self.logic.number_of_frames)
-            self.slider_widget.slider.set(self.logic.current_frame_number + 1)
+            self.slider_widget.slider.set(self.ui_current_frame_number)
         else:
             self.slider_widget.hide()
 
-    def handle_play_pause(self, play: bool):
-        self.is_playing = play
+    def update_slider_position(self):
+        self.slider_widget.slider.set(self.ui_current_frame_number)
 
-        if play:
+    def handle_play_pause(self):
+        self.is_playing = not self.is_playing
+        self.slider_widget.update_play_pause_button(self.is_playing)
+        if self.is_playing:
             self.play_video()
         else:
             self.after_cancel(self.play_video)
 
     def handle_stop(self):
         self.is_playing = False
+        self.slider_widget.update_play_pause_button(self.is_playing)
         self.slider_widget.slider.set(1)
         self.canvas_view.update_frame = True
 
     def play_video(self):
         if self.logic.current_frame_number >= self.logic.number_of_frames - 1:
             self.is_playing = False
-            self.slider_widget.pause()
+            self.slider_widget.update_play_pause_button(self.is_playing)
             return
 
         if self.is_playing:
             self.logic.video_forward()
-            self.slider_widget.slider.set(self.logic.current_frame_number + 1)
+            self.slider_widget.slider.set(self.ui_current_frame_number)
             self.canvas_view.update_frame = True
-            self.after(50, self.play_video)
+            self.after(10, self.play_video)
+
+    @property
+    def ui_current_frame_number(self) -> int:
+        return self.logic.current_frame_number + 1
