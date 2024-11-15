@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy import asc, Column, String, Integer
 
@@ -18,7 +18,7 @@ class Event(Base):
         self.uid = uid
 
     @classmethod
-    def get(cls, uid: str):
+    def get(cls, uid: str) -> Optional["Event"]:
         session = get_session()
         if uid is not None:
             return session.query(cls).filter(cls.uid == uid).first()
