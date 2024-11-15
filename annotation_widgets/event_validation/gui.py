@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image, ImageTk
 from pynput.keyboard import Listener
 
+from annotation_widgets.event_validation.logic import EventValidationStatusData
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 from enums import EventViewMode
 from exceptions import handle_exception
@@ -32,7 +33,6 @@ class EventValidationStatusBar(tk.Frame):
 
         # Video frame info label
         self.preview_mode_label = tk.Label(self, bd=1)
-        self.frame_info_label = tk.Label(self, bd=1)
 
         # Initialize labels and separators
         self.initialize_labels_and_separators()
@@ -72,9 +72,6 @@ class EventValidationStatusBar(tk.Frame):
         sep10 = ttk.Separator(self, orient='vertical')
         sep10.grid(row=0, column=13, sticky='ns')
 
-        # Video Frames info label (initially hidden)
-        self.frame_info_label.grid(row=0, column=14, sticky='ew', padx=15)
-
         self.columnconfigure(8, weight=1)  # Make progress bar expand
 
     def on_resize(self, event):
@@ -84,11 +81,11 @@ class EventValidationStatusBar(tk.Frame):
 
         # Set the new font to all labels and progress bar
         for widget in [self.mode_label, self.item_id_label, self.speed_label, self.processed_label, self.duration_label,
-                       self.preview_mode_label, self.frame_info_label]:
+                       self.preview_mode_label]:
             widget.config(font=label_font)
 
     def update_status(self):
-        status_data = self.get_status_data()
+        status_data: EventValidationStatusData = self.get_status_data()
 
         # Update labels
         self.mode_label.config(text=f"Mode: Event Validation")
@@ -101,12 +98,6 @@ class EventValidationStatusBar(tk.Frame):
         self.duration_label.config(text=f"Duration: {status_data.annotation_hours} hours")
 
         self.preview_mode_label.config(text=f"Preview mode: {status_data.view_mode}")
-
-        if status_data.view_mode == EventViewMode.VIDEO.name:
-            self.frame_info_label.config(text=f"Frame info: {status_data.current_frame_number + 1} / {status_data.number_of_frames}")
-            self.frame_info_label.grid()
-        else:
-            self.frame_info_label.grid_remove()
 
         # Schedule the next update
         self.after(10, self.update_status)
@@ -197,14 +188,67 @@ class EventValidationSideBar(tk.Frame):
                         rb.config(bg=self.questions_map[question][selected_answer])
 
 
+class VideoFrameSlider(tk.Frame):
+    def __init__(self, parent, from_, to, on_change_callback: Callable = None, on_play_pause_callback: Callable = None,
+                 on_stop_callback: Callable = None, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+        self.on_change_callback = on_change_callback
+        self.on_play_pause_callback = on_play_pause_callback
+        self.on_stop_callback = on_stop_callback
+
+        button_frame = tk.Frame(self)
+        button_frame.pack(side="left", padx=10, pady=5, anchor="s")
+
+        # Play/Pause Button
+        self.play_button = tk.Button(button_frame, text="▶", width=3, font=("Arial", 10), command=self.toggle_play_pause)
+        self.play_button.pack(side="left", padx=(0, 5), anchor="s")
+
+        # Stop Button
+        self.stop_button = tk.Button(button_frame, text="■", width=3, font=("Arial", 10), command=self.set_stop)
+        self.stop_button.pack(side="left", padx=(5, 0), anchor="s")
+
+        # Slider
+        self.slider = tk.Scale(self, from_=from_, to=to, orient="horizontal", command=self.on_slider_change, length=500, sliderlength=30, width=20)
+        self.slider.pack(side="right", fill="x", expand=True, padx=(10, 10), anchor="n")
+
+
+    def on_slider_change(self, value):
+        if self.on_change_callback is not None:
+            self.on_change_callback(int(value))
+
+    def toggle_play_pause(self):
+        if self.on_play_pause_callback is not None:
+            self.on_play_pause_callback()
+
+    def set_stop(self):
+        if self.on_stop_callback is not None:
+            self.on_stop_callback()
+
+    def update_play_pause_button(self, is_playing: bool):
+        text = "II" if is_playing else "▶"
+        self.play_button.config(text=text)
+
+    def show(self):
+        self.grid()
+
+    def hide(self):
+        self.grid_remove()
+
+
 class BaseCanvasView(tk.Canvas):
     """
     Class Contains base functionality of displaying Images in window.
     """
-    def __init__(self, parent: tk.Tk, root: tk.Tk, logic: AbstractImageAnnotationLogic):
+    def __init__(self, parent: tk.Tk, root: tk.Tk, on_update_canvas_callback: Callable,
+                 on_handle_key_callback: Callable, on_get_orig_image_callback: Callable,
+                 on_update_time_counter_callback: Callable):
         super().__init__(parent, bg="black")
 
-        self.logic = logic
+        self.on_update_canvas = on_update_canvas_callback
+        self.on_handle_key = on_handle_key_callback
+        self.on_get_orig_image = on_get_orig_image_callback
+        self.on_update_time_counter = on_update_time_counter_callback
 
         self.parent=root
 
@@ -227,7 +271,7 @@ class BaseCanvasView(tk.Canvas):
         self.bind("<Key>", self.handle_key_press) # For triggering methods by tkinter keyboard events
         self.bind("<Configure>", self.on_resize)
 
-        self.logic.update_canvas()
+        self.on_update_canvas()
 
     def on_key_press(self, key):
         self.any_key_pressed = True
@@ -261,10 +305,10 @@ class BaseCanvasView(tk.Canvas):
         if event is None:
             return
 
-        self.logic.handle_key(key=event.char.lower())
+        self.on_handle_key(key=event.char.lower())
 
         self.last_key_press_time = time.time()
-        self.logic.update_time_counter("keyboard")
+        self.on_update_time_counter("keyboard")
 
         self.update_frame = True
         self.last_key_event = None
@@ -273,13 +317,14 @@ class BaseCanvasView(tk.Canvas):
         """Fits image inside the annotation_widget and re-calculates scale_factor"""
         win_w=self.winfo_width()
         win_h=self.winfo_height()
-        img_h, img_w, c = self.logic.orig_image.shape
+
+        orig_image = self.on_get_orig_image()
+        img_h, img_w, c = orig_image.shape
         h_scale = win_h / img_h
         w_scale = win_w / img_w
 
         self.scale_factor = min(h_scale, w_scale)
 
-        self.logic.scale_factor = self.scale_factor
         self.x0, self.y0 = 0, 0
         self.update_frame = True
 
@@ -288,9 +333,10 @@ class BaseCanvasView(tk.Canvas):
         if self.update_frame:
 
             # Convert the OpenCV image to a format suitable for Tkinter
-            self.logic.update_canvas()
-            if self.logic.canvas is not None:
-                cv_image = cv2.cvtColor(self.logic.canvas, cv2.COLOR_BGR2RGB)
+            self.on_update_canvas()
+            img = self.on_get_orig_image()
+            if img is not None:
+                cv_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 cv_image = self.get_image_zone(img=cv_image, x0=self.x0, y0=self.y0, scale=self.scale_factor)
                 pil_image = Image.fromarray(cv_image)
                 tk_image = ImageTk.PhotoImage(image=pil_image)

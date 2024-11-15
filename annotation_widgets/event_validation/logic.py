@@ -31,41 +31,58 @@ class EventValidationStatusData:
 class EventValidationLogic(AbstractImageAnnotationLogic):
     def __init__(self, data_path: str, project_data: ProjectData):
 
-        self.image_names = self._get_image_names(data_path)
-        self.video_names = self._get_video_names(data_path)
+        self.pm: EventValidationPathManager = self.get_path_manager(data_path)
 
-        self._video_mode_only = True if not self.image_names else False
-        self.set_view_mode()
+        self._video_mode_only = True
+        assert os.path.isdir(self.pm.videos_path)
+        video_base_names = [item.split(".")[0] for item in os.listdir(self.pm.videos_path)]
+
+        if os.path.isdir(self.pm.images_path) and len(os.listdir(self.pm.images_path)) > 0:
+            self._video_mode_only = False
+            image_base_names = [item.split(".")[0] for item in os.listdir(self.pm.images_path)]
+            assert set(image_base_names) == set(video_base_names), "Number of 44 and videos are not the same"
+ 
+        self.item_base_names = sorted(video_base_names)
+
+        # View mode related logic init
+        self.item_changed = False
+        self.event: Event = None
 
         self.questions_map = json.loads(Value.get_value("fields"))  # Returns tree structure -> {"question_1": {"answer_1": "color_1", "answer_2": "color_2"...}}
         self.questions = list(self.questions_map.keys())
 
-        if not self._video_mode_only:
-            try:
-                assert len(self.image_names) == len(self.video_names)
-            except AssertionError:
-                messagebox.showinfo("Error", "Project might be broken. Number of images and videos differ.")
-
-        self.item_changed = False
-        self.event: Event = None
         self.comment = ""
         self.answers = OrderedDict((question, "") for question in self.questions)
+
+        self.item_id = 0
+        self.frames = []
+        self.current_frame_number = 0
+
+        # Callbacks init
         self._on_item_change: Callable = None
+        self._on_view_mode_change: Callable = None
+        self._on_frame_change: Callable = None
+
+        # Set view mode
+        self.view_mode: EventViewMode = None
+        self.change_view_mode(
+            mode = EventViewMode.IMAGE if not self._video_mode_only else EventViewMode.VIDEO
+        )
+
         super().__init__(data_path=data_path, project_data=project_data)
 
-    def set_view_mode(self):
-        self.view_mode = EventViewMode.IMAGE.name if not self._video_mode_only else EventViewMode.VIDEO.name
+    @property
+    def number_of_frames(self) -> int:
+        return len(self.frames)
 
-    @staticmethod
-    def _get_image_names(data_path: str) -> list:
-        images_path = os.path.join(data_path, "images")
-        return [item for item in sorted(os.listdir(images_path))] if os.path.exists(images_path) else []
-
-    @staticmethod
-    def _get_video_names(data_path: str) -> list:
-        videos_path = os.path.join(data_path, "videos")
-        return [item for item in sorted(os.listdir(videos_path))] if os.path.exists(videos_path) else []
-
+    def change_view_mode(self, mode: EventViewMode):
+        if self._video_mode_only:
+            mode = EventViewMode.VIDEO
+        self.view_mode = mode
+        if self.video_mode:
+            self.set_video_cap()
+        if self._on_view_mode_change is not None:
+            self._on_view_mode_change()
 
     @staticmethod
     def _get_uid_from_name(name) -> Optional[str]:
@@ -74,10 +91,9 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         if match:
             return match.group('uid')
 
-
     @property
     def items_number(self) -> int:
-        return len(self.video_names)
+        return len(self.item_base_names)
 
     @property
     def status_data(self) -> EventValidationStatusData:
@@ -88,14 +104,14 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             annotation_hours=round(self.duration_hours, 2),
             number_of_processed=number_of_processed,
             number_of_items=self.items_number,
-            view_mode=self.view_mode,
+            view_mode=self.view_mode.name,
             number_of_frames=self.number_of_frames,
             current_frame_number=self.current_frame_number,
         )
 
     @property
     def video_mode(self) -> bool:
-        return self._video_mode_only or self.view_mode == EventViewMode.VIDEO.name
+        return self._video_mode_only or self.view_mode is EventViewMode.VIDEO
 
     def get_path_manager(self, project_id) -> EventValidationPathManager:
         return EventValidationPathManager(project_id)
@@ -104,18 +120,19 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         assert 0 <= self.item_id < self.items_number, f"The Image ID {self.item_id} is out of range of the images list: {self.items_number}"
 
-        self.set_view_mode()
-        self.set_video_cap()
+        self.change_view_mode(EventViewMode.IMAGE)
 
-        item_uid = self._get_uid_from_name(self.video_names[self.item_id])
+        item_uid = self._get_uid_from_name(f"{self.item_base_names[self.item_id]}.mp4")
         if item_uid is None:
             return
         self.event = Event.get(uid=item_uid)
+        assert self.event is not None, f"Event not found: {self.item_base_names[self.item_id]}, {item_uid}"
         self.answers = self.get_default_answers(event=self.event)
         self.comment = self.set_sidebar_comment(event=self.event)
 
         if self._video_mode_only:
-            self.load_video_frame(frame_number=0)
+            self.set_video_cap()
+            self.load_video_frame()
         else:
             self.load_image()
 
@@ -129,46 +146,56 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
             self.event.save()
 
     def load_image(self):
-        image_name = self.image_names[self.item_id]
+        image_name = f"{self.item_base_names[self.item_id]}.jpg"
         orig_image = cv2.imread(os.path.join(self.pm.images_path, image_name))
 
         if orig_image is not None:
             self.orig_image = orig_image
-            self.canvas = orig_image
+            self.update_canvas()
 
-    def set_video_cap(self):
-        video_path = os.path.join(self.pm.videos_path, self.video_names[self.item_id])
+    def set_video_cap(self, frames_limit: int = 1000):
+        video_path = os.path.join(self.pm.videos_path, f"{self.item_base_names[self.item_id]}.mp4")
         assert video_path.endswith("mp4")
 
+        self.frames.clear()
+
         self.cap = cv2.VideoCapture(video_path)
-        self.current_frame_number = 0
-        self.number_of_frames = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+
         if not self.cap.isOpened():
             raise MessageBoxException(f"Error opening video file {video_path}")
+
+        counter = 0
+        while True:
+            ret, frame = self.cap.read()
+            if ret:
+                self.frames.append(frame)
+                counter += 1
+            else:
+                break
+            if counter > frames_limit:
+                break
+
+        # Set the current frame number to the middle of the video, because the event trigger is almost always in the middle of the video
+        self.current_frame_number = int(len(self.frames) / 2) - 1 
+
+        self.cap.release()
 
     def load_video_frame(self, frame_number: int = None) -> None:
 
         if frame_number is not None:
-        
             # Don't load frame if frame number is out of video frame range
             if frame_number < 0 or frame_number > self.number_of_frames - 1:
                 return
-
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
             self.current_frame_number = frame_number
         else:
-        
             # Don't load frame if frame number is out of video frame range
             if self.current_frame_number >= self.number_of_frames - 1:
-                return 
-            
+                return
             self.current_frame_number += 1
 
-        ret, frame = self.cap.read()
-
-        if ret:
-            self.orig_image = frame
-            self.canvas = frame
+        self.orig_image = self.frames[self.current_frame_number]
+        self.update_canvas()
+        self.on_frame_change()
 
     def switch_item(self, item_id: int) -> None:
         if item_id > self.items_number - 1 or item_id < 0:
@@ -203,8 +230,18 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
     def set_sidebar_comment(event: Event) -> str:
         return event.validation_values.get("comment")
 
-    def on_item_change(self, callback: Callable) -> None:
+    def set_on_item_change_callback(self, callback: Callable) -> None:
         self._on_item_change = callback
+
+    def set_on_view_mode_change_callback(self, callback: Callable):
+        self._on_view_mode_change = callback
+
+    def set_on_frame_change_callback(self, callback: Callable):
+        self._on_frame_change = callback
+
+    def on_frame_change(self):
+        if self._on_frame_change:
+            self._on_frame_change()
 
     def update_comment(self, new_comment: str) -> None:
         self.comment = new_comment
@@ -220,12 +257,12 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         elif key.lower() == "w":
             self.forward()
         elif key.lower() == "a":  # Switch to IMAGE mode
-            if self.video_mode and not self._video_mode_only:
-                self.view_mode = EventViewMode.IMAGE.name
+            if self.video_mode:
+                self.change_view_mode(EventViewMode.IMAGE)
                 self.load_image()
         elif key.lower() == "s":  # Switch to VIDEO mode
             if not self.video_mode:
-                self.view_mode = EventViewMode.VIDEO.name
+                self.change_view_mode(EventViewMode.VIDEO)
                 self.load_video_frame(frame_number=self.current_frame_number)
         elif key.lower() == "z":
             if self.video_mode:
@@ -235,11 +272,12 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
                 self.video_forward()
 
         elif key.isdigit():
-            question_idx = int(key) - 1
-            question = self.questions[question_idx]
-            self.cycle_answer(question)
-            if self._on_item_change:
-                self._on_item_change()
+            if len(self.questions) >= int(key):
+                question_idx = int(key) - 1
+                question = self.questions[question_idx]
+                self.cycle_answer(question)
+                if self._on_item_change:
+                    self._on_item_change()
 
     def cycle_answer(self, question: str) -> None:
         current_answer = self.answers[question]
@@ -255,4 +293,4 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.update_answer(question, next_answer)
 
     def update_canvas(self):
-        pass
+        self.canvas = self.orig_image

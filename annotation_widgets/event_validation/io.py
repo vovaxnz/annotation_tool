@@ -57,12 +57,17 @@ class EventValidationIO(AbstractAnnotationIO):
         events = []
         pattern = r'event-(?P<uid>[a-f0-9\-]+)\.[a-z0-9]+$'
 
-        for item in sorted(os.listdir(self.pm.videos_path)):
-            match = re.search(pattern, str(item))
+        for video_name in sorted(os.listdir(self.pm.videos_path)):
+            match = re.search(pattern, str(video_name))
             if match:
-                events.append(Event(uid=match.group("uid")))
+                video_uid = match.group("uid")
+                events.append(Event(uid=video_uid))
+            else:
+                raise RuntimeError(f"Incorrect video name format {video_name}")
 
         Event.save_new_in_bulk(events)
+
+        assert len(events) == len(os.listdir(self.pm.videos_path))
 
 
     def overwrite_annotations(self):
@@ -79,7 +84,10 @@ class EventValidationIO(AbstractAnnotationIO):
                 "Status (TP/FP)"
             ],
             "events" {
-                "76a4365d-25cb-4403-a76e-cfe70016a8e7": ["True", None, "TP"],
+                "76a4365d-25cb-4403-a76e-cfe70016a8e7": {
+                    "answers": ["True", None, "TP"],
+                    "comment": "..."
+                }
                 ...
             }
         }
@@ -89,7 +97,10 @@ class EventValidationIO(AbstractAnnotationIO):
         result = {"fields": list(fields.keys()), "events": {}}
 
         for event in Event.all():
-            result["events"][event.uid] = json.loads(event.custom_fields)
+            result["events"][event.uid] = {
+                "answers": json.loads(event.custom_fields),
+                "comment": event.comment
+            }
 
         save_json(result, output_path)
 
