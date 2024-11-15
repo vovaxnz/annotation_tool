@@ -1,21 +1,16 @@
 
-from dataclasses import dataclass
-from enum import Enum, IntEnum
-import json
-import math
-import os
 import time
-from typing import Dict, List, Optional
-import numpy as np
+from dataclasses import dataclass
+from enum import Enum
+
 import cv2
+import numpy as np
 
-from labeling.abstract_labeling_app import AbstractLabelingApp
-
+from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 from exceptions import MessageBoxException
-from labeling.project_data import ProjectData
-from models import ClassificationImage
-
-
+from models import ProjectData
+from .models import ClassificationImage
+from .path_manager import FilteringPathManager
 
 FILTERING_BARCODE_PIXEL_SIZE = 2
 MAX_IMAGE_NAME_LENGTH = 100
@@ -59,10 +54,10 @@ class FilteringStatusData:
     delay: str
     selected: bool
     speed_per_hour: float
-    img_id: int
+    item_id: int
     annotation_hours: float
     number_of_processed: int
-    number_of_images: int
+    number_of_items: int
 
 
 class FilteringDelay(Enum):
@@ -71,7 +66,7 @@ class FilteringDelay(Enum):
     SHORT = 0.01
 
 
-class FilteringApp(AbstractLabelingApp):
+class ImageFilteringLogic(AbstractImageAnnotationLogic):
 
     def __init__(self, data_path: str, project_data: ProjectData):
     
@@ -90,25 +85,28 @@ class FilteringApp(AbstractLabelingApp):
         super().__init__(data_path=data_path, project_data=project_data)
 
     @property
-    def img_number(self) -> int:
+    def items_number(self) -> int:
         return self.number_of_frames
 
     @property
     def status_data(self) -> FilteringStatusData:
-        number_of_processed = len(self.processed_img_ids)
+        number_of_processed = len(self.processed_item_ids)
         return FilteringStatusData(
             delay=self.delay.name,
             selected = self.labeled_image.selected,
             speed_per_hour=round(number_of_processed / (self.duration_hours + 1e-7), 2),
-            img_id=self.img_id,
+            item_id=self.item_id,
             annotation_hours=round(self.duration_hours, 2),
             number_of_processed=number_of_processed,
-            number_of_images=self.img_number,
+            number_of_items=self.items_number,
         )
-    
-    def load_image(self, next: bool = True):
+
+    def get_path_manager(self, project_id) -> FilteringPathManager:
+        return FilteringPathManager(project_id)
+
+    def load_item(self, next: bool = True):
         if not next:
-            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.img_id)
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.item_id)
         
         ret, orig_image = self.cap.read()
     
@@ -120,32 +118,32 @@ class FilteringApp(AbstractLabelingApp):
             current_img_name = decode_img_name_from_image(self.orig_image)
             self.labeled_image = ClassificationImage.get(name=current_img_name)
         except:
-            self.labeled_image = ClassificationImage.get(img_id=self.img_id)
+            self.labeled_image = ClassificationImage.get(item_id=self.item_id)
 
         if self.labeled_image is None:
-            self.labeled_image = ClassificationImage(name=current_img_name, img_id=self.img_id)
+            self.labeled_image = ClassificationImage(name=current_img_name, item_id=self.item_id)
         
         self.update_canvas()
 
-    def save_image(self):
-        if self.image_changed:
+    def save_item(self):
+        if self.item_changed:
             self.labeled_image.save()
 
-    def change_image(self, img_id: int):
-        if img_id > self.img_number - 1 or img_id < 0:
+    def switch_item(self, item_id: int):
+        if item_id > self.items_number - 1 or item_id < 0:
             return
         time.sleep(self.delay.value)
-        self.save_image()
-        self.processed_img_ids.add(self.img_id)
+        self.save_item()
+        self.processed_item_ids.add(self.item_id)
 
-        forward = img_id == self.img_id + 1
-        self.img_id = img_id
-        self.load_image(next=forward)
+        forward = item_id == self.item_id + 1
+        self.item_id = item_id
+        self.load_item(next=forward)
         self.save_state()
 
     def select_image(self):
         self.labeled_image.selected = not self.labeled_image.selected
-        self.image_changed = True
+        self.item_changed = True
 
     def handle_key(self, key: str):
         if key.lower() == "d" or key.lower() == "k":
@@ -166,15 +164,15 @@ class FilteringApp(AbstractLabelingApp):
     def go_to_next_selected(self):
         cimages = ClassificationImage.all_selected()
         for cimage in cimages:
-            if cimage.img_id > self.img_id:
-                self.change_image(img_id=cimage.img_id)
+            if cimage.item_id > self.item_id:
+                self.switch_item(item_id=cimage.item_id)
                 break
 
     def go_to_previous_selected(self):
         cimages = ClassificationImage.all_selected()
         for cimage in reversed(list(cimages)):
-            if cimage.img_id < self.img_id:
-                self.change_image(img_id=cimage.img_id)
+            if cimage.item_id < self.item_id:
+                self.switch_item(item_id=cimage.item_id)
                 break
 
     def update_canvas(self):
