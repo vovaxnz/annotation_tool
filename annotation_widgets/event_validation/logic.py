@@ -65,9 +65,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         # Set view mode
         self.view_mode: EventViewMode = None
-        self.change_view_mode(
-            mode = EventViewMode.IMAGE if not self._video_mode_only else EventViewMode.VIDEO
-        )
+        self.change_view_mode(EventViewMode.IMAGE)
 
         super().__init__(data_path=data_path, project_data=project_data)
 
@@ -79,8 +77,6 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         if self._video_mode_only:
             mode = EventViewMode.VIDEO
         self.view_mode = mode
-        if self.video_mode:
-            self.set_video_cap()
         if self._on_view_mode_change is not None:
             self._on_view_mode_change()
 
@@ -120,7 +116,6 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
 
         assert 0 <= self.item_id < self.items_number, f"The Image ID {self.item_id} is out of range of the images list: {self.items_number}"
 
-        self.change_view_mode(EventViewMode.IMAGE)
 
         item_uid = self._get_uid_from_name(f"{self.item_base_names[self.item_id]}.mp4")
         if item_uid is None:
@@ -130,7 +125,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.answers = self.get_default_answers(event=self.event)
         self.comment = self.set_sidebar_comment(event=self.event)
 
-        if self._video_mode_only:
+        if self.video_mode:
             self.set_video_cap()
             self.load_video_frame()
         else:

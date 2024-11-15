@@ -18,6 +18,7 @@ class AbstractAnnotationLogic(ABC):
         self.item_id = 0 
         self.duration_hours = 0
         self.processed_item_ids: set = set()
+        self.track_actions = True
 
         self.pm = self.get_path_manager(project_id=self.project_data.id)
 
@@ -42,6 +43,9 @@ class AbstractAnnotationLogic(ABC):
 
     def get_path_manager(self, project_id) -> BasePathManager:
         raise NotImplementedError
+
+    def stop_tracking(self):
+        self.track_actions = False
 
     def save_state(self):  # TODO: Save values as a batch
         Value.update_value("item_id", self.item_id)
@@ -71,12 +75,13 @@ class AbstractAnnotationLogic(ABC):
         assert self.item_id < self.items_number, f"Incorrect item_id {self.item_id}. The number of items is {self.items_number}"
 
     def update_time_counter(self, message: str = None):
-        with open(self.pm.statistics_path, 'a+') as file:
-            file.write(f"{self.project_data.stage.name},{get_datetime_str()},{message}\n")
-        curr_time = time.time()
-        step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
-        self.tick_time = curr_time
-        self.duration_hours += step_duration / 3600
+        if self.track_actions:
+            with open(self.pm.statistics_path, 'a+') as file:
+                file.write(f"{self.project_data.stage.name},{get_datetime_str()},{message}\n")
+            curr_time = time.time()
+            step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
+            self.tick_time = curr_time
+            self.duration_hours += step_duration / 3600
 
     @abstractmethod
     def switch_item(self, item_id: int):
