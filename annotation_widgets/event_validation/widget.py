@@ -10,6 +10,7 @@ from .logic import EventValidationLogic
 
 class EventValidationWidget(AbstractAnnotationWidget):
     def __init__(self, root: tk.Tk, io: EventValidationIO, logic: EventValidationLogic, project_data: ProjectData):
+        self.logic: EventValidationLogic
         super().__init__(root, io, logic, project_data)
 
         self.pack(side="top", fill="both", expand=True)
@@ -89,7 +90,7 @@ class EventValidationWidget(AbstractAnnotationWidget):
 
     def update_slider(self):
         self.slider_widget.set_stop()
-        if self.logic.view_mode == EventViewMode.VIDEO.name:
+        if self.logic.view_mode is EventViewMode.VIDEO:
             self.slider_widget.show()
             self.slider_widget.slider.config(to=self.logic.number_of_frames)
             self.update_slider_position()

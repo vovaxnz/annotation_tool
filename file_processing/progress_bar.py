@@ -25,7 +25,6 @@ class ProcessingProgressBar:
         self.processed_gb = 0
         self.speed = 0
         self.remaining_time = 0
-        self.processing_complete = False
 
         self.setup_gui(root=root)
 

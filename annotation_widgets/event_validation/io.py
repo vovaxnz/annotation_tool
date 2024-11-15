@@ -57,12 +57,17 @@ class EventValidationIO(AbstractAnnotationIO):
         events = []
         pattern = r'event-(?P<uid>[a-f0-9\-]+)\.[a-z0-9]+$'
 
-        for item in sorted(os.listdir(self.pm.videos_path)):
-            match = re.search(pattern, str(item))
+        for video_name in sorted(os.listdir(self.pm.videos_path)):
+            match = re.search(pattern, str(video_name))
             if match:
-                events.append(Event(uid=match.group("uid")))
+                video_uid = match.group("uid")
+                events.append(Event(uid=video_uid))
+            else:
+                raise RuntimeError(f"Incorrect video name format {video_name}")
 
         Event.save_new_in_bulk(events)
+
+        assert len(events) == len(os.listdir(self.pm.videos_path))
 
 
     def overwrite_annotations(self):

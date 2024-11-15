@@ -10,7 +10,7 @@ from file_processing.progress_bar import ProcessingProgressBar
 
 class ArchiveUnzipper(ProcessingProgressBar):
     def unzip(self, archive_path, output_dir):
-
+        
         assert os.path.isfile(archive_path), f"Archive {archive_path} not found"
 
         self.processed_percent = 0
@@ -32,15 +32,20 @@ class ArchiveUnzipper(ProcessingProgressBar):
 
         self.root.wait_window(self.root)
 
+        while not self.processing_complete:
+            time.sleep(0.05)
+            print('Unzipping is still in progress')
+
     def check_download_completion(self, future, archive_path):
         if future.done():
             try:
                 future.result()  # This will raise any exceptions caught by the thread
             except Exception as e:
                 raise MessageBoxException(f"The archive {archive_path} was not unzipped properly. Error: {traceback.format_exc()}")
-            time.sleep(0.5)
+
             self.root.destroy()
         else:
+            
             self.root.after(100, lambda: self.check_download_completion(future, archive_path))
 
 

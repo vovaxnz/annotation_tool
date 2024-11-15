@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image, ImageTk
 from pynput.keyboard import Listener
 
+from annotation_widgets.event_validation.logic import EventValidationStatusData
 from annotation_widgets.image.logic import AbstractImageAnnotationLogic
 from enums import EventViewMode
 from exceptions import handle_exception
@@ -84,7 +85,7 @@ class EventValidationStatusBar(tk.Frame):
             widget.config(font=label_font)
 
     def update_status(self):
-        status_data = self.get_status_data()
+        status_data: EventValidationStatusData = self.get_status_data()
 
         # Update labels
         self.mode_label.config(text=f"Mode: Event Validation")
