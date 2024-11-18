@@ -65,3 +65,11 @@ class ProjectData:
             'mode': self.mode.name
         }
         return data_dict
+    
+    def from_json(self, project: Dict) -> "ProjectData":
+        return ProjectData(
+            id=project["id"],
+            uid=project["uid"],
+            stage=getattr(AnnotationStage, project["annotation_stage"]),
+            mode=getattr(AnnotationMode, project["annotation_mode"])
+        )

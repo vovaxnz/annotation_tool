@@ -45,9 +45,9 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         self.img_names = sorted(os.listdir(data_path)) 
         
         if project_data.stage is AnnotationStage.CORRECTION:
-            self.img_names = [img_name for img_name in self.img_names if len(LabeledImage.get(name=img_name).review_labels) > 0]
+            self.img_names = [item.name for item in LabeledImage.all() if len(item.review_labels) > 0]
         elif project_data.stage is AnnotationStage.REVIEW:
-            self.img_names = [item.name for item in LabeledImage.all() if item.visible]
+            self.img_names = [item.name for item in LabeledImage.all() if item.requires_correction]
 
         for img_name in self.img_names: # Check that images from the directory are in the the database
             img_object = LabeledImage.get(name=img_name)

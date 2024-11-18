@@ -23,14 +23,7 @@ def get_projects_data() -> List[ProjectData]:
 
             result = list()
             for project in projects:
-                result.append(
-                    ProjectData(
-                        id=project["id"],
-                        uid=project["uid"],
-                        stage=getattr(AnnotationStage, project["annotation_stage"]),
-                        mode=getattr(AnnotationMode, project["annotation_mode"])
-                    )
-                )
+                result.append(ProjectData.from_json(project))
             return result
     
     raise MessageBoxException(f"Unable to get projects data. {response.status_code}")

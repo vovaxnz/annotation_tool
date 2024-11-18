@@ -4,6 +4,7 @@ from typing import Dict
 
 
 class AnnotationStage(Enum):
+    UNKNOWN = "UNKNOWN"
     ANNOTATE = "ANNOTATE"
     SENT_FOR_REVIEW = "SENT_FOR_REVIEW"
     REVIEW = "REVIEW"
