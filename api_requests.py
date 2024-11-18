@@ -7,6 +7,7 @@ from config import settings
 from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 from models import ProjectData
+from path_manager import get_local_projects_data
 
 
 def get_projects_data() -> List[ProjectData]: 
@@ -61,16 +62,16 @@ def complete_task(project_uid: int, duration_hours: float):
         raise MessageBoxException(message)
 
 
-def get_completed_projects_data() -> List[str]:
-    url = f'{settings.api_url}/api/annotation/completed_projects_data/'
+def get_validated_completed_projects_uids() -> List[str]:
+    url = f'{settings.api_url}/api/annotation/completed_projects/validate/'
 
-    data = {'user_token': settings.token}
-
-    projects_data = []
+    local_projects_data = get_local_projects_data()
+    local_project_uids = [item.uid for item in local_projects_data]
+    data = {'user_token': settings.token, "local_projects_uids": local_project_uids}
 
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()
-        return response.json().get("projects_uids", [])
+        return response.json().get("completed_projects_uids", [])
     except (HTTPError, JSONDecodeError) as e:
         pass

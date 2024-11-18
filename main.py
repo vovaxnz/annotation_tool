@@ -5,7 +5,7 @@ from typing import Callable, List
 from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
-from api_requests import get_projects_data, get_completed_projects_data
+from api_requests import get_projects_data, get_validated_completed_projects_uids
 from enums import AnnotationStage
 from exceptions import handle_exception
 from annotation_widgets.widget import AbstractAnnotationWidget
