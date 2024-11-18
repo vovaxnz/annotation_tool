@@ -1,6 +1,4 @@
 from enum import Enum
-from typing import Dict
-
 
 
 class AnnotationStage(Enum):
@@ -12,6 +10,7 @@ class AnnotationStage(Enum):
     SENT_FOR_CORRECTION = "SENT_FOR_CORRECTION"
     DONE = "DONE"
     FILTERING = "FILTERING"
+    EVENT_VALIDATION = "EVENT_VALIDATION"
 
 
 class AnnotationMode(Enum):
@@ -19,6 +18,7 @@ class AnnotationMode(Enum):
     SEGMENTATION = "SEGMENTATION"
     KEYPOINTS = "KEYPOINTS"
     FILTERING = "FILTERING"
+    EVENT_VALIDATION = "EVENT_VALIDATION"
 
 
 class FigureType(Enum):
@@ -26,3 +26,8 @@ class FigureType(Enum):
     MASK = "MASK"
     KGROUP = "KGROUP"
     REVIEW_LABEL = "REVIEW_LABEL"
+
+
+class EventViewMode(Enum):
+    VIDEO = "VIDEO"
+    IMAGE = "IMAGE"

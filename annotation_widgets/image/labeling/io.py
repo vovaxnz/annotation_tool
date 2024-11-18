@@ -1,29 +1,24 @@
-from enum import Enum, auto
 import json
 import os
-import shutil
 import tkinter as tk
 from typing import Dict, List
-
 from annotation_widgets.io import AbstractAnnotationIO
-
-
-from .bboxes.models import BBox
-from .keypoints.models import KeypointGroup
-from .models import Label, LabeledImage, ReviewLabel
-from .segmentation.models import Mask
 from api_requests import get_project_data
 from enums import AnnotationStage
 from exceptions import MessageBoxException
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper
 from gui_utils import get_loading_window
-from models import ProjectData, Value
+from models import Value, ProjectData
 from utils import check_correct_json, get_img_size, open_json, save_json
+from .bboxes.models import BBox
+from .keypoints.models import KeypointGroup
+from .models import Label, LabeledImage, ReviewLabel
+from .path_manager import LabelingPathManager
+from .segmentation.models import Mask
 
 
 class ImageLabelingIO(AbstractAnnotationIO):
-
 
     @property
     def should_be_overwritten(self) -> bool:
@@ -36,6 +31,9 @@ class ImageLabelingIO(AbstractAnnotationIO):
             self.update_stage(AnnotationStage.SENT_FOR_REVIEW)
         elif self.project_data.stage is AnnotationStage.REVIEW:
             self.update_stage(AnnotationStage.SENT_FOR_CORRECTION)
+
+    def get_path_manager(self, project_id: int):
+        return LabelingPathManager(project_id)
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. Shows loading window while downloading"""

@@ -7,16 +7,20 @@ from tkinter import messagebox
 from typing import Dict, List
 
 from annotation_widgets.io import AbstractAnnotationIO
-
+from models import ProjectData
 
 from .models import ClassificationImage
 
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 
 from utils import  save_json
+from .path_manager import FilteringPathManager
 
 
 class ImageFilteringIO(AbstractAnnotationIO):
+
+    def get_path_manager(self, project_id: int):
+        return FilteringPathManager(project_id)
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. Shows loading window while downloading"""
@@ -46,6 +50,6 @@ class ImageFilteringIO(AbstractAnnotationIO):
                     result["ids"].append(limage.item_id)
         save_json(result, output_path) 
 
-    def _upload_annoation_results(self):
+    def _upload_annotation_results(self):
         self._export_selected_frames(output_path=self.pm.selected_frames_json_path)
         upload_file(self.project_data.uid, self.pm.selected_frames_json_path)

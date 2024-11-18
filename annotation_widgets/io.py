@@ -10,7 +10,7 @@ from enums import AnnotationStage
 from file_processing.file_transfer import upload_file
 from gui_utils import get_loading_window
 from models import ProjectData, Value
-from path_manager import PathManager
+from path_manager import BasePathManager
 from utils import save_json
 
 
@@ -18,7 +18,7 @@ class AbstractAnnotationIO(ABC):
     
     def __init__(self, project_data: ProjectData):
         self.project_data: ProjectData = project_data
-        self.pm = PathManager(project_data.id) 
+        self.pm: BasePathManager = self.get_path_manager(project_data.id)
 
     @property
     def stage(self) -> AnnotationStage:
@@ -54,6 +54,10 @@ class AbstractAnnotationIO(ABC):
         Value.update_value("item_id", 0)
         Value.update_value("duration_hours", 0)
         Value.update_value("processed_item_ids", [])
+
+    def get_path_manager(self, project_id: int): 
+        """Returns BasePathManager class"""
+        raise NotImplementedError()
 
     def download_project(self, root: tk.Tk):
         """Downloads data and annotations from the server. 

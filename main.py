@@ -100,6 +100,8 @@ class MainWindow(tk.Tk):
     def open_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
         
+        projects_data = get_projects_data()
+
         try:
             projects_data = get_projects_data()
         except:
@@ -127,8 +129,8 @@ class MainWindow(tk.Tk):
         loading_window.destroy()
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
-        io = get_io(project_data)
         if project_data is not None: 
+            io = get_io(project_data)
             io.download_project(root=self)
 
 
@@ -171,7 +173,7 @@ class MainWindow(tk.Tk):
 
 
     def open_settings(self):
-        SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update())
+        SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update() if self.annotation_widget is not None else None)
         
     def go_to_id(self):
         form = IdForm(root=self, max_id=self.annotation_widget.items_number) 
@@ -204,13 +206,13 @@ class MainWindow(tk.Tk):
         template_path = os.path.join(templates_path, "hotkeys.html")
         with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        show_html_window(title="Hotkeys", html_content=html_content)
+        show_html_window(self, title="Hotkeys", html_content=html_content)
 
     def show_how(self):
         template_path = os.path.join(templates_path, "how.html")
         with open(template_path, 'r', encoding='utf-8') as file:
             html_content = file.read()
-        show_html_window(title="How to use this tool?", html_content=html_content)
+        show_html_window(self, title="How to use this tool?", html_content=html_content)
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
