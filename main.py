@@ -4,7 +4,7 @@ from typing import Callable, List
 from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
-from api_requests import get_projects_data, get_completed_projects_data
+from api_requests import get_projects_data, get_validated_completed_projects_uids
 from exceptions import handle_exception
 from annotation_widgets.widget import AbstractAnnotationWidget
 from gui_utils import IdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window, show_html_window
@@ -151,11 +151,11 @@ class MainWindow(tk.Tk):
 
     def remove_completed_projects(self):
         local_projects_data = get_local_projects_data()
-        if local_projects_data:
-            portal_projects_uids = get_completed_projects_data()
+        if len(local_projects_data) != 0:
+            completed_projects_uids = get_validated_completed_projects_uids()
 
-            if portal_projects_uids:
-                local_projects_to_remove = [item for item in local_projects_data if item.uid in portal_projects_uids]
+            if completed_projects_uids != 0:
+                local_projects_to_remove = [item for item in local_projects_data if item.uid in completed_projects_uids]
 
                 local_projects_ids_str = ", ".join([str(item.id) for item in local_projects_to_remove])
                 agree = messagebox.askokcancel("Completed projects deletion", "Do you want to remove completed projects from your device")
