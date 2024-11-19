@@ -11,7 +11,7 @@ from file_processing.file_transfer import upload_file
 from gui_utils import get_loading_window
 from models import ProjectData, Value
 from path_manager import BasePathManager
-from utils import save_json
+from utils import open_json, save_json
 
 
 class AbstractAnnotationIO(ABC):
@@ -22,15 +22,21 @@ class AbstractAnnotationIO(ABC):
 
     @property
     def stage(self) -> AnnotationStage:
-        stage_name = Value.get_value(name="annotation_stage")
-        if stage_name is not None:
-            getattr(AnnotationStage, stage_name)
-        else:
-            return AnnotationStage.UNKNOWN
+        stage = AnnotationStage.UNKNOWN
+        if os.path.isfile(self.pm.state_path):
+            local_project_data = ProjectData.from_json(open_json(self.pm.state_path))
+            stage = local_project_data.stage
+        return stage
     
     def update_stage(self, stage: AnnotationStage):
-        Value.update_value("annotation_stage", stage.name, overwrite=True)
+        assert os.path.isfile(self.pm.state_path)
+        project_data = ProjectData.from_json(open_json(self.pm.state_path))
+        project_data.stage = stage
+        save_json(project_data.to_json(), self.pm.state_path)
     
+    def save_project_data(self):
+        save_json(self.project_data.to_json(), self.pm.state_path)
+
     def change_stage_at_completion(self):
         self.update_stage(AnnotationStage.DONE)
 
@@ -39,7 +45,6 @@ class AbstractAnnotationIO(ABC):
         return self.stage is AnnotationStage.UNKNOWN
 
     def initialize_project(self, root: tk.Tk):
-        save_json(self.project_data.to_json(), self.pm.state_path)
         configure_database(self.pm.db_path)
         self.download_project(root=root)
         if self.should_be_overwritten:
@@ -47,7 +52,7 @@ class AbstractAnnotationIO(ABC):
             self.overwrite_project()
             self.reset_counters()
             loading_window.destroy()
-        self.update_stage(self.project_data.stage)
+        self.save_project_data()
         assert not self.should_be_overwritten, f"Current stage is {self.stage}, new stage is {self.project_data.stage}"
      
     def reset_counters(self):
@@ -96,5 +101,3 @@ class AbstractAnnotationIO(ABC):
     def remove_project(self):
         if os.path.isdir(self.pm.project_path):
             shutil.rmtree(self.pm.project_path)
-        if os.path.isfile(self.pm.db_local_path):
-            os.remove(self.pm.db_local_path)

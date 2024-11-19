@@ -61,12 +61,13 @@ class ProjectData:
         data_dict = {
             'id': self.id,
             'uid': self.uid,
-            'stage': self.stage.name,
-            'mode': self.mode.name
+            'annotation_stage': self.stage.name,
+            'annotation_mode': self.mode.name
         }
         return data_dict
     
-    def from_json(self, project: Dict) -> "ProjectData":
+    @classmethod
+    def from_json(cls, project: Dict) -> "ProjectData":
         return ProjectData(
             id=project["id"],
             uid=project["uid"],
