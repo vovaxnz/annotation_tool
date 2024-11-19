@@ -42,7 +42,7 @@ class AbstractAnnotationIO(ABC):
 
     @property
     def should_be_overwritten(self) -> bool:
-        return self.stage is AnnotationStage.UNKNOWN
+        return self.stage != self.project_data.stage
 
     def initialize_project(self, root: tk.Tk):
         configure_database(self.pm.db_path)

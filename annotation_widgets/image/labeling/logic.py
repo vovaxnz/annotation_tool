@@ -41,8 +41,12 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         
         if project_data.stage is AnnotationStage.CORRECTION:
             self.img_names = [item.name for item in LabeledImage.all() if len(item.review_labels) > 0]
+            if len(self.img_names) == 0:
+                raise RuntimeError(f"This is a CORRECTION stage and you don't have any image with ReviewLabels on them. You have nothing to fix. Ask Administrator to mark this project ({project_data.id}) as completed")
         elif project_data.stage is AnnotationStage.REVIEW:
-            self.img_names = [item.name for item in LabeledImage.all() if item.requires_correction]
+            self.img_names = [item.name for item in LabeledImage.all() if item.requires_annotation]
+            if len(self.img_names) == 0:
+                raise RuntimeError(f"This is a REVIEW stage and you don't have any image requiring annotation. You have nothing to review. Ask Administrator to mark this project ({project_data.id}) as completed")
 
         for img_name in self.img_names: # Check that images from the directory are in the the database
             img_object = LabeledImage.get(name=img_name)

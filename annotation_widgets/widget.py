@@ -26,7 +26,6 @@ class AbstractAnnotationWidget(tk.Frame):
 
     def close(self):
         self.logic.save_item()
-        self.logic.save_state() 
         self.destroy()
 
         if self.close_callback:
