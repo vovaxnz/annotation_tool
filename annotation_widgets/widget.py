@@ -48,11 +48,8 @@ class AbstractAnnotationWidget(tk.Frame):
         self.logic.go_to_id(id)
         self.schedule_update()
 
-    def import_project(self, overwrite: bool = False):
-        self.io.import_project(overwrite=overwrite)
-
     def overwrite_annotations(self):
-        self.io.overwrite_annotations()
+        self.io.download_and_overwrite_annotations()
 
     def remove_project(self):
         self.io.remove_project()

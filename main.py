@@ -1,10 +1,12 @@
 import os
 import sys
+import threading
 from typing import Callable, List
 from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
-from api_requests import get_projects_data
+from api_requests import get_projects_data, get_validated_completed_projects_uids
+from enums import AnnotationStage
 from exceptions import handle_exception
 from annotation_widgets.widget import AbstractAnnotationWidget
 from gui_utils import IdForm, MessageBox, ProjectSelector, SettingsManager, get_loading_window, show_html_window
@@ -55,10 +57,14 @@ class MainWindow(tk.Tk):
         self.menu_bar.add_cascade(label="Help", menu=self.help_menu)
         self.update_menu(initial=True)
         
-
         # Attach the menu bar to the window
         self.config(menu=self.menu_bar)
         
+        # Remove completed projects
+        thread = threading.Thread(target=self.remove_completed_projects)
+        thread.daemon = True 
+        thread.start()
+
         self.protocol("WM_DELETE_WINDOW", self.on_window_close)
 
     def update_menu(self, initial=False):
@@ -151,6 +157,21 @@ class MainWindow(tk.Tk):
             else:
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
 
+    def remove_completed_projects(self):
+        local_projects_data = get_local_projects_data()
+        if len(local_projects_data) > 0:
+            projects_data: List[ProjectData] = get_projects_data()
+            active_project_uids = [project.uid for project in projects_data]
+            local_projects_to_remove: List[ProjectData] = list()
+            for local_project in local_projects_data:
+                if local_project.stage not in [AnnotationStage.REVIEW, AnnotationStage.SENT_FOR_REVIEW]:
+                    if local_project.uid not in active_project_uids:
+                        local_projects_to_remove.append(local_project)
+            for project_data in local_projects_to_remove:
+                io = get_io(project_data)
+                io.remove_project()
+
+
     def open_settings(self):
         SettingsManager(root=self, at_exit=lambda : self.annotation_widget.schedule_update() if self.annotation_widget is not None else None)
         
@@ -163,6 +184,7 @@ class MainWindow(tk.Tk):
     def on_window_close(self):
         if self.annotation_widget is not None:
             self.annotation_widget.close()
+        self.remove_completed_projects()
         self.destroy()
 
     def update_tool(self):

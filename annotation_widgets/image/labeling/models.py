@@ -7,7 +7,7 @@ from enums import FigureType
 import json
 import cv2
 import numpy as np
-from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
+from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect, func
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple, Dict
 from config import settings
@@ -21,6 +21,7 @@ class LabeledImage(Base):
     height = Column(Integer)
     width = Column(Integer)
     trash = Column(Boolean, default=False)
+    requires_correction = Column(Boolean, default=True)
 
     bboxes = relationship("BBox", back_populates="image")
     kgroups = relationship("KeypointGroup", back_populates="image")
@@ -70,6 +71,7 @@ class LabeledImage(Base):
     def clear_review_labels(self):
         for review_label in self.review_labels:
             review_label.delete()
+
 
 
 class Label(Base):
@@ -200,7 +202,7 @@ class ReviewLabel(Figure):
     __tablename__ = 'review_label'
 
     id = Column(Integer, primary_key=True)
-    item_id = Column(Integer, ForeignKey('image.id'))
+    item_id = Column(Integer, ForeignKey('image.id', ondelete='CASCADE'))
     x = Column(Integer)
     y = Column(Integer)
     label = Column(String) # TODO: Use Label reference instead of str
@@ -233,6 +235,11 @@ class ReviewLabel(Figure):
     def all(cls) -> List["ReviewLabel"]:
         session = get_session()
         return list(session.query(cls).order_by(asc(cls.name)))
+
+    @classmethod
+    def count_with_image(cls) -> int:
+        session = get_session()
+        return session.query(func.count(cls.id)).filter(cls.item_id.isnot(None)).scalar()
 
     @property
     def state(self):
@@ -359,5 +366,3 @@ class ReviewLabel(Figure):
 
     def serialize(self) -> Dict:
         return {"x": self.x, "y": self.y, "label": self.label}
-
-

@@ -32,11 +32,11 @@ class ImageFilteringIO(AbstractAnnotationIO):
                 save_path=self.pm.video_path,
             )
 
-    def import_project(self, overwrite: bool = False):
+    def overwrite_project(self):
         """Filtering mode does not require importing anything due to the nature of the task""" 
         pass
 
-    def overwrite_annotations(self):
+    def download_and_overwrite_annotations(self):
         """Force download and overwrite annotations in the database"""
         messagebox.showinfo("Not implemented", "Unable to overwrite annotations for this type of projects")
 
