@@ -326,11 +326,13 @@ class CanvasView(tk.Canvas):
         # Wrapper function to adjust event coordinates
         def wrapped_event(event):
             # Adjust the event coordinates based on the current scale
-            scaled_event = event
-            scaled_event.x, scaled_event.y = self.xy_screen_to_image(event.x, event.y)
+            scaled_x, scaled_y = self.xy_screen_to_image(event.x, event.y)
+            if self.is_coordinates_within_image_frame(scaled_x, scaled_y):
+                scaled_event = event
+                scaled_event.x, scaled_event.y = scaled_x, scaled_y
             # Call the actual event handler with the scaled event
-            return handler(scaled_event)
-
+                return handler(scaled_event)
+            return None
         return wrapped_event
 
     def on_mouse_wheel(self, event):
@@ -408,6 +410,10 @@ class CanvasView(tk.Canvas):
 
         cropped = cv2.resize(cropped, (w_scaled, h_scaled), interpolation=cv2.INTER_AREA)
         return cropped
+
+    def is_coordinates_within_image_frame(self, event_x, event_y) -> bool:
+        img_h, img_w, _ = self.logic.orig_image.shape
+        return 0 <= event_x < img_w and 0 <= event_y < img_h
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
