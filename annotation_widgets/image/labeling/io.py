@@ -20,11 +20,6 @@ from .segmentation.models import Mask
 
 class ImageLabelingIO(AbstractAnnotationIO):
 
-    @property
-    def should_be_overwritten(self) -> bool:
-        return (self.project_data.stage is AnnotationStage.REVIEW and self.stage is AnnotationStage.SENT_FOR_CORRECTION) or \
-            (self.project_data.stage is AnnotationStage.CORRECTION and self.stage is AnnotationStage.SENT_FOR_REVIEW) or \
-            self.stage is AnnotationStage.UNKNOWN
 
     def change_stage_at_completion(self):
         if self.project_data.stage in [AnnotationStage.ANNOTATE, AnnotationStage.CORRECTION]:
@@ -211,10 +206,10 @@ class ImageLabelingIO(AbstractAnnotationIO):
                 review_data_for_image = review_data.get(img_name, [])
 
                 image.clear_review_labels()
-                image.requires_correction = False
+                image.requires_annotation = False
 
                 if len(review_data_for_image) > 0:
-                    image.requires_correction = True
+                    image.requires_annotation = True
 
                     for item in review_data_for_image:
                         rl = ReviewLabel(x=item["x"], y=item["y"], label=item["label"])

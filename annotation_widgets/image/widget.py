@@ -48,7 +48,6 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
 
     def close(self):
         self.logic.save_item()
-        self.logic.save_state() 
         self.destroy()
 
         if self.status_bar is not None:

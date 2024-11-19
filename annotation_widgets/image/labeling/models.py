@@ -21,7 +21,7 @@ class LabeledImage(Base):
     height = Column(Integer)
     width = Column(Integer)
     trash = Column(Boolean, default=False)
-    requires_correction = Column(Boolean, default=True)
+    requires_annotation = Column(Boolean, default=True)
 
     bboxes = relationship("BBox", back_populates="image")
     kgroups = relationship("KeypointGroup", back_populates="image")

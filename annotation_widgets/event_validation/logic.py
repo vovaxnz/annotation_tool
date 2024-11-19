@@ -40,7 +40,7 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         if os.path.isdir(self.pm.images_path) and len(os.listdir(self.pm.images_path)) > 0:
             self._video_mode_only = False
             image_base_names = [item.split(".")[0] for item in os.listdir(self.pm.images_path)]
-            assert set(image_base_names) == set(video_base_names), "Number of 44 and videos are not the same"
+            assert set(image_base_names) == set(video_base_names), "Number of images and videos are not the same"
  
         self.item_base_names = sorted(video_base_names)
 
