@@ -20,6 +20,7 @@ class AbstractAnnotationLogic(ABC):
         self.duration_hours = 0
         self.processed_item_ids: set = set()
 
+
         self.pm = self.get_path_manager(project_id=self.project_data.id)
 
         self.load_state()
@@ -65,12 +66,14 @@ class AbstractAnnotationLogic(ABC):
         assert self.item_id < self.items_number, f"Incorrect item_id {self.item_id}. The number of items is {self.items_number}"
 
     def update_time_counter(self, message: str = None):
-        with open(self.pm.statistics_path, 'a+') as file:
-            file.write(f"{self.project_data.stage.name},{get_datetime_str()},{message}\n")
         curr_time = time.time()
-        step_duration = min(curr_time - self.tick_time, self.max_action_time_sec)
-        self.tick_time = curr_time
-        self.duration_hours += step_duration / 3600
+        interval = curr_time - self.tick_time
+        if interval > 1:
+            with open(self.pm.statistics_path, 'a+') as file:
+                file.write(f"{self.project_data.stage.name},{get_datetime_str()},{message}\n")
+            step_duration = min(interval, self.max_action_time_sec)
+            self.tick_time = curr_time
+            self.duration_hours += step_duration / 3600
 
     @abstractmethod
     def switch_item(self, item_id: int):
