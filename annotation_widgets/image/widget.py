@@ -333,7 +333,6 @@ class CanvasView(tk.Canvas):
             scaled_event.x, scaled_event.y = max(0, min(scaled_x, img_w - 2)), max(0, min(scaled_y, img_h - 2))
             # Call the actual event handler with the scaled event
             return handler(scaled_event)
-            # return None
         return wrapped_event
 
     def on_mouse_wheel(self, event):
