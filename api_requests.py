@@ -1,9 +1,13 @@
+from json import JSONDecodeError
 from typing import List, Tuple
+from urllib.error import HTTPError
+
 import requests
 from config import settings
 from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 from models import ProjectData
+from path_manager import get_local_projects_data
 
 
 def get_projects_data() -> List[ProjectData]: 
@@ -20,14 +24,7 @@ def get_projects_data() -> List[ProjectData]:
 
             result = list()
             for project in projects:
-                result.append(
-                    ProjectData(
-                        id=project["id"],
-                        uid=project["uid"],
-                        stage=getattr(AnnotationStage, project["annotation_stage"]),
-                        mode=getattr(AnnotationMode, project["annotation_mode"])
-                    )
-                )
+                result.append(ProjectData.from_json(project))
             return result
     
     raise MessageBoxException(f"Unable to get projects data. {response.status_code}")
@@ -63,3 +60,18 @@ def complete_task(project_uid: int, duration_hours: float):
         except:
             message = f"Internal Server Error with project uid {project_uid}"
         raise MessageBoxException(message)
+
+
+def get_validated_completed_projects_uids() -> List[str]:
+    url = f'{settings.api_url}/api/annotation/completed_projects/validate/'
+
+    local_projects_data = get_local_projects_data()
+    local_project_uids = [item.uid for item in local_projects_data]
+    data = {'user_token': settings.token, "local_projects_uids": local_project_uids}
+
+    try:
+        response = requests.post(url, json=data)
+        response.raise_for_status()
+        return response.json().get("completed_projects_uids", [])
+    except (HTTPError, JSONDecodeError) as e:
+        pass

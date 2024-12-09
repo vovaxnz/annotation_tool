@@ -48,7 +48,6 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
 
     def close(self):
         self.logic.save_item()
-        self.logic.save_state() 
         self.destroy()
 
         if self.status_bar is not None:
@@ -67,7 +66,7 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
         agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
         if agree:
             root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            self.io.overwrite_annotations()
+            self.io.download_and_overwrite_annotations()
             self.logic.load_item()
             root.destroy()
             self.update_frame = True
@@ -326,11 +325,13 @@ class CanvasView(tk.Canvas):
         # Wrapper function to adjust event coordinates
         def wrapped_event(event):
             # Adjust the event coordinates based on the current scale
+            scaled_x, scaled_y = self.xy_screen_to_image(event.x, event.y)
+            img_h, img_w, _ = self.logic.orig_image.shape
+
             scaled_event = event
-            scaled_event.x, scaled_event.y = self.xy_screen_to_image(event.x, event.y)
+            scaled_event.x, scaled_event.y = max(0, min(scaled_x, img_w - 2)), max(0, min(scaled_y, img_h - 2))
             # Call the actual event handler with the scaled event
             return handler(scaled_event)
-
         return wrapped_event
 
     def on_mouse_wheel(self, event):
