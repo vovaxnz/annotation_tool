@@ -64,6 +64,7 @@ class FilteringDelay(Enum):
     LONG = 0.25
     MIDDLE = 0.1
     SHORT = 0.01
+    NO_DELAY = 0
 
 
 class ImageFilteringLogic(AbstractImageAnnotationLogic):
@@ -155,10 +156,12 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
         elif key.lower() == "s":
             self.make_image_worse = not self.make_image_worse
         elif key.lower() == "1":
-            self.delay = FilteringDelay.SHORT
+            self.delay = FilteringDelay.NO_DELAY
         elif key.lower() == "2":
-            self.delay = FilteringDelay.MIDDLE
+            self.delay = FilteringDelay.SHORT
         elif key.lower() == "3":
+            self.delay = FilteringDelay.MIDDLE
+        elif key.lower() == "4":
             self.delay = FilteringDelay.LONG
 
     def go_to_next_selected(self):

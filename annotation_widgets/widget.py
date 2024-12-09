@@ -56,4 +56,5 @@ class AbstractAnnotationWidget(tk.Frame):
     def complete_annotation(self, root: tk.Tk): 
         self.logic.save_item()
         self.logic.save_state()
+        self.logic.stop_tracking()
         self.io.complete_annotation(duration_hours=self.logic.duration_hours, root=root)
