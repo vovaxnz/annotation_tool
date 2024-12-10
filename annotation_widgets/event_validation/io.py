@@ -42,7 +42,7 @@ class EventValidationIO(AbstractAnnotationIO):
             au.unzip(self.pm.archive_path, self.pm.project_path)
 
 
-    def import_project(self, overwrite: bool = False):
+    def overwrite_project(self):
         fields = open_json(self.pm.meta_ann_path)
 
         # Converts list structure into tree structure to avoid explicit index usage further in code.
@@ -52,7 +52,7 @@ class EventValidationIO(AbstractAnnotationIO):
             answer_color_map = {answer: color for answer, color in zip(item["answers"], item["colors"])}
             fields_tree_data[item["question"]] = answer_color_map
 
-        Value.update_value("fields", json.dumps(fields_tree_data), overwrite=False)
+        Value.update_value("fields", json.dumps(fields_tree_data), overwrite=True)
 
         events = []
         pattern = r'event-(?P<uid>[a-f0-9\-]+)\.[a-z0-9]+$'
@@ -70,7 +70,7 @@ class EventValidationIO(AbstractAnnotationIO):
         assert len(events) == len(os.listdir(self.pm.videos_path))
 
 
-    def overwrite_annotations(self):
+    def download_and_overwrite_annotations(self):
         """Force download and overwrite annotations in the database"""
         messagebox.showinfo("Not implemented", "Unable to overwrite annotations for this type of projects")
 

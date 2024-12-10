@@ -1,12 +1,16 @@
+from json import JSONDecodeError
 from typing import List, Tuple
+from urllib.error import HTTPError
+
 import requests
 from config import settings
 from enums import AnnotationMode, AnnotationStage
 from exceptions import MessageBoxException
 from models import ProjectData
+from path_manager import get_local_projects_data
 
 
-def get_projects_data() -> List[ProjectData]: 
+def get_projects_data(only_assigned_to_user: bool = True) -> List[ProjectData]: 
     url = f'{settings.api_url}/api/annotation/projects_data/'
 
     data = {'user_token': settings.token}
@@ -20,14 +24,9 @@ def get_projects_data() -> List[ProjectData]:
 
             result = list()
             for project in projects:
-                result.append(
-                    ProjectData(
-                        id=project["id"],
-                        uid=project["uid"],
-                        stage=getattr(AnnotationStage, project["annotation_stage"]),
-                        mode=getattr(AnnotationMode, project["annotation_mode"])
-                    )
-                )
+                if only_assigned_to_user and not project.get("assigned_to_user", True):
+                    continue
+                result.append(ProjectData.from_json(project))
             return result
     
     raise MessageBoxException(f"Unable to get projects data. {response.status_code}")

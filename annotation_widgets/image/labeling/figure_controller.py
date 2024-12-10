@@ -171,13 +171,17 @@ class ObjectFigureController(AbstractFigureController):
             self.figures[self.selected_figure_id].selected = True
 
     def update_preview_figure(self, x: int, y: int):
-        figure_type: Figure = self.current_figure_type
+        figure: Figure = self.current_figure_type
         if self.start_point is not None:
-            self.preview_figure = figure_type.embed_to_bbox(
+            if self.preview_figure is not None and self.preview_figure.figure_type == figure.figure_type:
+                figure_to_embed = self.preview_figure
+            else:
+                figure_to_embed = None
+            self.preview_figure = figure.embed_to_bbox(
                 start_point=self.start_point,
                 end_point=(x, y),
                 label=self.active_label,
-                figure=self.preview_figure,
+                figure=figure_to_embed
             )
         else:
             self.preview_figure = None
@@ -241,7 +245,15 @@ class ObjectFigureController(AbstractFigureController):
         self.active_label = label
         if self.selected_figure_id is not None:
             fig: Figure = self.figures[self.selected_figure_id]
-            if fig.figure_type == label.type:
+            if fig.figure_type != label.type: # Disable active figure if figure types are different
+                self.preview_figure = None
+                self.start_point = None
+                self.mode = Mode.IDLE
+                self.selected_figure_id = None
+                for figure in self.figures:
+                    figure.active_point_id = None
+                    figure.selected = False
+            else:
                 fig.label = self.active_label.name
             self.take_snapshot()
 

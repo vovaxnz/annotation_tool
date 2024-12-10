@@ -49,7 +49,7 @@ def download_file(uid, file_name, save_path, update_callback: Callable = None, s
             if ignore_404 and r.status_code == 404:
                 return
             else:
-                raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {str(r.json())}")
+                raise MessageBoxException(f"Unable to download file {uid}:{file_name}. Error: {r.json()}")
         total_size_in_bytes = int(r.headers.get('content-length', 0))
         downloaded_size = 0
         start_time = time.time()
