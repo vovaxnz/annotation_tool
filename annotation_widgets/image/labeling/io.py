@@ -46,14 +46,14 @@ class ImageLabelingIO(AbstractAnnotationIO):
                 file_name=os.path.basename(self.pm.figures_ann_path),
                 save_path=self.pm.figures_ann_path,
             )
-        elif self.project_data.stage is AnnotationStage.REVIEW and self.stage is AnnotationStage.SENT_FOR_CORRECTION:
+        elif self.project_data.stage is AnnotationStage.REVIEW and (not os.path.isfile(self.pm.figures_ann_path) or self.stage is AnnotationStage.SENT_FOR_CORRECTION):
             download_file(
                 uid=self.project_data.uid,
                 file_name=os.path.basename(self.pm.figures_ann_path),
                 save_path=self.pm.figures_ann_path,
             )
 
-        if self.project_data.stage is AnnotationStage.CORRECTION and self.stage is AnnotationStage.SENT_FOR_REVIEW:
+        if self.project_data.stage is AnnotationStage.CORRECTION and (not os.path.isfile(self.pm.review_ann_path) or self.stage is AnnotationStage.SENT_FOR_REVIEW):
             download_file(
                 uid=self.project_data.uid,
                 file_name=os.path.basename(self.pm.review_ann_path),

@@ -70,16 +70,15 @@ class AbstractAnnotationLogic(ABC):
         assert self.item_id < self.items_number, f"Incorrect item_id {self.item_id}. The number of items is {self.items_number}"
 
     def update_time_counter(self, message: str = None):
-
         if self.track_actions:
-        curr_time = time.time()
-        interval = curr_time - self.tick_time
-        if interval > 1:
-            with open(self.pm.statistics_path, 'a+') as file:
-                file.write(f"{self.project_data.stage.name},{get_datetime_str()},{message}\n")
-            step_duration = min(interval, self.max_action_time_sec)
-            self.tick_time = curr_time
-            self.duration_hours += step_duration / 3600
+            curr_time = time.time()
+            interval = curr_time - self.tick_time
+            if interval > 1:
+                with open(self.pm.statistics_path, 'a+') as file:
+                    file.write(f"{self.project_data.stage.name},{get_datetime_str()},{message}\n")
+                step_duration = min(interval, self.max_action_time_sec)
+                self.tick_time = curr_time
+                self.duration_hours += step_duration / 3600
 
     @abstractmethod
     def switch_item(self, item_id: int):

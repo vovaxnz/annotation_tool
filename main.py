@@ -5,7 +5,7 @@ from typing import Callable, List
 from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
-from api_requests import get_projects_data, get_validated_completed_projects_uids
+from api_requests import get_projects_data
 from enums import AnnotationStage
 from exceptions import handle_exception
 from annotation_widgets.widget import AbstractAnnotationWidget
@@ -103,7 +103,7 @@ class MainWindow(tk.Tk):
         try:
             projects_data = get_projects_data()
         except:
-            messagebox.showinfo("Error", "Unable to reach a web service. You`ll be shown only already downloaded projects.")
+            messagebox.showinfo("Error", "Unable to get projects from a web service. You`ll be shown only already downloaded projects.")
             projects_data = get_local_projects_data()
     
         loading_window.destroy()
@@ -158,13 +158,12 @@ class MainWindow(tk.Tk):
     def remove_completed_projects(self):
         local_projects_data = get_local_projects_data()
         if len(local_projects_data) > 0:
-            projects_data: List[ProjectData] = get_projects_data()
+            projects_data: List[ProjectData] = get_projects_data(only_assigned_to_user=False)
             active_project_uids = [project.uid for project in projects_data]
             local_projects_to_remove: List[ProjectData] = list()
             for local_project in local_projects_data:
-                if local_project.stage not in [AnnotationStage.REVIEW, AnnotationStage.SENT_FOR_REVIEW]:
-                    if local_project.uid not in active_project_uids:
-                        local_projects_to_remove.append(local_project)
+                if local_project.uid not in active_project_uids:
+                    local_projects_to_remove.append(local_project)
             for project_data in local_projects_to_remove:
                 io = get_io(project_data)
                 io.remove_project()
@@ -182,7 +181,6 @@ class MainWindow(tk.Tk):
     def on_window_close(self):
         if self.annotation_widget is not None:
             self.annotation_widget.close()
-        self.remove_completed_projects()
         self.destroy()
 
     def update_tool(self):
