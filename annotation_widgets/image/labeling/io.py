@@ -40,25 +40,19 @@ class ImageLabelingIO(AbstractAnnotationIO):
                 file_name=os.path.basename(self.pm.meta_ann_path),
                 save_path=self.pm.meta_ann_path,
             )
-        if not os.path.isfile(self.pm.figures_ann_path) or not check_correct_json(self.pm.figures_ann_path):
-            download_file(
-                uid=self.project_data.uid,
-                file_name=os.path.basename(self.pm.figures_ann_path),
-                save_path=self.pm.figures_ann_path,
-            )
-        elif self.project_data.stage is AnnotationStage.REVIEW and (not os.path.isfile(self.pm.figures_ann_path) or self.stage is AnnotationStage.SENT_FOR_CORRECTION):
-            download_file(
-                uid=self.project_data.uid,
-                file_name=os.path.basename(self.pm.figures_ann_path),
-                save_path=self.pm.figures_ann_path,
-            )
 
-        if self.project_data.stage is AnnotationStage.CORRECTION and (not os.path.isfile(self.pm.review_ann_path) or self.stage is AnnotationStage.SENT_FOR_REVIEW):
-            download_file(
-                uid=self.project_data.uid,
-                file_name=os.path.basename(self.pm.review_ann_path),
-                save_path=self.pm.review_ann_path,
-            )
+        download_file(
+            uid=self.project_data.uid,
+            file_name=os.path.basename(self.pm.figures_ann_path),
+            save_path=self.pm.figures_ann_path,
+        )
+
+        download_file(
+            uid=self.project_data.uid,
+            file_name=os.path.basename(self.pm.review_ann_path),
+            save_path=self.pm.review_ann_path,
+            ignore_404=True
+        )
 
         img_ann_number = len(open_json(self.pm.figures_ann_path))
         if os.path.isdir(self.pm.images_path):
@@ -81,7 +75,7 @@ class ImageLabelingIO(AbstractAnnotationIO):
 
         img_number = len(os.listdir(self.pm.images_path))
         if img_number != img_ann_number:
-            raise MessageBoxException(f"The project {self.project_data.id} has a different number of images and annotations. Re-lauch application to download again or, if that doesn't help, ask to fix the project")
+            raise MessageBoxException(f"The project {self.project_data.id} has a different number of images and annotations. Remove and download it again, and if that doesn't help, ask administrator to fix the project")
 
     def overwrite_project(self): 
         """
@@ -198,7 +192,7 @@ class ImageLabelingIO(AbstractAnnotationIO):
 
         # Review labels
         if os.path.isfile(self.pm.review_ann_path ):
-            review_data = open_json(self.pm.review_ann_path )
+            review_data = open_json(self.pm.review_ann_path)
 
             limages = list()
             for img_name in os.listdir(self.pm.images_path):
@@ -254,12 +248,12 @@ class ImageLabelingIO(AbstractAnnotationIO):
             file_name=os.path.basename(self.pm.figures_ann_path), 
             save_path=self.pm.figures_ann_path, 
         )
-        if annotation_stage in [AnnotationStage.CORRECTION, AnnotationStage.REVIEW]:
-            download_file(
-                uid=project_uid, 
-                file_name=os.path.basename(self.pm.review_ann_path), 
-                save_path=self.pm.review_ann_path, 
-            )
+        download_file(
+            uid=project_uid, 
+            file_name=os.path.basename(self.pm.review_ann_path), 
+            save_path=self.pm.review_ann_path, 
+            ignore_404=True
+        )
         download_file(
             uid=project_uid, 
             file_name=os.path.basename(self.pm.meta_ann_path), 
