@@ -68,9 +68,18 @@ class ProjectData:
     
     @classmethod
     def from_json(cls, project: Dict) -> "ProjectData":
+
+        stage_name = project.get("annotation_stage")
+        if stage_name is None:
+            stage_name = project.get("stage")
+
+        mode_name = project.get("annotation_mode")
+        if mode_name is None:
+            mode_name = project.get("mode")
+        
         return ProjectData(
             id=project["id"],
             uid=project["uid"],
-            stage=getattr(AnnotationStage, project["annotation_stage"]),
-            mode=getattr(AnnotationMode, project["annotation_mode"])
+            stage=getattr(AnnotationStage, stage_name),
+            mode=getattr(AnnotationMode, mode_name)
         )
