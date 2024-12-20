@@ -110,8 +110,6 @@ class ImageLabelingIO(AbstractAnnotationIO):
         figures_data = open_json(self.pm.figures_ann_path )
         meta_data = open_json(self.pm.meta_ann_path)
 
-        import_is_first: bool = len(LabeledImage.all()) == 0
-
         # Labels
         for label_dict in meta_data["labels"] + meta_data["review_labels"]:
             label = Label.get(name=label_dict["name"], figure_type=label_dict["type"])
@@ -196,13 +194,21 @@ class ImageLabelingIO(AbstractAnnotationIO):
         if os.path.isfile(self.pm.review_ann_path ):
             review_data = open_json(self.pm.review_ann_path)
 
+            # Check how many images with review labels
+            number_for_correction = 0
+            for img_name in os.listdir(self.pm.images_path):
+                review_data_for_image = review_data.get(img_name, [])
+                if len(review_data_for_image) > 0:
+                    number_for_correction += 1
+            show_all = number_for_correction == 0
+
             limages = list()
             for img_name in os.listdir(self.pm.images_path):
                 image = LabeledImage.get(name=img_name)
                 review_data_for_image = review_data.get(img_name, [])
 
                 image.clear_review_labels()
-                if import_is_first:
+                if show_all:
                     image.requires_annotation = True
                 else:
                     image.requires_annotation = False
