@@ -3,12 +3,10 @@ from db import Base, get_session
 import json
 import cv2
 import numpy as np
-from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
+from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect, func
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple, Dict
 from config import settings
-
-from typing import List
 
 
 class ClassificationImage(Base):
@@ -36,6 +34,11 @@ class ClassificationImage(Base):
     def all_selected(cls) -> List["ClassificationImage"]:
         session = get_session()
         return list(session.query(cls).filter(cls.selected == True).order_by(asc(cls.item_id)))
+
+    @classmethod
+    def selected_count(cls) -> int:
+        session = get_session()
+        return session.query(func.count(cls.id)).filter(cls.selected == True).scalar()
 
     def __init__(self, name, item_id, selected: bool = False):
         self.name = name
