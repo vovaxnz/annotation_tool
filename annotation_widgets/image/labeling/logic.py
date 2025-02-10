@@ -41,12 +41,11 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         
         if project_data.stage is AnnotationStage.CORRECTION:
             self.img_names = [item.name for item in LabeledImage.all() if len(item.review_labels) > 0]
-            if len(self.img_names) == 0:
-                raise RuntimeError(f"This is a CORRECTION stage and you don't have any image with ReviewLabels on them. You have nothing to fix. Ask Administrator to mark this project ({project_data.id}) as completed")
         elif project_data.stage is AnnotationStage.REVIEW:
             self.img_names = [item.name for item in LabeledImage.all() if item.requires_annotation]
-            if len(self.img_names) == 0:
-                raise RuntimeError(f"This is a REVIEW stage and you don't have any image requiring annotation. You have nothing to review. Ask Administrator to mark this project ({project_data.id}) as completed")
+
+        if len(self.img_names) == 0:
+            raise RuntimeError(f"Project id: {project_data.id}; Stage: {project_data.stage.name}; Number of images: {len(LabeledImage.all())}; Number to annotate: 0")
 
         for img_name in self.img_names: # Check that images from the directory are in the the database
             img_object = LabeledImage.get(name=img_name)
@@ -83,6 +82,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
             self.controller = ControllerByMode[project_data.mode](active_label=labels[0])
 
         super().__init__(data_path=data_path, project_data=project_data)
+
 
     @property
     def items_number(self) -> int:

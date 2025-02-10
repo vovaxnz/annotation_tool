@@ -46,8 +46,8 @@ class AbstractAnnotationIO(ABC):
 
     def initialize_project(self, root: tk.Tk):
         configure_database(self.pm.db_path)
-        self.download_project(root=root)
         if self.should_be_overwritten:
+            self.download_project(root=root)
             loading_window = get_loading_window(text="Overwritting project...", root=root)
             self.overwrite_project()
             self.reset_counters()
