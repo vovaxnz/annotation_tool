@@ -53,6 +53,7 @@ def decode_img_name_from_image(img: np.ndarray, mult=1):
 class FilteringStatusData:
     delay: str
     selected: bool
+    selected_number: int
     speed_per_hour: float
     item_id: int
     annotation_hours: float
@@ -90,11 +91,16 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
         return self.number_of_frames
 
     @property
+    def selected_images_number(self) -> int:
+        return ClassificationImage.selected_count()
+
+    @property
     def status_data(self) -> FilteringStatusData:
         number_of_processed = len(self.processed_item_ids)
         return FilteringStatusData(
             delay=self.delay.name,
             selected = self.labeled_image.selected,
+            selected_number = self.selected_images_number,
             speed_per_hour=round(number_of_processed / (self.duration_hours + 1e-7), 2),
             item_id=self.item_id,
             annotation_hours=round(self.duration_hours, 2),
@@ -123,7 +129,7 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
 
         if self.labeled_image is None:
             self.labeled_image = ClassificationImage(name=current_img_name, item_id=self.item_id)
-        
+
         self.update_canvas()
 
     def save_item(self):
@@ -131,11 +137,11 @@ class ImageFilteringLogic(AbstractImageAnnotationLogic):
             self.labeled_image.save()
 
     def switch_item(self, item_id: int):
+        self.processed_item_ids.add(self.item_id)
         if item_id > self.items_number - 1 or item_id < 0:
             return
         time.sleep(self.delay.value)
         self.save_item()
-        self.processed_item_ids.add(self.item_id)
 
         forward = item_id == self.item_id + 1
         self.item_id = item_id

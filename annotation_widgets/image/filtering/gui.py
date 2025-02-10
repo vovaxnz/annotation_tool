@@ -15,6 +15,7 @@ class FilteringStatusBar(tk.Frame):
         self.selected_label = tk.Label(self, bd=1)
         self.item_id_label = tk.Label(self, bd=1)
         self.speed_label = tk.Label(self, bd=1)
+        self.selected_ratio_label = tk.Label(self, bd=1)
         self.processed_label = tk.Label(self, bd=1)
         self.progress_bar = ttk.Progressbar(self, orient="horizontal", mode="determinate")
         self.duration_label = tk.Label(self, bd=1)
@@ -38,29 +39,33 @@ class FilteringStatusBar(tk.Frame):
         sep2.grid(row=0, column=3, sticky='ns')
 
         self.selected_label.grid(row=0, column=4, sticky='ew', padx=15)
-        sep2 = ttk.Separator(self, orient='vertical')
-        sep2.grid(row=0, column=5, sticky='ns')
+        sep3 = ttk.Separator(self, orient='vertical')
+        sep3.grid(row=0, column=5, sticky='ns')
 
         self.item_id_label.grid(row=0, column=6, sticky='ew', padx=15)
-        sep5 = ttk.Separator(self, orient='vertical')
-        sep5.grid(row=0, column=7, sticky='ns')
+        sep4 = ttk.Separator(self, orient='vertical')
+        sep4.grid(row=0, column=7, sticky='ns')
 
         self.speed_label.grid(row=0, column=8, sticky='ew', padx=15)
+        sep5 = ttk.Separator(self, orient='vertical')
+        sep5.grid(row=0, column=9, sticky='ns')
+
+        self.selected_ratio_label.grid(row=0, column=10, sticky='ew', padx=15)
         sep6 = ttk.Separator(self, orient='vertical')
-        sep6.grid(row=0, column=9, sticky='ns')
+        sep6.grid(row=0, column=11, sticky='ns')
 
-        self.processed_label.grid(row=0, column=10, sticky='ew', padx=15)
+        self.processed_label.grid(row=0, column=12, sticky='ew', padx=15)
         sep7 = ttk.Separator(self, orient='vertical')
-        sep7.grid(row=0, column=11, sticky='ns')
+        sep7.grid(row=0, column=13, sticky='ns')
 
-        self.progress_bar.grid(row=0, column=12, sticky='ew', padx=15)
-        self.columnconfigure(12, weight=1)  # Make progress bar expand
+        self.progress_bar.grid(row=0, column=14, sticky='ew', padx=15)
+        self.columnconfigure(14, weight=1)  # Make progress bar expand
         sep8 = ttk.Separator(self, orient='vertical')
-        sep8.grid(row=0, column=13, sticky='ns')
+        sep8.grid(row=0, column=15, sticky='ns')
 
-        self.duration_label.grid(row=0, column=14, sticky='ew', padx=15)
+        self.duration_label.grid(row=0, column=16, sticky='ew', padx=15)
         sep9 = ttk.Separator(self, orient='vertical')
-        sep9.grid(row=0, column=15, sticky='ns')
+        sep9.grid(row=0, column=17, sticky='ns')
 
     def on_resize(self, event):
         # Calculate an appropriate font size based on the current width
@@ -68,7 +73,11 @@ class FilteringStatusBar(tk.Frame):
         label_font = font.Font(family="Ubuntu Condensed", size=new_font_size)
 
         # Set the new font to all labels and progress bar
-        for widget in [self.mode_label, self.delay_label, self.selected_label, self.item_id_label, self.speed_label, self.processed_label, self.duration_label]:
+        labels = [
+            self.mode_label, self.delay_label, self.selected_label, self.item_id_label, self.speed_label,
+            self.processed_label, self.duration_label, self.selected_ratio_label
+        ]
+        for widget in labels:
             widget.config(font=label_font)
 
     def update_status(self):
@@ -85,6 +94,9 @@ class FilteringStatusBar(tk.Frame):
 
         self.item_id_label.config(text=f"Img id: {status_data.item_id}")
         self.speed_label.config(text=f"Speed: {status_data.speed_per_hour} img/hour")
+
+        selected_percentage = round(status_data.selected_number / (status_data.number_of_processed + 1e-7) * 100, 2)
+        self.selected_ratio_label.config(text=f"Selected: {selected_percentage}% ({status_data.selected_number} selected / {status_data.number_of_processed} viewed)")
 
         position_percent = int((status_data.item_id + 1) / status_data.number_of_items * 100)
         self.processed_label.config(text=f"Position: {position_percent} % ({status_data.item_id + 1}/{status_data.number_of_items})")

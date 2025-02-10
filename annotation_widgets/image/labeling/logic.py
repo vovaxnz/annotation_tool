@@ -224,11 +224,11 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
 
 
     def switch_item(self, item_id: int):
+        self.processed_item_ids.add(self.item_id)
         if item_id > len(self.img_names) - 1 or item_id < 0:
             return
         self.save_item()
         self.controller.clear_history()
-        self.processed_item_ids.add(self.item_id)
         self.item_id = item_id
         self.load_item()
         self.save_state()
