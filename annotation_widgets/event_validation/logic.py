@@ -193,11 +193,11 @@ class EventValidationLogic(AbstractImageAnnotationLogic):
         self.on_frame_change()
 
     def switch_item(self, item_id: int) -> None:
+        self.processed_item_ids.add(self.item_id)
         if item_id > self.items_number - 1 or item_id < 0:
             return
 
         self.save_item()
-        self.processed_item_ids.add(self.item_id)
 
         forward = item_id == self.item_id + 1
         self.item_id = item_id
