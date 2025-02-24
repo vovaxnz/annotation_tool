@@ -224,7 +224,7 @@ class ProjectSelector:
 
     def _create_project_buttons(self):
         for project in self.projects:
-            text = f"{project.id} ({project.mode.name}: {project.stage.name})"
+            text = f"{project.id} ({project.mode.name}: {project.stage.name}, Dataset: {project.dataset})"
             button = tk.Button(self.scroll_frame, text=text, command=lambda project=project: self._select_project(project))
             button.pack(pady=5, padx=15, fill='x')
 

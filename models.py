@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from db import Base, get_session
 
 import json
@@ -7,7 +7,7 @@ import numpy as np
 from enums import AnnotationMode, AnnotationStage
 from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
-from typing import Any, List, Optional, Tuple, Dict
+from typing import Any, List, Optional, Tuple, Dict, Union
 from config import settings
 
 
@@ -54,6 +54,8 @@ class Value(Base):
 class ProjectData:
     id: int
     uid: str
+    dataset: Union[str, None]
+    classes: Union[List[str], None]
     stage: AnnotationStage
     mode: AnnotationMode
 
@@ -61,6 +63,8 @@ class ProjectData:
         data_dict = {
             'id': self.id,
             'uid': self.uid,
+            'dataset': self.dataset,
+            'classes': self.classes,
             'annotation_stage': self.stage.name,
             'annotation_mode': self.mode.name
         }
@@ -80,6 +84,8 @@ class ProjectData:
         return ProjectData(
             id=project["id"],
             uid=project["uid"],
+            dataset=project.get("dataset"),
             stage=getattr(AnnotationStage, stage_name),
-            mode=getattr(AnnotationMode, mode_name)
+            mode=getattr(AnnotationMode, mode_name),
+            classes=project.get("classes")
         )

@@ -1,10 +1,15 @@
+import json
+import tkinter as tk
+
+from jinja2 import Environment, FileSystemLoader
+
+from annotation_widgets.image.widget import AbstractImageAnnotationWidget
+from config import templates_path
+from gui_utils import show_html_window
+from models import ProjectData, Value
 from .gui import FilteringStatusBar
 from .io import ImageFilteringIO
 from .logic import ImageFilteringLogic
-from annotation_widgets.image.widget import AbstractImageAnnotationWidget
-import tkinter as tk
-
-from models import ProjectData
 
 
 class ImageFilteringWidget(AbstractImageAnnotationWidget):
@@ -13,3 +18,18 @@ class ImageFilteringWidget(AbstractImageAnnotationWidget):
 
     def set_up_status_bar(self):
         self.status_bar = FilteringStatusBar(parent=self, logic=self.logic)
+
+    def show_classes(self):
+
+        if self.project_data.classes:
+            data = {"classes": self.project_data.classes}
+
+            env = Environment(loader=FileSystemLoader(templates_path))
+            template = env.get_template('classes.html')
+            html_content = template.render(data=data)
+            show_html_window(root=self, title="Classes", html_content=html_content)
+
+    def add_menu_items(self, root: tk.Tk):
+        assert root.help_menu is not None
+        if self.project_data.classes:
+            root.help_menu.add_command(label="Classes", command=self.show_classes)
