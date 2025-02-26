@@ -13,8 +13,9 @@ from .models import ClassificationImage
 
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 
-from utils import  save_json
+from utils import save_json, open_json
 from .path_manager import FilteringPathManager
+from ..labeling.models import Label
 
 
 class ImageFilteringIO(AbstractAnnotationIO):
@@ -33,8 +34,38 @@ class ImageFilteringIO(AbstractAnnotationIO):
             )
 
     def overwrite_project(self):
-        """Filtering mode does not require importing anything due to the nature of the task""" 
-        pass
+        """
+            meta ann format:
+        {
+            "labels": [
+                {"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX", "attributes": "..."},
+            ],
+        }
+        """
+        assert os.path.isfile(self.pm.meta_ann_path), "File 'meta.json' does not exist"
+        meta_data = open_json(self.pm.meta_ann_path)
+
+        # Labels
+        for label_dict in meta_data["labels"]:
+            label = Label.get(name=label_dict["name"], figure_type=label_dict["type"])
+
+            attributes = label_dict.get("attributes")
+            if attributes is not None:
+                attributes = json.dumps(attributes)
+
+            if label is None:
+                label = Label(
+                    name=label_dict["name"],
+                    color=label_dict["color"],
+                    hotkey=label_dict["hotkey"],
+                    type=label_dict["type"],
+                    attributes=attributes
+                )
+            else:
+                label.color = label_dict["color"]
+                label.hotkey = label_dict["hotkey"]
+                label.attributes = attributes
+            label.save()
 
     def download_and_overwrite_annotations(self):
         """Force download and overwrite annotations in the database"""

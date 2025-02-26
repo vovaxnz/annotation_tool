@@ -10,6 +10,7 @@ from models import ProjectData, Value
 from .gui import FilteringStatusBar
 from .io import ImageFilteringIO
 from .logic import ImageFilteringLogic
+from ..labeling.models import Label
 
 
 class ImageFilteringWidget(AbstractImageAnnotationWidget):
@@ -22,8 +23,14 @@ class ImageFilteringWidget(AbstractImageAnnotationWidget):
     def show_classes(self):
 
         if self.project_data.classes:
-            data = {"classes": self.project_data.classes}
-
+            data = [
+                {
+                    "name": l.name,
+                    "color": l.color,
+                    "hotkey": l.hotkey,
+                }
+                for l in Label.get_figure_labels()
+            ]
             env = Environment(loader=FileSystemLoader(templates_path))
             template = env.get_template('classes.html')
             html_content = template.render(data=data)

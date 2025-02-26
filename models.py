@@ -54,8 +54,6 @@ class Value(Base):
 class ProjectData:
     id: int
     uid: str
-    dataset: Union[str, None]
-    classes: Union[List[str], None]
     stage: AnnotationStage
     mode: AnnotationMode
 
@@ -63,8 +61,6 @@ class ProjectData:
         data_dict = {
             'id': self.id,
             'uid': self.uid,
-            'dataset': self.dataset,
-            'classes': self.classes,
             'annotation_stage': self.stage.name,
             'annotation_mode': self.mode.name
         }
@@ -84,8 +80,6 @@ class ProjectData:
         return ProjectData(
             id=project["id"],
             uid=project["uid"],
-            dataset=project.get("dataset"),
             stage=getattr(AnnotationStage, stage_name),
-            mode=getattr(AnnotationMode, mode_name),
-            classes=project.get("classes")
+            mode=getattr(AnnotationMode, mode_name)
         )
