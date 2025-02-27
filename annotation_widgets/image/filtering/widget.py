@@ -22,21 +22,19 @@ class ImageFilteringWidget(AbstractImageAnnotationWidget):
 
     def show_classes(self):
 
-        if self.project_data.classes:
-            data = [
-                {
-                    "name": l.name,
-                    "color": l.color,
-                    "hotkey": l.hotkey,
-                }
-                for l in Label.get_figure_labels()
-            ]
-            env = Environment(loader=FileSystemLoader(templates_path))
-            template = env.get_template('classes.html')
-            html_content = template.render(data=data)
-            show_html_window(root=self, title="Classes", html_content=html_content)
+        data = [
+            {
+                "name": l.name,
+                "color": l.color,
+                "hotkey": l.hotkey,
+            }
+            for l in Label.get_figure_labels()
+        ]
+        env = Environment(loader=FileSystemLoader(templates_path))
+        template = env.get_template('classes.html')
+        html_content = template.render(data=data)
+        show_html_window(root=self, title="Classes", html_content=html_content)
 
     def add_menu_items(self, root: tk.Tk):
         assert root.help_menu is not None
-        if self.project_data.classes:
-            root.help_menu.add_command(label="Classes", command=self.show_classes)
+        root.help_menu.add_command(label="Classes", command=self.show_classes)

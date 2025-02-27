@@ -1,19 +1,12 @@
-from enum import Enum, auto
 import json
 import os
-import shutil
 import tkinter as tk
 from tkinter import messagebox
-from typing import Dict, List
 
 from annotation_widgets.io import AbstractAnnotationIO
-from models import ProjectData
-
-from .models import ClassificationImage
-
-from file_processing.file_transfer import FileTransferClient, download_file, upload_file
-
+from file_processing.file_transfer import FileTransferClient, upload_file
 from utils import save_json, open_json
+from .models import ClassificationImage
 from .path_manager import FilteringPathManager
 from ..labeling.models import Label
 
