@@ -1,3 +1,4 @@
+import json
 import os
 from typing import List
 
@@ -14,6 +15,7 @@ def get_local_projects_data() -> List[ProjectData]:
             pm = BasePathManager(project_id=project_name)
             if pm.is_valid:
                 result.append(ProjectData.from_json(open_json(pm.state_path)))
+
     return result
 
 
@@ -54,6 +56,10 @@ class BasePathManager:
     @property
     def is_valid(self) -> bool:  # Common
         if not os.path.isfile(self.state_path):
+            return False
+        try:
+            open_json(self.state_path)
+        except:
             return False
         if not os.path.isfile(self.db_local_path):
             return False

@@ -2,7 +2,8 @@ import json
 import os
 import tkinter as tk
 from typing import Dict, List
-from annotation_widgets.io import AbstractAnnotationIO
+from annotation_widgets.image.io import ImageIO
+from annotation_widgets.image.models import Label
 from api_requests import get_project_data
 from enums import AnnotationStage
 from exceptions import MessageBoxException
@@ -13,12 +14,12 @@ from models import Value, ProjectData
 from utils import check_correct_json, get_img_size, open_json, save_json
 from .bboxes.models import BBox
 from .keypoints.models import KeypointGroup
-from .models import Label, LabeledImage, ReviewLabel
+from .models import LabeledImage, ReviewLabel
 from .path_manager import LabelingPathManager
 from .segmentation.models import Mask
 
 
-class ImageLabelingIO(AbstractAnnotationIO):
+class ImageLabelingIO(ImageIO):
 
 
     def change_stage_at_completion(self):
@@ -111,26 +112,7 @@ class ImageLabelingIO(AbstractAnnotationIO):
         meta_data = open_json(self.pm.meta_ann_path)
 
         # Labels
-        for label_dict in meta_data["labels"] + meta_data["review_labels"]:
-            label = Label.get(name=label_dict["name"], figure_type=label_dict["type"])
-
-            attributes = label_dict.get("attributes")
-            if attributes is not None:
-                attributes = json.dumps(attributes)
-
-            if label is None:
-                label = Label(
-                    name=label_dict["name"],
-                    color=label_dict["color"],
-                    hotkey=label_dict["hotkey"],
-                    type=label_dict["type"],
-                    attributes=attributes
-                )
-            else:
-                label.color = label_dict["color"]
-                label.hotkey = label_dict["hotkey"]
-                label.attributes = attributes
-            label.save()
+        self.overwrite_labels(labels_data=meta_data["labels"] + meta_data["review_labels"])
     
         # Figures
         limages = list()
