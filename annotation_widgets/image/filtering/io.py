@@ -3,15 +3,15 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 
-from annotation_widgets.io import AbstractAnnotationIO
+from annotation_widgets.image.io import ImageIO
 from file_processing.file_transfer import FileTransferClient, upload_file
-from utils import save_json, open_json
+from utils import check_correct_json, save_json, open_json
 from .models import ClassificationImage
 from .path_manager import FilteringPathManager
 from annotation_widgets.image.models import Label
 
 
-class ImageFilteringIO(AbstractAnnotationIO):
+class ImageFilteringIO(ImageIO):
 
     def get_path_manager(self, project_id: int):
         return FilteringPathManager(project_id)
@@ -25,7 +25,7 @@ class ImageFilteringIO(AbstractAnnotationIO):
                 file_name=os.path.basename(self.pm.video_path),
                 save_path=self.pm.video_path,
             )
-        if not os.path.isfile(self.pm.meta_ann_path):
+        if not os.path.isfile(self.pm.meta_ann_path) or not check_correct_json(self.pm.meta_ann_path):
             ftc = FileTransferClient(window_title="Downloading progress", root=root)
             ftc.download(
                 uid=self.project_data.uid,
@@ -46,26 +46,7 @@ class ImageFilteringIO(AbstractAnnotationIO):
         meta_data = open_json(self.pm.meta_ann_path)
 
         # Labels
-        for label_dict in meta_data["labels"]:
-            label = Label.get(name=label_dict["name"], figure_type=label_dict["type"])
-
-            attributes = label_dict.get("attributes")
-            if attributes is not None:
-                attributes = json.dumps(attributes)
-
-            if label is None:
-                label = Label(
-                    name=label_dict["name"],
-                    color=label_dict["color"],
-                    hotkey=label_dict["hotkey"],
-                    type=label_dict["type"],
-                    attributes=attributes
-                )
-            else:
-                label.color = label_dict["color"]
-                label.hotkey = label_dict["hotkey"]
-                label.attributes = attributes
-            label.save()
+        self.overwrite_labels(labels_data=meta_data["labels"])
 
     def download_and_overwrite_annotations(self):
         """Force download and overwrite annotations in the database"""
