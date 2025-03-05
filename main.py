@@ -100,13 +100,18 @@ class MainWindow(tk.Tk):
     def open_project(self):
         loading_window = get_loading_window(text="Getting your active projects...", root=self)
 
-        try:
-            projects_data = get_projects_data()
-        except:
-            messagebox.showinfo("Error", "Unable to get projects from a web service. You`ll be shown only already downloaded projects.")
-            projects_data = get_local_projects_data()
-    
-        loading_window.destroy()
+        def worker():
+            try:
+                projects_data = get_projects_data()
+            except:
+                projects_data = get_local_projects_data()
+                messagebox.showinfo("Error", "Unable to get projects from a web service. You'll be shown only already downloaded projects.")
+            self.after(0, loading_window.destroy)
+            self.after(0, lambda: self._select_project(projects_data))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _select_project(self, projects_data: List[ProjectData]):
         ps = ProjectSelector(projects_data, root=self)
         project_data: ProjectData = ps.select()
         if project_data is not None: 
@@ -158,7 +163,9 @@ class MainWindow(tk.Tk):
     def remove_completed_projects(self):
         local_projects_data = get_local_projects_data()
         if len(local_projects_data) > 0:
-            projects_data: List[ProjectData] = get_projects_data(only_assigned_to_user=False)
+            projects_data: List[ProjectData] = get_projects_data(only_assigned_to_user=False, raise_error=False)
+            if projects_data is None:
+                return
             active_project_uids = [project.uid for project in projects_data]
             local_projects_to_remove: List[ProjectData] = list()
             for local_project in local_projects_data:

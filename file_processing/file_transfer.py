@@ -6,41 +6,55 @@ from config import settings
 import requests
 from exceptions import MessageBoxException
 from file_processing.progress_bar import ProcessingProgressBar
+import tkinter as tk
 
 
 class FileTransferClient(ProcessingProgressBar):
+    def __init__(self, window_title: str = None, root: tk.Tk = None):
+        super().__init__(window_title=window_title, root=root)
+        self.uid = None
+        self.file_name = None
+        self.save_path = None
+
     def download(self, uid, file_name, save_path):
+        self.uid = uid
+        self.file_name = file_name
+        self.save_path = save_path
+
         self.processed_percent = 0
         self.processed_gb = 0
         self.speed = 0
         self.remaining_time = 0
-        self.processing_complete = False
-
-        def update_progress(percent, size_gb, speed, remaining_time, processing_complete):
-            self.processed_percent = percent
-            self.processed_gb = size_gb
-            self.speed = speed
-            self.remaining_time = remaining_time
-            self.processing_complete = processing_complete
-
+        self.processing_complete.clear()
+        self.terminate_processing.clear()
         self.gui_close_event.clear()
 
-        executor = ThreadPoolExecutor()
-        future = executor.submit(download_file, uid, file_name, save_path, update_progress, lambda: self.terminate_processing)
-        self.check_download_completion(future, uid, file_name)
+        self.start_processing_thread()
+        self.root.mainloop()
 
-        self.root.wait_window(self.root)
+    def process_data(self):
+        try:
+            download_file(
+                self.uid,
+                self.file_name,
+                self.save_path,
+                update_callback=self.update_progress,
+                should_terminate=lambda: self.terminate_processing.is_set()
+            )
+            self.processing_complete.set()
+        except Exception as e:
+            self.processing_complete.set()
+            raise MessageBoxException(
+                f"Unable to download file {self.uid}/{self.file_name}. Error: {traceback.format_exc()}"
+            )
 
-    def check_download_completion(self, future, uid, file_name):
-        if future.done():
-            try:
-                future.result()  # This will raise any exceptions caught by the thread
-            except Exception as e:
-                raise MessageBoxException(f"Unable to download file {uid}/{file_name}. Error: {traceback.format_exc()}")
-            time.sleep(0.5)
-            self.root.destroy()
-        else:
-            self.root.after(100, lambda: self.check_download_completion(future, uid, file_name))
+    def update_progress(self, percent, size_gb, speed, remaining_time, processing_complete):
+        self.processed_percent = percent
+        self.processed_gb = size_gb
+        self.speed = speed
+        self.remaining_time = remaining_time
+        if processing_complete:
+            self.processing_complete.set()
 
 def download_file(uid, file_name, save_path, update_callback: Callable = None, should_terminate: Callable = None, ignore_404=False):
     with requests.post(f"{settings.file_url}/download/{uid}/{file_name}", headers={'Authorization': f'Bearer {settings.token}'}, stream=True) as r:

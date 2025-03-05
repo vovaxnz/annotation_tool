@@ -1,5 +1,5 @@
 from json import JSONDecodeError
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from urllib.error import HTTPError
 
 import requests
@@ -10,26 +10,27 @@ from models import ProjectData
 from path_manager import get_local_projects_data
 
 
-def get_projects_data(only_assigned_to_user: bool = True) -> List[ProjectData]: 
+def get_projects_data(only_assigned_to_user: bool = True, raise_error: bool = True) -> Optional[List[ProjectData]]:
     url = f'{settings.api_url}/api/annotation/projects_data/'
-
     data = {'user_token': settings.token}
 
-    for i in range(2):
-        response = requests.post(url, json=data)
+    try:
+        response = requests.post(url, json=data, timeout=5)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        if raise_error:
+            raise MessageBoxException(f"Unable to connect to the server: {e}")
+        else:
+            return None
 
-        if response.status_code == 200:
-        
-            projects = response.json()["projects"]
+    projects = response.json().get("projects", [])
+    result = [
+        ProjectData.from_json(project)
+        for project in projects
+        if not only_assigned_to_user or project.get("assigned_to_user", True)
+    ]
 
-            result = list()
-            for project in projects:
-                if only_assigned_to_user and not project.get("assigned_to_user", True):
-                    continue
-                result.append(ProjectData.from_json(project))
-            return result
-    
-    raise MessageBoxException(f"Unable to get projects data. {response.status_code}")
+    return result
 
 
 def get_project_data(project_uid: str) -> Tuple[AnnotationStage, AnnotationMode]:
