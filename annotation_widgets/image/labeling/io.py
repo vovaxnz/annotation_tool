@@ -2,6 +2,7 @@ import json
 import os
 import tkinter as tk
 from typing import Dict, List
+from annotation_widgets.image.models import Label
 from annotation_widgets.io import AbstractAnnotationIO
 from api_requests import get_project_data
 from enums import AnnotationStage
@@ -13,7 +14,7 @@ from models import Value, ProjectData
 from utils import check_correct_json, get_img_size, open_json, save_json
 from .bboxes.models import BBox
 from .keypoints.models import KeypointGroup
-from .models import Label, LabeledImage, ReviewLabel
+from .models import LabeledImage, ReviewLabel
 from .path_manager import LabelingPathManager
 from .segmentation.models import Mask
 

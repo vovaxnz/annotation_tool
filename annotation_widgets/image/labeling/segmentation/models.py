@@ -1,5 +1,6 @@
-from annotation_widgets.image.labeling.models import Figure, Label, Point
+from annotation_widgets.image.labeling.models import Figure, Point
 from annotation_widgets.image.labeling.segmentation.masks_encoding import decode_rle, encode_rle
+from annotation_widgets.image.models import Label
 from db import Base, get_session
 
 import json

@@ -4,8 +4,10 @@ from enum import Enum, auto
 import json
 import random
 
+from annotation_widgets.image.models import Label
+
 from .figure_types import FigureTypes
-from .models import Figure, Label, Point, ReviewLabel
+from .models import Figure, Point, ReviewLabel
 import numpy as np
 
 from typing import Dict, List, Optional, Tuple

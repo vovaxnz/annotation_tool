@@ -3,6 +3,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List
 
+from annotation_widgets.image.models import Label
 import cv2
 import numpy as np
 
@@ -13,7 +14,7 @@ from models import ProjectData
 from .drawing import create_class_selection_wheel, get_selected_sector_id
 from .figure_controller import ObjectFigureController
 from .figure_controller_factory import ControllerByMode
-from .models import Figure, Label, LabeledImage, ReviewLabel
+from .models import Figure, LabeledImage, ReviewLabel
 from .path_manager import LabelingPathManager
 
 

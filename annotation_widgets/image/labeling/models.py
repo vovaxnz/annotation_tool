@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 
+from annotation_widgets.image.models import Label
 from db import Base, get_session
-from config import ColorBGR
-from enums import FigureType
 
 import json
 import cv2
 import numpy as np
-from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect, func
+from sqlalchemy import Boolean, asc, create_engine, Column, String, Integer, ForeignKey, inspect, func
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 from typing import Any, List, Optional, Tuple, Dict
 from config import settings
@@ -72,58 +71,6 @@ class LabeledImage(Base):
         for review_label in self.review_labels:
             review_label.delete()
 
-
-
-class Label(Base):
-    __tablename__ = 'label'
-
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    color = Column(String)
-    hotkey = Column(String)
-    type = Column(String) # FigureType
-    attributes = Column(String, nullable=True)
-
-
-    def __init__(self, name: str, color: str, hotkey: str, type: str, attributes: str = None):
-        """
-        Args:
-            attributes (str): Any attributes in json format
-        """
-        self.name = name
-        self.color = color
-        self.hotkey = hotkey
-        self.type = type
-        self.attributes = attributes
-
-    @property
-    def color_bgr(self) -> Tuple[int, int, int]:
-        return getattr(ColorBGR, self.color, ColorBGR.white)
-
-    @classmethod
-    def get(cls, name: str, figure_type: str):
-        session = get_session()
-        return session.query(cls).filter(cls.name == name, cls.type == figure_type).first()
-
-    def save(self):
-        session = get_session()
-        session.add(self)
-        session.commit()
-
-    @classmethod
-    def get_review_labels(cls) -> List["Label"]:
-        session = get_session()
-        return session.query(cls).filter(cls.type == FigureType.REVIEW_LABEL.name).order_by(asc(cls.hotkey))
-
-    @classmethod
-    def get_figure_labels(cls) -> List["Label"]:
-        session = get_session()
-        return session.query(cls).filter(cls.type != FigureType.REVIEW_LABEL.name).order_by(asc(cls.hotkey))
-
-    @classmethod
-    def all(cls) -> List["Label"]:
-        session = get_session()
-        return session.query(cls).order_by(asc(cls.hotkey))
 
 
 class Point:

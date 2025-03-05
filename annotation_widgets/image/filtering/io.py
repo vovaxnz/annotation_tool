@@ -8,7 +8,7 @@ from file_processing.file_transfer import FileTransferClient, upload_file
 from utils import save_json, open_json
 from .models import ClassificationImage
 from .path_manager import FilteringPathManager
-from ..labeling.models import Label
+from annotation_widgets.image.models import Label
 
 
 class ImageFilteringIO(AbstractAnnotationIO):
@@ -24,6 +24,13 @@ class ImageFilteringIO(AbstractAnnotationIO):
                 uid=self.project_data.uid,
                 file_name=os.path.basename(self.pm.video_path),
                 save_path=self.pm.video_path,
+            )
+        if not os.path.isfile(self.pm.meta_ann_path):
+            ftc = FileTransferClient(window_title="Downloading progress", root=root)
+            ftc.download(
+                uid=self.project_data.uid,
+                file_name=os.path.basename(self.pm.meta_ann_path),
+                save_path=self.pm.meta_ann_path,
             )
 
     def overwrite_project(self):
