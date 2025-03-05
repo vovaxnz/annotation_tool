@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from db import Base, get_session
 
 import json
@@ -7,7 +7,7 @@ import numpy as np
 from enums import AnnotationMode, AnnotationStage
 from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
-from typing import Any, List, Optional, Tuple, Dict
+from typing import Any, List, Optional, Tuple, Dict, Union
 from config import settings
 
 

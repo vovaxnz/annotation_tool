@@ -38,21 +38,23 @@
 
 
   <div class="container">
-<table>
-  
-    <tr>
-      <th style="width: 100px;">Color</th>
-      <th style="width: 300px;">Label</th>
-      <th style="width: 100px;">Hotkey</th>
-    </tr>
-    {% for item in data %}
-    <tr>
-      <td bgcolor="{{ item.color }}" height="40"></td>
-      <td style="font-size: 16px;">{{ item.name }}</td>
-      <td>{{ item.hotkey }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+      <table>
+        <tr>
+          <th style="width: 100px;">Color</th>
+          <th style="width: 300px;">Label</th>
+          <th style="width: 100px;">Type</th>
+          <th style="width: 100px;">Hotkey</th>
+        </tr>
+        {% for item in data %}
+        <tr>
+          <td bgcolor="{{ item.color }}" height="40"></td>
+          <td style="font-size: 16px;">{{ item.name }}</td>
+          <td style="font-size: 16px;">{{ item.type }}</td>
+          
+          <td>{{ item.hotkey }}</td>
+        </tr>
+        {% endfor %}
+    </table>
   </div>
 </body>
 </html>

@@ -1,7 +1,8 @@
 
+import json
 import time
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import  messagebox
 from typing import Tuple
 
 import cv2
@@ -14,10 +15,13 @@ from annotation_widgets.logic import AbstractAnnotationLogic
 from annotation_widgets.widget import AbstractAnnotationWidget
 from config import settings
 from exceptions import handle_exception
-from gui_utils import get_loading_window
+from gui_utils import get_loading_window, show_html_window
 from models import ProjectData
 from utils import check_url_rechable
 from .logic import AbstractImageAnnotationLogic
+from jinja2 import Environment, FileSystemLoader
+from config import templates_path
+from .models import Label
 
 
 class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
@@ -39,6 +43,41 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
         self.set_up_status_bar()
         assert self.status_bar is not None
         self.status_bar.grid(row=1, column=0, sticky='ew')  # StatusBar at the bottom, expanding horizontally
+
+    def show_classes(self):
+
+        data = [
+            {
+                "name": l.name,
+                "type": l.type,
+                "color": l.color,
+                "hotkey": l.hotkey,
+            }
+            for l in Label.get_figure_labels()
+        ]
+
+        # Add keypoints color
+        for l in Label.get_figure_labels()[:1]:
+            attributes = l.attributes
+            if attributes is None:
+                continue
+            keypoint_info = json.loads(attributes).get("keypoint_info")
+            if keypoint_info is None:
+                continue
+            for kp_name, kp_data in keypoint_info.items():
+                data.append(
+                    {
+                        "name": kp_name,
+                        "type": "KEYPOINT",
+                        "color": kp_data["color"],
+                        "hotkey": "",
+                    }
+                )
+
+        env = Environment(loader=FileSystemLoader(templates_path))
+        template = env.get_template('classes.html')
+        html_content = template.render(data=data)
+        show_html_window(root=self, title="Classes", html_content=html_content)
 
     def set_up_status_bar(self):
         raise NotImplementedError

@@ -1,7 +1,7 @@
 from .gui import AnnotationStatusBar
 from .io import ImageLabelingIO
 from .logic import ImageLabelingLogic
-from .models import Label
+from annotation_widgets.image.models import Label
 from annotation_widgets.image.widget import AbstractImageAnnotationWidget
 from jinja2 import Environment, FileSystemLoader
 from config import templates_path
@@ -17,20 +17,6 @@ class ImageLabelingWidget(AbstractImageAnnotationWidget):
 
     def set_up_status_bar(self):
         self.status_bar = AnnotationStatusBar(parent=self, logic=self.logic)
-
-    def show_classes(self):
-        data = [
-            {
-                "name": l.name,
-                "color": l.color,
-                "hotkey": l.hotkey,
-            } for l in Label.get_figure_labels()
-        ]
-        
-        env = Environment(loader=FileSystemLoader(templates_path))
-        template = env.get_template('classes.html')
-        html_content = template.render(data=data)
-        show_html_window(root=self, title="Classes", html_content=html_content)
 
     def show_review_labels(self):
         data = [
