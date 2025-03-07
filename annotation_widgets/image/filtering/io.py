@@ -34,19 +34,9 @@ class ImageFilteringIO(ImageIO):
             )
 
     def overwrite_project(self):
-        """
-            meta ann format:
-        {
-            "labels": [
-                {"name": "truck", "color": "yellow", "hotkey": "1", "type": "BBOX", "attributes": "..."},
-            ],
-        }
-        """
-        assert os.path.isfile(self.pm.meta_ann_path), "File 'meta.json' does not exist"
-        meta_data = open_json(self.pm.meta_ann_path)
-
-        # Labels
-        self.overwrite_labels(labels_data=meta_data["labels"])
+        if os.path.isfile(self.pm.meta_ann_path):
+            meta_data = open_json(self.pm.meta_ann_path)
+            self.overwrite_labels(labels_data=meta_data["labels"])
 
     def download_and_overwrite_annotations(self):
         """Force download and overwrite annotations in the database"""
