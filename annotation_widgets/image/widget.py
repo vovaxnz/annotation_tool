@@ -57,14 +57,19 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
         ]
 
         # Add keypoints color
-        for l in Label.get_figure_labels()[:1]:
+        added_kp_names = set()
+        for l in Label.get_figure_labels():
             attributes = l.attributes
             if attributes is None:
                 continue
+            
             keypoint_info = json.loads(attributes).get("keypoint_info")
             if keypoint_info is None:
                 continue
+
             for kp_name, kp_data in keypoint_info.items():
+                if kp_name in added_kp_names:
+                    continue
                 data.append(
                     {
                         "name": kp_name,
@@ -73,6 +78,7 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
                         "hotkey": "",
                     }
                 )
+                added_kp_names.add(kp_name)
 
         env = Environment(loader=FileSystemLoader(templates_path))
         template = env.get_template('classes.html')
