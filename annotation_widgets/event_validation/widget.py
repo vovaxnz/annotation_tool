@@ -1,11 +1,20 @@
 import tkinter as tk
+from tkinter import messagebox
 
+from annotation_widgets.event_validation.gui import (
+    EventValidationStatusBar,
+    EventValidationSideBar,
+    BaseCanvasView,
+    VideoFrameSlider,
+)
+from annotation_widgets.event_validation.io import EventValidationIO
+from annotation_widgets.event_validation.logic import EventValidationLogic
 from annotation_widgets.widget import AbstractAnnotationWidget
+from config import settings
 from enums import EventViewMode
+from gui_utils import get_loading_window
 from models import ProjectData
-from .gui import EventValidationStatusBar, EventValidationSideBar, BaseCanvasView, VideoFrameSlider
-from .io import EventValidationIO
-from .logic import EventValidationLogic
+from utils import check_url_rechable
 
 
 class EventValidationWidget(AbstractAnnotationWidget):
@@ -129,3 +138,25 @@ class EventValidationWidget(AbstractAnnotationWidget):
     @property
     def ui_current_frame_number(self) -> int:
         return self.logic.current_frame_number + 1
+
+    def overwrite_annotations(self):
+
+        if not check_url_rechable(settings.api_url):
+            messagebox.showinfo("Error", "Unable to reach a web service")
+            return
+
+        agree = messagebox.askokcancel(
+            title="Overwrite",
+            message="Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten"
+        )
+        if agree:
+            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
+            self.io.download_and_overwrite_annotations()
+            self.logic.load_item()
+            root.destroy()
+            self.update_widgets_display()
+            messagebox.showinfo("Success", "The annotations have been overwritten")
+
+    def add_menu_items(self, root: tk.Tk):
+        assert root.file_menu is not None
+        root.file_menu.add_command(label="Download and overwrite annotations", command=self.overwrite_annotations)

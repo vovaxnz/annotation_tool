@@ -2,26 +2,26 @@
 import json
 import time
 import tkinter as tk
-from tkinter import  messagebox
+from tkinter import messagebox
 from typing import Tuple
 
 import cv2
 import numpy as np
 from PIL import Image, ImageTk
+from jinja2 import Environment, FileSystemLoader
 from pynput.keyboard import Listener
 
 from annotation_widgets.io import AbstractAnnotationIO
 from annotation_widgets.logic import AbstractAnnotationLogic
 from annotation_widgets.widget import AbstractAnnotationWidget
 from config import settings
+from config import templates_path
 from exceptions import handle_exception
 from gui_utils import get_loading_window, show_html_window
 from models import ProjectData
 from utils import check_url_rechable
-from .logic import AbstractImageAnnotationLogic
-from jinja2 import Environment, FileSystemLoader
-from config import templates_path
-from .models import Label
+from annotation_widgets.image.logic import AbstractImageAnnotationLogic
+from annotation_widgets.image.models import Label
 
 
 class AbstractImageAnnotationWidget(AbstractAnnotationWidget):

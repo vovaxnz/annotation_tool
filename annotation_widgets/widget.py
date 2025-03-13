@@ -1,11 +1,11 @@
-from typing import Callable
-from .io import AbstractAnnotationIO
-from .logic import AbstractAnnotationLogic
 import tkinter as tk
+from typing import Callable
 
+from annotation_widgets.io import AbstractAnnotationIO
+from annotation_widgets.logic import AbstractAnnotationLogic
 from models import ProjectData
- 
- 
+
+
 class AbstractAnnotationWidget(tk.Frame): 
     def __init__(self, root: tk.Tk, io: AbstractAnnotationIO, logic: AbstractAnnotationLogic, project_data: ProjectData):
         super().__init__(root)
@@ -40,7 +40,6 @@ class AbstractAnnotationWidget(tk.Frame):
 
     def schedule_update(self):
         pass
-
 
     def go_to_id(self, id: int):
         """Move to i`th element"""

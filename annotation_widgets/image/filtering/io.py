@@ -1,14 +1,12 @@
-import json
 import os
 import tkinter as tk
 from tkinter import messagebox
 
+from annotation_widgets.image.filtering.models import ClassificationImage
+from annotation_widgets.image.filtering.path_manager import FilteringPathManager
 from annotation_widgets.image.io import ImageIO
 from file_processing.file_transfer import FileTransferClient, upload_file
 from utils import check_correct_json, save_json, open_json
-from .models import ClassificationImage
-from .path_manager import FilteringPathManager
-from annotation_widgets.image.models import Label
 
 
 class ImageFilteringIO(ImageIO):
