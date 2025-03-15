@@ -92,31 +92,19 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
         self.canvas_view.update_frame = True
 
     def close(self):
-        self.logic.save_item()
-        self.destroy()
 
         if self.status_bar is not None:
             self.status_bar.destroy()
             self.status_bar = None 
 
-        if self.close_callback:
-            self.close_callback()
+        super().close()
 
-    def overwrite_annotations(self):
+    def on_overwrite(self):
+        """Steps after annotation being overwritten, specific for widget"""
+        self.update_frame = True
+        self.schedule_update()
 
-        if not check_url_rechable(settings.api_url):
-            messagebox.showinfo("Error", "Unable to reach a web service")
-            return
 
-        agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
-        if agree:
-            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            self.io.download_and_overwrite_annotations()
-            self.logic.load_item()
-            root.destroy()
-            self.update_frame = True
-            self.schedule_update()
-            messagebox.showinfo("Success", "The annotations have been overwritten")
 
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):

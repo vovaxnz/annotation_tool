@@ -7,14 +7,24 @@ from enums import AnnotationMode, AnnotationStage
 from models import ProjectData
 from utils import get_datetime_str, open_json
 
-
-def get_local_projects_data() -> List[ProjectData]: 
+def get_local_projects_data(with_broken_projects: bool = False) -> List[ProjectData]: 
     result = list()
     if os.path.isdir(os.path.join(settings.data_dir, "data")):
         for project_name in os.listdir(os.path.join(settings.data_dir, "data")):
             pm = BasePathManager(project_id=project_name)
             if pm.is_valid:
                 result.append(ProjectData.from_json(open_json(pm.state_path)))
+            elif with_broken_projects:
+                try:
+                    result.append(ProjectData.from_json(open_json(pm.state_path)))
+                except:
+                    result.append(ProjectData(
+                        id=project_name, 
+                        uid=None, 
+                        stage=AnnotationStage.UNKNOWN, 
+                        mode=AnnotationMode.UNKNOWN
+                    ))
+
 
     return result
 

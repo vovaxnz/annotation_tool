@@ -1,10 +1,14 @@
 import tkinter as tk
 from typing import Callable
+from tkinter import messagebox
 
 from annotation_widgets.io import AbstractAnnotationIO
 from annotation_widgets.logic import AbstractAnnotationLogic
 from models import ProjectData
-
+from gui_utils import get_loading_window
+from models import ProjectData
+from utils import check_url_rechable
+from config import settings
 
 class AbstractAnnotationWidget(tk.Frame): 
     def __init__(self, root: tk.Tk, io: AbstractAnnotationIO, logic: AbstractAnnotationLogic, project_data: ProjectData):
@@ -46,8 +50,26 @@ class AbstractAnnotationWidget(tk.Frame):
         self.logic.go_to_id(id)
         self.schedule_update()
 
+    def on_overwrite(self):
+        """Steps after rewritting annotations, specific for widget"""
+        pass
+    
     def overwrite_annotations(self):
-        self.io.download_and_overwrite_annotations()
+
+        if not check_url_rechable(settings.api_url):
+            messagebox.showinfo("Error", "Unable to reach a web service")
+            return
+
+        agree = messagebox.askokcancel("Overwrite", "Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten")
+        if agree:
+            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
+            self.io.download_and_overwrite_annotations()
+            self.logic.load_item()
+            root.destroy()
+            self.on_overwrite()
+            messagebox.showinfo("Success", "The annotations have been overwritten")
+
+
 
     def remove_project(self):
         self.io.remove_project()

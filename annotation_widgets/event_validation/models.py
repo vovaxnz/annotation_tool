@@ -63,14 +63,19 @@ class Event(Base):
         return sidebar_values
 
     @classmethod
-    def events_without_answers(cls) -> List[int]:
+    def get_unvalidated_event_ids(cls) -> List[int]:
         session = get_session()
         events = session.query(cls.id, cls.custom_fields).all()
 
-        # Filter out None, empty lists, and lists containing only empty strings
-        unanswered_events = [
-            id_ for id_, custom_fields in events
-            if custom_fields is None
-               or all(not field.strip() for field in json.loads(custom_fields))  # Ensure at least one non-empty string
-        ]
-        return [event_id - 1 for event_id in unanswered_events]
+        unanswered_events_ids = list()
+        for event_id, custom_fields in events:
+
+            if custom_fields is None or len(json.loads(custom_fields)) == 0:
+                unanswered_events_ids.append(event_id)
+                continue
+
+            # Ensure at least one non-empty string
+            if all(len(field.strip()) == 0 for field in json.loads(custom_fields)):
+                unanswered_events_ids.append(event_id)
+
+        return unanswered_events_ids

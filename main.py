@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import threading
 from typing import Callable, List
@@ -19,7 +20,7 @@ from config import settings
 import subprocess
 
 
-from path_manager import get_local_projects_data
+from path_manager import BasePathManager, get_local_projects_data
 from utils import check_url_rechable
 from tkinter import PhotoImage
 
@@ -133,17 +134,18 @@ class MainWindow(tk.Tk):
 
 
     def remove_project(self):
-        projects_data = get_local_projects_data()
+        projects_data = get_local_projects_data(with_broken_projects=True)
         ps = ProjectSelector(projects_data, root=self, title="Select project to remove", description="Select project to remove\nfrom your computer. \nThis will remove project files \nfrom your computer, \nbut not from eg-ml")
         project_data: ProjectData = ps.select()
         if project_data is not None: 
-            io = get_io(project_data)
-            io.remove_project()
-            messagebox.showinfo("Project removed", f"Project {project_data.id} removed")
+            pm = BasePathManager(project_id=project_data.id)
+            if os.path.isdir(pm.project_path):
+                shutil.rmtree(pm.project_path)
             if self.annotation_widget is not None:
                 if self.annotation_widget.project_id == project_data.id:
                     self.remove_annotation_widget()
                     self.title(f"Annotation tool")
+            messagebox.showinfo("Project removed", f"Project {project_data.id} removed")
 
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
@@ -156,7 +158,7 @@ class MainWindow(tk.Tk):
                 messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
 
     def remove_completed_projects(self):
-        local_projects_data = get_local_projects_data()
+        local_projects_data = get_local_projects_data(with_broken_projects=True)
         if len(local_projects_data) > 0:
             projects_data: List[ProjectData] = get_projects_data(only_assigned_to_user=False)
             active_project_uids = [project.uid for project in projects_data]
@@ -165,8 +167,9 @@ class MainWindow(tk.Tk):
                 if local_project.uid not in active_project_uids:
                     local_projects_to_remove.append(local_project)
             for project_data in local_projects_to_remove:
-                io = get_io(project_data)
-                io.remove_project()
+                pm = BasePathManager(project_id=project_data.id)
+                if os.path.isdir(pm.project_path):
+                    shutil.rmtree(pm.project_path)
 
 
     def open_settings(self):

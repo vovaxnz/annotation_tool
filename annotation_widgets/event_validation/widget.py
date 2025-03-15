@@ -139,24 +139,16 @@ class EventValidationWidget(AbstractAnnotationWidget):
     def ui_current_frame_number(self) -> int:
         return self.logic.current_frame_number + 1
 
-    def overwrite_annotations(self):
-
-        if not check_url_rechable(settings.api_url):
-            messagebox.showinfo("Error", "Unable to reach a web service")
-            return
-
-        agree = messagebox.askokcancel(
-            title="Overwrite",
-            message="Are you sure you want to download annotations and overwrite your annotations with them? All your work will be overwritten"
-        )
-        if agree:
-            root = get_loading_window(text="Downloading and overwriting annotations...", root=self.parent)
-            self.io.download_and_overwrite_annotations()
-            self.logic.load_item()
-            root.destroy()
-            self.update_widgets_display()
-            messagebox.showinfo("Success", "The annotations have been overwritten")
+    def on_overwrite(self):
+        """Steps after annotation being overwritten, specific for widget"""
+        self.update_widgets_display()
 
     def add_menu_items(self, root: tk.Tk):
         assert root.file_menu is not None
         root.file_menu.add_command(label="Download and overwrite annotations", command=self.overwrite_annotations)
+
+    def close(self):
+        # Unbind explicitly, because we use bind_all in constructor
+        self.unbind_all("<Button-1>") 
+        self.unbind_all("<Button-3>") 
+        super().close()

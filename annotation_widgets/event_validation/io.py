@@ -46,6 +46,7 @@ class EventValidationIO(AbstractAnnotationIO):
                 uid=self.project_data.uid,
                 file_name=os.path.basename(self.pm.event_validation_results_json_path),
                 save_path=self.pm.event_validation_results_json_path,
+                ignore_404=True
             )
 
     def overwrite_project(self):
@@ -68,11 +69,11 @@ class EventValidationIO(AbstractAnnotationIO):
             imported_events_data = open_json(self.pm.event_validation_results_json_path)
         else:
             imported_events_data = None
-
+        
         if imported_events_data is not None:
             if list(fields_tree_data.keys()) != imported_events_data.get("fields"):
                 raise Exception(
-                    f"Questions stored in `event_validation_results.json` differ from questions from `meta.json`. "
+                    f"Task {self.project_data.id}: Validation rules are different in `event_validation_results.json` and `meta.json`. "
                     f"Please reach out to Administrator to handle this issue."
                 )
 
@@ -82,19 +83,20 @@ class EventValidationIO(AbstractAnnotationIO):
                 video_uid = match.group("uid")
                 event_obj = Event(uid=video_uid)
 
-                imported_event = imported_events_data.get("events", {}).get(video_uid) if imported_events_data is not None else None
-
-                if imported_event is not None:
-                    event_obj.custom_fields = json.dumps(imported_event.get("answers"))
-                    event_obj.comment = imported_event.get("comment") if imported_event.get("comment") else None
+                if imported_events_data is not None:
+                    imported_event = imported_events_data.get("events", {}).get(video_uid)
+                    if imported_event is not None:
+                        event_obj.custom_fields = json.dumps(imported_event.get("answers"))
+                        event_obj.comment = imported_event.get("comment") if imported_event.get("comment") else None
 
                 events.append(event_obj)
             else:
                 raise RuntimeError(f"Incorrect video name format {video_name}")
 
+        assert len(events) == len(os.listdir(self.pm.videos_path))
+
         Event.overwrite(events)
 
-        assert len(events) == len(os.listdir(self.pm.videos_path))
 
 
     def download_and_overwrite_annotations(self):
@@ -104,6 +106,7 @@ class EventValidationIO(AbstractAnnotationIO):
             uid=self.project_data.uid,
             file_name=os.path.basename(self.pm.event_validation_results_json_path),
             save_path=self.pm.event_validation_results_json_path,
+            ignore_404=True,
         )
         download_file(
             uid=self.project_data.uid,
@@ -131,7 +134,7 @@ class EventValidationIO(AbstractAnnotationIO):
             }
         }
         """
-        if unanswered_events := Event.events_without_answers():
+        if unanswered_events := Event.get_unvalidated_event_ids():
             messagebox.showerror(message=f"Events № {unanswered_events} are not answered. Finish them to complete the project")
             return
 
