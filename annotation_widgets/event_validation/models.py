@@ -75,7 +75,7 @@ class Event(Base):
                 continue
 
             # Ensure at least one non-empty string
-            if all(len(field.strip()) == 0 for field in json.loads(custom_fields)):
+            if any(len(field.strip()) == 0 for field in json.loads(custom_fields)):
                 unanswered_events_ids.append(event_id)
 
         return unanswered_events_ids

@@ -2,7 +2,6 @@
 import json
 import time
 import tkinter as tk
-from tkinter import messagebox
 from typing import Tuple
 
 import cv2
@@ -11,17 +10,15 @@ from PIL import Image, ImageTk
 from jinja2 import Environment, FileSystemLoader
 from pynput.keyboard import Listener
 
+from annotation_widgets.image.logic import AbstractImageAnnotationLogic
+from annotation_widgets.image.models import Label
 from annotation_widgets.io import AbstractAnnotationIO
 from annotation_widgets.logic import AbstractAnnotationLogic
 from annotation_widgets.widget import AbstractAnnotationWidget
-from config import settings
 from config import templates_path
 from exceptions import handle_exception
-from gui_utils import get_loading_window, show_html_window
+from gui_utils import show_html_window
 from models import ProjectData
-from utils import check_url_rechable
-from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from annotation_widgets.image.models import Label
 
 
 class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
@@ -103,9 +100,6 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
         """Steps after annotation being overwritten, specific for widget"""
         self.update_frame = True
         self.schedule_update()
-
-
-
 
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
