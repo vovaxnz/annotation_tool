@@ -150,12 +150,16 @@ class MainWindow(tk.Tk):
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
         if agree:
-            if check_url_rechable(settings.api_url):
-                self.annotation_widget.complete_annotation(root=self)
-                self.remove_annotation_widget()
-                self.title(f"Annotation tool")
+            ready_to_complete, message = self.annotation_widget.check_before_completion()
+            if not ready_to_complete:
+                messagebox.showerror(title="Project can not be completed", message=message)
             else:
-                messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
+                if check_url_rechable(settings.api_url):
+                    self.annotation_widget.complete_annotation(root=self)
+                    self.remove_annotation_widget()
+                    self.title(f"Annotation tool")
+                else:
+                    messagebox.showinfo("Error", "Unable to reach a web service. Project is not completed. You can complete it later after resume access to the web service.")
 
     def remove_completed_projects(self):
         local_projects_data = get_local_projects_data(with_broken_projects=True)

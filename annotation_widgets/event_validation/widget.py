@@ -1,5 +1,4 @@
 import tkinter as tk
-from tkinter import messagebox
 
 from annotation_widgets.event_validation.gui import (
     EventValidationStatusBar,
@@ -9,12 +8,11 @@ from annotation_widgets.event_validation.gui import (
 )
 from annotation_widgets.event_validation.io import EventValidationIO
 from annotation_widgets.event_validation.logic import EventValidationLogic
+from annotation_widgets.event_validation.models import Event
+from annotation_widgets.models import CheckResult
 from annotation_widgets.widget import AbstractAnnotationWidget
-from config import settings
 from enums import EventViewMode
-from gui_utils import get_loading_window
 from models import ProjectData
-from utils import check_url_rechable
 
 
 class EventValidationWidget(AbstractAnnotationWidget):
@@ -152,3 +150,11 @@ class EventValidationWidget(AbstractAnnotationWidget):
         self.unbind_all("<Button-1>") 
         self.unbind_all("<Button-3>") 
         super().close()
+
+    def check_before_completion(self) -> CheckResult:
+        if unanswered_events := Event.get_unvalidated_event_ids():
+            return CheckResult(
+                ready_to_complete=False,
+                message=f"Events № {unanswered_events} are not answered. Finish them to complete the project"
+            )
+        return CheckResult()

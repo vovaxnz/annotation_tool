@@ -1,5 +1,6 @@
 import tkinter as tk
-from typing import Callable
+from abc import abstractmethod
+from typing import Callable, Tuple
 from tkinter import messagebox
 
 from annotation_widgets.io import AbstractAnnotationIO
@@ -69,10 +70,12 @@ class AbstractAnnotationWidget(tk.Frame):
             self.on_overwrite()
             messagebox.showinfo("Success", "The annotations have been overwritten")
 
-
-
     def remove_project(self):
         self.io.remove_project()
+
+    @abstractmethod
+    def check_before_completion(self) -> Tuple[bool, str]:
+        raise NotImplementedError
 
     def complete_annotation(self, root: tk.Tk): 
         self.logic.save_item()

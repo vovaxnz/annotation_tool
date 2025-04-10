@@ -15,6 +15,7 @@ from annotation_widgets.image.models import Label
 from annotation_widgets.io import AbstractAnnotationIO
 from annotation_widgets.logic import AbstractAnnotationLogic
 from annotation_widgets.widget import AbstractAnnotationWidget
+from annotation_widgets.models import CheckResult
 from config import templates_path
 from exceptions import handle_exception
 from gui_utils import show_html_window
@@ -104,6 +105,8 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
     def report_callback_exception(self, exc_type, exc_value, exc_traceback):
         handle_exception(exc_type, exc_value, exc_traceback)
 
+    def check_before_completion(self) -> CheckResult:
+        return CheckResult()
 
 
 class CanvasView(tk.Canvas):

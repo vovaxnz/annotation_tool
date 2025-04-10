@@ -97,8 +97,6 @@ class EventValidationIO(AbstractAnnotationIO):
 
         Event.overwrite(events)
 
-
-
     def download_and_overwrite_annotations(self):
         """Force download and overwrite annotations in the database"""
 
@@ -149,9 +147,3 @@ class EventValidationIO(AbstractAnnotationIO):
     def _upload_annotation_results(self):
         self._export_event_validation_results(output_path=self.pm.event_validation_results_json_path)
         upload_file(self.project_data.uid, self.pm.event_validation_results_json_path)
-
-    def complete_annotation(self, duration_hours: float, root: tk.Tk):
-        if unanswered_events := Event.get_unvalidated_event_ids():
-            messagebox.showerror(title="Validation Error", message=f"Events № {unanswered_events} are not answered. Finish them to complete the project")
-        else:
-            super().complete_annotation(duration_hours=duration_hours, root=root)
