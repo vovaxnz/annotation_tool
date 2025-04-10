@@ -77,8 +77,6 @@ class AbstractAnnotationWidget(tk.Frame):
     def check_before_completion(self) -> Tuple[bool, str]:
         raise NotImplementedError
 
-    def complete_annotation(self, root: tk.Tk): 
-        self.logic.save_item()
-        self.logic.save_state()
+    def complete_annotation(self, root: tk.Tk):
         self.logic.stop_tracking()
         self.io.complete_annotation(duration_hours=self.logic.duration_hours, root=root)

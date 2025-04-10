@@ -152,6 +152,8 @@ class EventValidationWidget(AbstractAnnotationWidget):
         super().close()
 
     def check_before_completion(self) -> CheckResult:
+        self.logic.save_item()
+        self.logic.save_state()
         if unanswered_events := Event.get_unvalidated_event_ids():
             return CheckResult(
                 ready_to_complete=False,

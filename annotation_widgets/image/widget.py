@@ -106,6 +106,8 @@ class AbstractImageAnnotationWidget(AbstractAnnotationWidget):
         handle_exception(exc_type, exc_value, exc_traceback)
 
     def check_before_completion(self) -> CheckResult:
+        self.logic.save_item()
+        self.logic.save_state()
         return CheckResult()
 
 
