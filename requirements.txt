@@ -6,3 +6,4 @@ Jinja2
 tkinterweb
 tqdm
 pynput
+cryptography

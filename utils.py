@@ -1,10 +1,11 @@
-from datetime import datetime
 import json
 import os
+from datetime import datetime
 from typing import Tuple
 
-from PIL import Image
 import requests
+from PIL import Image
+
 
 def open_json(detections_file):
     with open(detections_file, "r") as file:
