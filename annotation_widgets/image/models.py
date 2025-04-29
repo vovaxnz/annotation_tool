@@ -1,11 +1,10 @@
+from typing import List, Tuple
+
+from sqlalchemy import asc, Column, String, Integer
+
 from config import ColorBGR
 from db import Base, get_session
 from enums import FigureType
-
-
-from typing import List, Tuple
-from sqlalchemy import Boolean, asc, create_engine, Column, String, Integer, ForeignKey, inspect, func
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
 
 
 class Label(Base):

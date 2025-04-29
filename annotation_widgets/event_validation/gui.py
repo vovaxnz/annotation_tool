@@ -11,8 +11,6 @@ from PIL import Image, ImageTk
 from pynput.keyboard import Listener
 
 from annotation_widgets.event_validation.logic import EventValidationStatusData
-from annotation_widgets.image.logic import AbstractImageAnnotationLogic
-from enums import EventViewMode
 from exceptions import handle_exception
 from models import Value
 

@@ -1,11 +1,18 @@
 import tkinter as tk
 
+from annotation_widgets.event_validation.gui import (
+    EventValidationStatusBar,
+    EventValidationSideBar,
+    BaseCanvasView,
+    VideoFrameSlider,
+)
+from annotation_widgets.event_validation.io import EventValidationIO
+from annotation_widgets.event_validation.logic import EventValidationLogic
+from annotation_widgets.event_validation.models import Event
+from annotation_widgets.models import CheckResult
 from annotation_widgets.widget import AbstractAnnotationWidget
 from enums import EventViewMode
 from models import ProjectData
-from .gui import EventValidationStatusBar, EventValidationSideBar, BaseCanvasView, VideoFrameSlider
-from .io import EventValidationIO
-from .logic import EventValidationLogic
 
 
 class EventValidationWidget(AbstractAnnotationWidget):
@@ -129,3 +136,27 @@ class EventValidationWidget(AbstractAnnotationWidget):
     @property
     def ui_current_frame_number(self) -> int:
         return self.logic.current_frame_number + 1
+
+    def on_overwrite(self):
+        """Steps after annotation being overwritten, specific for widget"""
+        self.update_widgets_display()
+
+    def add_menu_items(self, root: tk.Tk):
+        assert root.file_menu is not None
+        root.file_menu.add_command(label="Download and overwrite annotations", command=self.overwrite_annotations)
+
+    def close(self):
+        # Unbind explicitly, because we use bind_all in constructor
+        self.unbind_all("<Button-1>") 
+        self.unbind_all("<Button-3>") 
+        super().close()
+
+    def check_before_completion(self) -> CheckResult:
+        self.logic.save_item()
+        self.logic.save_state()
+        if unanswered_events := Event.get_unvalidated_event_ids():
+            return CheckResult(
+                ready_to_complete=False,
+                message=f"Events № {unanswered_events} are not answered. Finish them to complete the project"
+            )
+        return CheckResult()
