@@ -6,6 +6,7 @@ from typing import Callable, List
 from annotation_widgets.factory import get_io, get_widget
 
 import tkinter as tk
+from annotation_widgets.models import CheckResult
 from api_requests import get_projects_data
 from enums import AnnotationStage
 from exceptions import handle_exception
@@ -150,9 +151,9 @@ class MainWindow(tk.Tk):
     def complete_project(self):
         agree = messagebox.askokcancel("Project Completion", "Are you sure you want to complete the project?")
         if agree:
-            ready_to_complete, message = self.annotation_widget.check_before_completion()
-            if not ready_to_complete:
-                messagebox.showerror(title="Project can not be completed", message=message)
+            check_result: CheckResult = self.annotation_widget.check_before_completion()
+            if not check_result.ready_to_complete:
+                messagebox.showerror(title="Project can not be completed", message=check_result.message)
             else:
                 if check_url_rechable(settings.api_url):
                     self.annotation_widget.complete_annotation(root=self)

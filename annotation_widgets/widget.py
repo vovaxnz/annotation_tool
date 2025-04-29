@@ -5,6 +5,7 @@ from tkinter import messagebox
 
 from annotation_widgets.io import AbstractAnnotationIO
 from annotation_widgets.logic import AbstractAnnotationLogic
+from annotation_widgets.models import CheckResult
 from models import ProjectData
 from gui_utils import get_loading_window
 from models import ProjectData
@@ -74,7 +75,7 @@ class AbstractAnnotationWidget(tk.Frame):
         self.io.remove_project()
 
     @abstractmethod
-    def check_before_completion(self) -> Tuple[bool, str]:
+    def check_before_completion(self) -> CheckResult:
         raise NotImplementedError
 
     def complete_annotation(self, root: tk.Tk):
