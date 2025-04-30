@@ -1,22 +1,21 @@
 import json
 import os
 import tkinter as tk
-from typing import Dict, List
-from annotation_widgets.image.io import ImageIO
-from annotation_widgets.image.models import Label
-from api_requests import get_project_data
+
 from enums import AnnotationStage
 from exceptions import MessageBoxException
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper
 from gui_utils import get_loading_window
-from models import Value, ProjectData
+from models import Value
 from utils import check_correct_json, get_img_size, open_json, save_json
-from .bboxes.models import BBox
-from .keypoints.models import KeypointGroup
-from .models import LabeledImage, ReviewLabel
-from .path_manager import LabelingPathManager
-from .segmentation.models import Mask
+
+from annotation_widgets.image.io import ImageIO
+from annotation_widgets.image.labeling.bboxes.models import BBox
+from annotation_widgets.image.labeling.keypoints.models import KeypointGroup
+from annotation_widgets.image.labeling.models import LabeledImage, ReviewLabel
+from annotation_widgets.image.labeling.path_manager import LabelingPathManager
+from annotation_widgets.image.labeling.segmentation.models import Mask
 
 
 class ImageLabelingIO(ImageIO):
@@ -233,8 +232,6 @@ class ImageLabelingIO(ImageIO):
         """Force download and overwrite annotations in the database"""
 
         project_id, project_uid = self.project_data.id, self.project_data.uid
-
-        annotation_stage, annotation_mode = get_project_data(project_uid)
         
         download_file(
             uid=project_uid, 
