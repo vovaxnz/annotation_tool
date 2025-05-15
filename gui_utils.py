@@ -85,6 +85,8 @@ class SettingsManager:
             self.create_entry_widget(key, value, row)
         elif value['type'] == 'number':
             self.create_scale_widget(key, value, row)
+        elif value['type'] == 'boolean':
+            self.create_toggle_widget(key, value, row)
 
     def create_entry_widget(self, key, value, row):
         entry = ttk.Entry(self.root)
@@ -102,6 +104,18 @@ class SettingsManager:
         )
         scale.grid(row=row, column=1, padx=10, pady=5, sticky=tk.W + tk.E)
         self.widgets[key] = scale_var
+
+    def create_toggle_widget(self, key, value, row):
+        var = tk.BooleanVar()
+        var.set(bool(value['value']))
+
+        style = ttk.Style()
+        style.configure('Big.TCheckbutton', indicatorsize=30, padding=10)
+
+        check = ttk.Checkbutton(self.root, variable=var, style='Big.TCheckbutton')
+        check.grid(row=row, column=1, padx=10, pady=5, sticky=tk.W)
+
+        self.widgets[key] = var
 
     def create_save_button(self, row):
         save_button = ttk.Button(self.root, text="Save", command=self.on_save)

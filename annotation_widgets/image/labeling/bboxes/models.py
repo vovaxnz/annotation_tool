@@ -110,7 +110,7 @@ class BBox(Figure):
     def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
         """Returns id of point of near bbox"""
         for i, point in enumerate(self.points):
-            if point.close_to(x, y, distance=10):
+            if point.close_to(x, y, distance=settings.cursor_proximity_threshold):
                 return i
 
     def contains_point(self, point: Point) -> bool:
@@ -123,22 +123,40 @@ class BBox(Figure):
             label: Label,
             show_label_names: bool = False,
             show_object_size: bool = False,
+            with_border: bool = True,
+            color_fill_opacity: float = 0,
+            color: Tuple[int, int, int] = None,
         ) -> np.ndarray:
 
-        if settings.bbox_transparency != 0:
-            canvas_copy = np.copy(canvas)
-        else:
-            canvas_copy = None
-        line_width = max(1, int(settings.bbox_line_width / ((elements_scale_factor + 1e-7) ** (1/3))))
+        
+        if color is None:
+            color = label.color_bgr
 
-        if self.selected:
-            if elements_scale_factor < 3:
-                line_width += 2
-            else:
-                line_width += 1
+        if color_fill_opacity > 0:
+            canvas_orig = np.copy(canvas)
+            canvas = cv2.rectangle(
+                canvas, 
+                (int(self.x1), int(self.y1)), (int(self.x2), int(self.y2)), 
+                color, 
+                thickness=-1,
+            )
+            canvas = cv2.addWeighted(canvas, color_fill_opacity, canvas_orig, max(1 - color_fill_opacity, 0), 0)
 
-        for layer_id in range(line_width):
-            canvas = cv2.rectangle(canvas, (int(self.x1 - layer_id), int(self.y1 - layer_id)), (int(self.x2 + layer_id), int(self.y2 + layer_id)), label.color_bgr, 1)
+
+        if  with_border:
+            line_width = max(1, int(settings.bbox_line_width / ((elements_scale_factor + 1e-7) ** (1/3))))
+
+            if self.selected:
+                if elements_scale_factor < 3:
+                    line_width += 1
+
+            for layer_id in range(line_width):
+                canvas = cv2.rectangle(
+                    canvas, 
+                    (int(self.x1 - layer_id), int(self.y1 - layer_id)), (int(self.x2 + layer_id), int(self.y2 + layer_id)), 
+                    color, 
+                    thickness=1,
+                )
 
         label_text = None
         if show_label_names:
@@ -162,7 +180,7 @@ class BBox(Figure):
                 text=label_text,
                 x=x,
                 y=y,
-                color_bgr=label.color_bgr,
+                color_bgr=color,
                 padding=5,
                 under_point=under_point
             )
@@ -170,16 +188,15 @@ class BBox(Figure):
 
         if self.active_point_id is not None:
             point = self.points[self.active_point_id]
-            circle_radius = max(1, int(settings.bbox_point_size / ((elements_scale_factor + 1e-7) ** (1/3))))
+            circle_radius = max(1, int(settings.bbox_handler_size / ((elements_scale_factor + 1e-7) ** (1/3))))
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (0, 0, 0), 2)
-        if canvas_copy is not None:
-            canvas = cv2.addWeighted(canvas_copy, settings.bbox_transparency, canvas, 1 - settings.bbox_transparency, 0)
+
         return canvas
 
-    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "BBox" = None) -> Optional[Figure]:
+    def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 3, figure: "BBox" = None) -> Optional[Figure]:
         x, y = end_point
-        if abs(start_point[0] - x) > min_movement_to_create and abs(start_point[1] - y) > min_movement_to_create:
+        if abs(start_point[0] - x) > min_movement_to_create or abs(start_point[1] - y) > min_movement_to_create:
             x1 = min(start_point[0], x)
             y1 = min(start_point[1], y)
             x2 = max(start_point[0], x)

@@ -32,7 +32,11 @@ class Label(Base):
 
     @property
     def color_bgr(self) -> Tuple[int, int, int]:
-        return getattr(ColorBGR, self.color, ColorBGR.white)
+        return getattr(ColorBGR, self.color, ColorBGR.gray)
+
+    @property
+    def is_blur(self):
+        return self.name == "blur"
 
     @classmethod
     def get(cls, name: str, figure_type: str):

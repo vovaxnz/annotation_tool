@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from annotation_widgets.image.models import Label
 import cv2
@@ -16,6 +16,7 @@ from .figure_controller import ObjectFigureController
 from .figure_controller_factory import ControllerByMode
 from .models import Figure, LabeledImage, ReviewLabel
 from .path_manager import LabelingPathManager
+from config import ColorBGR, settings
 
 
 @dataclass
@@ -32,6 +33,7 @@ class StatusData:
     number_of_items: int
     figures_hidden: bool
     review_labels_hidden: bool
+    blur_render: bool
 
 
 class ImageLabelingLogic(AbstractImageAnnotationLogic):
@@ -59,11 +61,13 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         self.show_object_size = False
         self.img_dir = data_path
         self.orig_image: np.ndarray = None
+        self.blurred_image: np.ndarray = None
         self.is_trash = False
         self.hide_figures = False
         self.hide_review_labels = False
         self.scale_factor = 1
         self.selecting_class = False
+        self.visualize_blur: bool = False
 
         if project_data.stage is AnnotationStage.REVIEW:
             labels = Label.get_review_labels()
@@ -105,7 +109,8 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
             number_of_processed=number_of_processed,
             number_of_items=len(self.img_names),
             figures_hidden=self.hide_figures,
-            review_labels_hidden=self.hide_review_labels
+            review_labels_hidden=self.hide_review_labels,
+            blur_render=self.visualize_blur
         )
 
     @property
@@ -118,48 +123,105 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
     def get_path_manager(self, project_id) -> LabelingPathManager:
         return LabelingPathManager(project_id)
     
+    def separate_blur_and_figures(self, figures: List[Figure]) -> Tuple[List[Figure], List[Figure]]:
+        blur_figures = list()
+        figures_to_draw = list()
+        for figure in figures:
+            if figure.label == "blur":
+                blur_figures.append(figure)
+                if figure.selected:
+                    figures_to_draw.append(figure)
+            else:
+                figures_to_draw.append(figure)   
+        return blur_figures, figures_to_draw         
+
+    def blur_image(self, blur_figures: List[Figure], canvas: np.ndarray) -> np.ndarray:
+        if self.blurred_image is None:
+            self.blurred_image = cv2.GaussianBlur(self.orig_image, (301, 301), 0)
+
+        mask = np.zeros_like(canvas, dtype=np.uint8)
+        for figure in blur_figures:
+            mask = figure.draw_figure(
+                canvas=mask, 
+                elements_scale_factor=self.scale_factor, 
+                show_label_names=False,
+                show_object_size=False,
+                label=self.labels[figure.figure_type][figure.label],
+                color=ColorBGR.white,
+                with_border=False,
+                color_fill_opacity=1,
+            )
+
+        m = mask[:, :, 0] > 0
+        canvas[m] = self.blurred_image[m]
+
+        return canvas
+
+    def fill_with_gray(self, blur_figures: List[Figure], canvas: np.ndarray) -> np.ndarray:
+        for figure in blur_figures:
+            canvas = figure.draw_figure(
+                canvas=canvas, 
+                elements_scale_factor=self.scale_factor, 
+                show_label_names=False,
+                show_object_size=False,
+                label=self.labels[figure.figure_type][figure.label],
+                color=ColorBGR.gray,
+                with_border=False,
+                color_fill_opacity=0.8,
+            )
+        return canvas
+
     def update_canvas(self): 
         assert self.orig_image is not None
-        self.canvas = np.copy(self.orig_image)
+
+        if self.project_data.stage is AnnotationStage.REVIEW:
+            # review_labels was edited and figures stored unchanged
+            figures = self.figures 
+            review_labels = self.controller.figures 
+        else:
+            # figures was edited and review_labels stored unchanged
+            figures = self.controller.figures
+            review_labels = self.review_labels 
+
+        if not self.hide_review_labels:
+            result_figures = figures + review_labels
+        else:
+            result_figures = figures
+
+
+        if self.controller.preview_figure is not None:
+            result_figures.append(self.controller.preview_figure)
+
+        blur_figures, figures_to_draw = self.separate_blur_and_figures(result_figures)
+        
+        if not self.hide_figures:
+            if self.visualize_blur:
+                init_canvas = self.blur_image(blur_figures, np.copy(self.orig_image))
+            else:
+                init_canvas = self.fill_with_gray(blur_figures, np.copy(self.orig_image))
+            self.canvas = np.copy(init_canvas)
+        else:
+            init_canvas = self.orig_image
+            self.canvas = np.copy(init_canvas)
 
         if self.make_image_worse:
             self.canvas = self.deteriorate_image(self.canvas)
 
         if not self.hide_figures:
-            if self.project_data.stage is AnnotationStage.REVIEW:
-                # review_labels was edited and figures stored unchanged
-                figures = self.figures 
-                review_labels = self.controller.figures 
-            else:
-                # figures was edited and review_labels stored unchanged
-                figures = self.controller.figures
-                review_labels = self.review_labels 
-
-            if not self.hide_review_labels:
-                result_figures = figures + review_labels
-            else:
-                result_figures = figures
-
-            for figure_id, figure in enumerate(result_figures):
+            for figure_id, figure in enumerate(sorted(figures_to_draw, key=lambda x: x.surface, reverse=True)):
                 self.canvas = figure.draw_figure(
                     canvas=self.canvas, 
                     elements_scale_factor=self.scale_factor, 
                     show_label_names=self.show_label_names,
                     show_object_size=self.show_object_size,
-                    label=self.labels[figure.figure_type][figure.label]
+                    label=self.labels[figure.figure_type][figure.label],
+                    color_fill_opacity=settings.color_fill_opacity
                 )
         
-        self.canvas = self.controller.draw_additional_elements(self.canvas)
-
-        if self.controller.preview_figure is not None:
-            figure = self.controller.preview_figure
-            self.canvas = self.controller.preview_figure.draw_figure(
-                canvas=self.canvas, 
-                elements_scale_factor=self.scale_factor, 
-                show_label_names=False,
-                label=self.labels[figure.figure_type][figure.label]
-            )
+        self.canvas = cv2.addWeighted(self.canvas, settings.objects_opacity, init_canvas, max(1 - settings.objects_opacity, 0), 0)
         
+        self.canvas = self.controller.draw_additional_elements(self.canvas, scale_factor=self.scale_factor)
+
         if self.selecting_class and self.controller.label_wheel_xc is not None and self.controller.label_wheel_yc is not None:
             self.canvas = create_class_selection_wheel(
                 img=self.canvas,
@@ -177,6 +239,7 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         assert 0 <= self.item_id < len(self.img_names), f"The Image ID {self.item_id} is out of range of the images list: {len(self.img_names)}"
         img_name = self.img_names[self.item_id]
         self.orig_image = cv2.imread(os.path.join(self.img_dir, img_name))
+        self.blurred_image = None
         self.labeled_image = LabeledImage.get(name=img_name)
         self.review_labels = list(self.labeled_image.review_labels)
         self.figures = list(self.labeled_image.bboxes + self.labeled_image.kgroups + self.labeled_image.masks)
@@ -248,6 +311,9 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
 
     def switch_object_size_visibility(self):
         self.show_object_size = not self.show_object_size
+
+    def switch_blur_visibility(self):
+        self.visualize_blur = not self.visualize_blur
 
     def switch_hiding_figures(self):
         self.hide_figures = not self.hide_figures
@@ -347,3 +413,5 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
             self.switch_object_size_visibility() 
         elif key.lower() == "s":
             self.make_image_worse = not self.make_image_worse
+        elif key.lower() == "b":
+            self.switch_blur_visibility() 

@@ -104,6 +104,8 @@ class Figure(Base, ABC):
             label: Label,  # TODO: Use Label reference from the database
             show_label_names: bool = False,
             show_object_size: bool = False,
+            with_border: bool = True,
+            color_fill_opacity: float = 0,
         ) -> np.ndarray:
         raise NotImplementedError
 
@@ -219,7 +221,7 @@ class ReviewLabel(Figure):
         self.y = int(y)
 
     def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
-        if Point(self.x, self.y).close_to(x, y, distance=30):
+        if Point(self.x, self.y).close_to(x, y, distance=15):
             return 0
 
     def contains_point(self, point: Point) -> bool:
@@ -237,6 +239,8 @@ class ReviewLabel(Figure):
             label: Label,
             show_label_names: bool = True,
             show_object_size: bool = False,
+            with_border: bool = True,
+            color_fill_opacity: float = 0,
         ) -> np.ndarray:
 
         circle_radius = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))

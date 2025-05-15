@@ -97,7 +97,7 @@ class KeypointGroup(Figure):
 
     def find_nearest_point_index(self, x: int, y: int) -> Optional[int]:
         for i, point in enumerate(self.keypoints):
-            if point.close_to(x, y, distance=10):
+            if point.close_to(x, y, distance=settings.cursor_proximity_threshold):
                 return i
 
     def embed_to_bbox(start_point: Tuple[int, int], end_point: Tuple[int, int], label: Label, min_movement_to_create: int = 5, figure: "KeypointGroup" = None) -> Optional[Figure]:
@@ -153,6 +153,8 @@ class KeypointGroup(Figure):
             label: Label,
             show_label_names: bool = False,
             show_object_size: bool = False,
+            with_border: bool = True,
+            color_fill_opacity: float = 0,
         ) -> np.ndarray:
 
         line_width = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))
@@ -197,7 +199,7 @@ class KeypointGroup(Figure):
                     under_point = True
                 )
 
-            circle_radius = max(1, int(settings.kp_radius / ((elements_scale_factor + 1e-7) ** (1/3))))
+            circle_radius = max(1, int(settings.keypoint_handler_size / ((elements_scale_factor + 1e-7) ** (1/3))))
 
             if highlight_keypoint:
                 circle_radius += 1

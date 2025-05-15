@@ -35,18 +35,18 @@ class MaskFigureController(AbstractFigureController):
 
     def copy(self):
         if self.figures_dict.get(self.active_label.name) is not None:
-            self.copied_serialized_figure = {
+            self.serialized_figures_buffer = [{
                 "kwargs": self.figures_dict[self.active_label.name].serialize(),
                 "type": type(self.figures_dict[self.active_label.name])
-            }
+            }]
 
     def paste(self):
-        if self.copied_serialized_figure is not None:
-            fig_type = self.copied_serialized_figure["type"]
-            fig_kwargs = self.copied_serialized_figure["kwargs"]
+        for figure in self.serialized_figures_buffer:
+            fig_type = figure["type"]
+            fig_kwargs = figure["kwargs"]
             label = fig_kwargs["label"]
             self.figures_dict[label] = fig_type(**fig_kwargs)
-            self.take_snapshot()
+        self.take_snapshot()
 
     @property
     def figures(self) -> List[Figure]:
@@ -150,7 +150,7 @@ class MaskFigureController(AbstractFigureController):
     def check_cursor_on_polygon_start(self) -> bool:
         return len(self.polygon) > 2 and Point(*self.polygon[0]).close_to(self.cursor_x, self.cursor_y, distance=self.lock_distance)
 
-    def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
+    def draw_additional_elements(self, canvas: np.ndarray, scale_factor: float = None) -> np.ndarray:
         if self.mode is Mode.CREATE:
             for i in range(len(self.polygon) - 1):
                 p1 = self.polygon[i]

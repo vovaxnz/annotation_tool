@@ -38,7 +38,7 @@ class AbstractFigureController(ABC):
         self.img_height, self.img_width = None, None
         self.shift_mode = False
         self.history: HistoryBuffer = HistoryBuffer(length=10)
-        self.copied_serialized_figure: Dict = None
+        self.serialized_figures_buffer: List[Dict] = list()
         self.label_wheel_xc, self.label_wheel_yc = None, None
 
     def take_snapshot(self):
@@ -105,7 +105,7 @@ class AbstractFigureController(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
+    def draw_additional_elements(self, canvas: np.ndarray, scale_factor: float = None) -> np.ndarray:
         raise NotImplementedError
 
     @abstractmethod
@@ -134,18 +134,21 @@ class ObjectFigureController(AbstractFigureController):
         self.update_selection(self.cursor_x, self.cursor_y)
 
     def copy(self):
+        figures_to_add = self.figures
         if self.selected_figure_id is not None:
-            self.copied_serialized_figure = {
-                "kwargs": self.figures[self.selected_figure_id].serialize(),
-                "type": type(self.figures[self.selected_figure_id])
-            }
+            figures_to_add = [self.figures[self.selected_figure_id]]
+        for figure in figures_to_add:
+            self.serialized_figures_buffer.append(
+                {
+                    "kwargs": figure.serialize(),
+                    "type": type(figure)
+                }
+            )
 
     def paste(self):
-        if self.copied_serialized_figure is not None:
-            fig_type = self.copied_serialized_figure["type"]
-            fig_kwargs = self.copied_serialized_figure["kwargs"]
-            self.figures.append(fig_type(**fig_kwargs))
-            self.take_snapshot()
+        for figure in self.serialized_figures_buffer:
+            self.figures.append(figure["type"](**figure["kwargs"]))
+        self.take_snapshot()
 
     @property
     def current_figure_type(self) -> Figure:
@@ -229,7 +232,8 @@ class ObjectFigureController(AbstractFigureController):
     def handle_mouse_hover(self, x: int, y: int):
         if self.mode is Mode.CREATE:
             self.update_preview_figure(x, y)
-        self.update_selection(x, y)
+        else:
+            self.update_selection(x, y)
         self.cursor_x, self.cursor_y = x, y
 
     def delete_command(self):
@@ -259,15 +263,17 @@ class ObjectFigureController(AbstractFigureController):
                 fig.label = self.active_label.name
             self.take_snapshot()
 
-    def draw_additional_elements(self, canvas: np.ndarray) -> np.ndarray:
-
-        # Draw vertical and horizontal lines (black and white). Show only for bboxes
+    def draw_additional_elements(self, canvas: np.ndarray, scale_factor: float = None) -> np.ndarray:
         if self.active_label.type == FigureType.BBOX.name:
             h, w, c = canvas.shape
-            canvas = cv2.line(canvas, (int(self.cursor_x), 0), (int(self.cursor_x), h), (255, 255, 255), 1)
-            canvas = cv2.line(canvas, (int(self.cursor_x + 1), 0), (int(self.cursor_x + 1), h), (0, 0, 0), 1)
-            canvas = cv2.line(canvas, (0, int(self.cursor_y)), (w, int(self.cursor_y)), (255, 255, 255), 1)
-            canvas = cv2.line(canvas, (0, int(self.cursor_y + 1)), (w, int(self.cursor_y + 1)), (0, 0, 0), 1)
+            if scale_factor < 3:
+                canvas = cv2.line(canvas, (int(self.cursor_x), 0), (int(self.cursor_x), h), (255, 255, 255), 1)
+                canvas = cv2.line(canvas, (int(self.cursor_x + 1), 0), (int(self.cursor_x + 1), h), (0, 0, 0), 1)
+                canvas = cv2.line(canvas, (0, int(self.cursor_y)), (w, int(self.cursor_y)), (255, 255, 255), 1)
+                canvas = cv2.line(canvas, (0, int(self.cursor_y + 1)), (w, int(self.cursor_y + 1)), (0, 0, 0), 1)
+            else:
+                canvas = cv2.line(canvas, (0, int(self.cursor_y)), (w, int(self.cursor_y)), (150, 150, 150), 1)
+                canvas = cv2.line(canvas, (int(self.cursor_x), 0), (int(self.cursor_x), h), (150, 150, 150), 1)
         return canvas
 
     def handle_space(self):

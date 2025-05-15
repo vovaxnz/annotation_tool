@@ -108,12 +108,23 @@ class ImageLabelingIO(ImageIO):
         """
         # Set current image id to 0
         Value.update_value("item_id", 0, overwrite=True)
-        figures_data = open_json(self.pm.figures_ann_path )
+        figures_data = open_json(self.pm.figures_ann_path)
         meta_data = open_json(self.pm.meta_ann_path)
 
         # Labels
         self.overwrite_labels(labels_data=meta_data["labels"] + meta_data["review_labels"])
     
+        # Add blur label
+        label = Label.get(name="blur", figure_type="BBOX")
+        if label is None:
+            label = Label(
+                name="blur",
+                color="gray",
+                hotkey=0,
+                type="BBOX",
+            )
+            label.save()
+
         # Figures
         limages = list()
         for img_name in os.listdir(self.pm.images_path): 

@@ -15,36 +15,45 @@ DEFAULT_SETTINGS = {
     },
     "interface": {
         "bbox_line_width": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},
-        "bbox_point_size": {"type": "number", "value": 3, "min": 1, "max": 10, "step": 1},
-        "mask_transparency": {"type": "number", "value": 0.5, "min": 0, "max": 1, "step": 0.1},
-        "kp_radius": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},
-        "bbox_transparency": {"type": "number", "value": 0, "min": 0, "max": 1, "step": 0.1},
+        "cursor_proximity_threshold": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},
+        "objects_opacity": {"type": "number", "value": 1, "min": 0, "max": 1, "step": 0.1},
+        "color_fill_opacity": {"type": "number", "value": 0.1, "min": 0, "max": 1, "step": 0.1},
+        "bbox_handler_size": {"type": "number", "value": 3, "min": 1, "max": 10, "step": 1},
+        "keypoint_handler_size": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},
     }
 }
+
+
+
+
+def update_dict_values(user_dict: Dict, default_dict: Dict) -> bool:
+    """Updates default_dict with user_dict values if they not None"""
+    updated = False
+    for key, value in default_dict.items():
+        if key in user_dict:
+            if isinstance(value, dict):
+                sub_updated = update_dict_values(user_dict=user_dict[key], default_dict=default_dict[key])
+                if sub_updated:
+                    updated = True
+            else:
+                if default_dict.get(key) != user_dict.get(key):
+                    default_dict[key] = user_dict[key]
+                    updated = True
+
+    return updated
 
 
 class Settings:
     def __init__(self):
         self.json_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "settings.json")
-        self.data = DEFAULT_SETTINGS
-        if not os.path.isfile(self.json_path):
-            self.save_settings()
-        self.load_settings()
         
-
-    def load_settings(self):
-        data = open_json(self.json_path)
-
-        if not "general" in data:
-            new_data = DEFAULT_SETTINGS
-            new_data["general"]["token"]["value"] = data["token"] 
-            new_data["general"]["api_url"]["value"] = data["api_url"] 
-            new_data["general"]["file_url"]["value"] = data["file_url"] 
-            new_data["general"]["data_dir"]["value"] = data["data_dir"] 
-            data = new_data
-
-        self.data = data
-
+        self.data = DEFAULT_SETTINGS
+        updated = update_dict_values(
+            user_dict=open_json(self.json_path) if os.path.isfile(self.json_path) else dict(), 
+            default_dict=self.data
+        )
+        if updated:
+            self.save_settings()
 
     def save_settings(self):
         save_json(value=self.data, file_path=self.json_path)
@@ -66,9 +75,7 @@ class Settings:
             result = result["value"]
         
         if result is None:
-            self.load_settings()
-            if result is None:
-                raise MessageBoxException(f"Specify value of `{name}` in Project > Settings")
+            raise MessageBoxException(f"Specify value of `{name}` in Project > Settings. Your current settings: {self.data}")
         return result
 
     @property

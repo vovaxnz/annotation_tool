@@ -96,11 +96,24 @@ class Mask(Base):
             label: Label,
             show_label_names: bool = False,
             show_object_size: bool = False,
+            with_border: bool = True,
+            color_fill_opacity: float = 0.5,
         ) -> np.ndarray:
+
+        opacity = 0.5
+
         b2, g2, r2 = label.color_bgr
-        canvas_copy = np.copy(canvas)
-        canvas_copy[:, :, :3][self.mask > 0] = [b2, g2, r2]
-        canvas = cv2.addWeighted(canvas_copy, 1 - settings.mask_transparency, canvas, settings.mask_transparency, 0)
+
+        if opacity > 0:
+            canvas_with_mask = np.copy(canvas)
+        else:
+            canvas_with_mask = canvas
+
+        canvas_with_mask[:, :, :3][self.mask > 0] = [b2, g2, r2]
+
+        if opacity > 0:
+            canvas = cv2.addWeighted(canvas_with_mask, opacity, canvas, max(1 - opacity, 0), 0)
+            
         return canvas
 
     def serialize(self) -> Dict:
