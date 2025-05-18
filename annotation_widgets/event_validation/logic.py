@@ -3,7 +3,6 @@ import os
 import re
 from collections import OrderedDict
 from dataclasses import dataclass
-from tkinter import messagebox
 from typing import Callable, Optional
 
 import cv2

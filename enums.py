@@ -19,6 +19,7 @@ class AnnotationMode(Enum):
     KEYPOINTS = "KEYPOINTS"
     FILTERING = "FILTERING"
     EVENT_VALIDATION = "EVENT_VALIDATION"
+    UNKNOWN = "UNKNOWN"
 
 
 class FigureType(Enum):

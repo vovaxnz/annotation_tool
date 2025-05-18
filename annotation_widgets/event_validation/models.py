@@ -41,6 +41,14 @@ class Event(Base):
         session.bulk_save_objects(new_events)
         session.commit()
 
+    @classmethod
+    def overwrite(cls, events: List["Event"]):
+        session = get_session()
+
+        if events:
+            session.query(cls).delete()
+            session.bulk_save_objects(events)
+
     def save(self):
         session = get_session()
         session.add(self)
@@ -53,3 +61,21 @@ class Event(Base):
             sidebar_values["answers"] = json.loads(self.custom_fields)
         sidebar_values["comment"] = self.comment if self.comment else ""
         return sidebar_values
+
+    @classmethod
+    def get_unvalidated_event_ids(cls) -> List[int]:
+        session = get_session()
+        events = session.query(cls.id, cls.custom_fields).all()
+
+        unanswered_events_ids = list()
+        for event_id, custom_fields in events:
+
+            if custom_fields is None or len(json.loads(custom_fields)) == 0:
+                unanswered_events_ids.append(event_id)
+                continue
+
+            # Ensure at least one non-empty string
+            if any(len(field.strip()) == 0 for field in json.loads(custom_fields)):
+                unanswered_events_ids.append(event_id)
+
+        return unanswered_events_ids

@@ -1,14 +1,10 @@
-from dataclasses import dataclass, asdict
-from db import Base, get_session
+from dataclasses import dataclass
+from typing import Optional, Dict
 
-import json
-import cv2
-import numpy as np
+from sqlalchemy import Column, String, Integer
+
+from db import Base, get_session
 from enums import AnnotationMode, AnnotationStage
-from sqlalchemy import Boolean, asc, create_engine, Column, Float, String, Integer, ForeignKey, inspect
-from sqlalchemy.orm import relationship, scoped_session, sessionmaker, declarative_base, reconstructor
-from typing import Any, List, Optional, Tuple, Dict, Union
-from config import settings
 
 
 class Value(Base):
