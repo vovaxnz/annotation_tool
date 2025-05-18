@@ -14,9 +14,9 @@ DEFAULT_SETTINGS = {
         "data_dir": {"type": "string", "value": None},
     },
     "interface": {
-        "bbox_line_width": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},
-        "cursor_proximity_threshold": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},
-        "objects_opacity": {"type": "number", "value": 1, "min": 0, "max": 1, "step": 0.1},
+        "bbox_line_width": {"type": "number", "value": 3, "min": 1, "max": 10, "step": 1},
+        "cursor_proximity_threshold": {"type": "number", "value": 3, "min": 1, "max": 10, "step": 1},
+        "objects_opacity": {"type": "number", "value": 0.9, "min": 0, "max": 1, "step": 0.1},
         "color_fill_opacity": {"type": "number", "value": 0.1, "min": 0, "max": 1, "step": 0.1},
         "bbox_handler_size": {"type": "number", "value": 3, "min": 1, "max": 10, "step": 1},
         "keypoint_handler_size": {"type": "number", "value": 5, "min": 1, "max": 10, "step": 1},

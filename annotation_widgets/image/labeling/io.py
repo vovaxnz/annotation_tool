@@ -5,7 +5,7 @@ from typing import Dict, List
 from annotation_widgets.image.io import ImageIO
 from annotation_widgets.image.models import Label
 from api_requests import get_project_data
-from enums import AnnotationStage
+from enums import AnnotationStage, FigureType
 from exceptions import MessageBoxException
 from file_processing.file_transfer import FileTransferClient, download_file, upload_file
 from file_processing.unzipping import ArchiveUnzipper
@@ -115,13 +115,15 @@ class ImageLabelingIO(ImageIO):
         self.overwrite_labels(labels_data=meta_data["labels"] + meta_data["review_labels"])
     
         # Add blur label
-        label = Label.get(name="blur", figure_type="BBOX")
+        masks_labels_number = len([label for label in Label.all() if label.type == FigureType.MASK.name])
+        blur_label_type = "MASK" if masks_labels_number > 0 else "BBOX"
+        label = Label.get(name="blur", figure_type=blur_label_type)
         if label is None:
             label = Label(
                 name="blur",
                 color="gray",
                 hotkey=0,
-                type="BBOX",
+                type=blur_label_type,
             )
             label.save()
 

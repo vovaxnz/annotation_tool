@@ -188,7 +188,6 @@ class MainWindow(tk.Tk):
         agree = messagebox.askokcancel("Tool update", "Are you sure you want to update annotation tool?")
         if agree:
             root_path = os.path.dirname(os.path.abspath(__file__))
-            print(root_path)
 
             result = subprocess.run(["git", "-C", root_path, "pull"], capture_output=True, text=True)
 

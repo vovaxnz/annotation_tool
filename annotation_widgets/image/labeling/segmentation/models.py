@@ -22,6 +22,7 @@ class Mask(Base):
     height = Column(Integer)
     width = Column(Integer)
 
+
     image = relationship("LabeledImage", back_populates="masks")
 
     def __init__(self, label: str, rle: str, height: int, width: int):
@@ -29,6 +30,7 @@ class Mask(Base):
         self.label = label
         self.height = height
         self.width = width
+        self.selected: bool = False
         self.decode_rle()
 
     @reconstructor
@@ -98,6 +100,8 @@ class Mask(Base):
             show_object_size: bool = False,
             with_border: bool = True,
             color_fill_opacity: float = 0.5,
+            color: Tuple[int, int, int] = None,
+            show_active_point: bool = True
         ) -> np.ndarray:
 
         opacity = 0.5

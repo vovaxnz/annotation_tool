@@ -126,6 +126,7 @@ class BBox(Figure):
             with_border: bool = True,
             color_fill_opacity: float = 0,
             color: Tuple[int, int, int] = None,
+            show_active_point: bool = True
         ) -> np.ndarray:
 
         
@@ -186,7 +187,7 @@ class BBox(Figure):
             )
 
 
-        if self.active_point_id is not None:
+        if show_active_point and self.active_point_id is not None:
             point = self.points[self.active_point_id]
             circle_radius = max(1, int(settings.bbox_handler_size / ((elements_scale_factor + 1e-7) ** (1/3))))
             cv2.circle(canvas, (int(point.x), int(point.y)), circle_radius, (255, 255, 255), -1)

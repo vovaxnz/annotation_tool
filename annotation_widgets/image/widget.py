@@ -181,7 +181,9 @@ class CanvasView(tk.Canvas):
         self.a_held_down = False
         self.keyboard_events_interval = 0.1
         self.bind("<KeyPress-a>", self.handle_key_a_press)
+        self.bind("<KeyPress-A>", self.handle_key_a_press)
         self.bind("<KeyRelease-a>", self.handle_key_a_release)
+        self.bind("<KeyRelease-A>", self.handle_key_a_release)
 
         self.close_callback = None
 

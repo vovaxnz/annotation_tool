@@ -155,6 +155,8 @@ class KeypointGroup(Figure):
             show_object_size: bool = False,
             with_border: bool = True,
             color_fill_opacity: float = 0,
+            color: Tuple[int, int, int] = None,
+            show_active_point: bool = True
         ) -> np.ndarray:
 
         line_width = max(1, int(3 / ((elements_scale_factor + 1e-7) ** (1/3))))
