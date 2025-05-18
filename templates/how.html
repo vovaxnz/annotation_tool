@@ -53,13 +53,13 @@
         To go to the specific image of the project click <strong>Project &gt; Go to ID</strong> and specify image id in the field.
         </p>
         <p>
-        Pay attention to the <strong>Mode</strong> section on the left side of the status bar (bottom field on the window). It shows which task you have to do.
+        Pay attention to the <strong>Mode</strong> section on the left side of the status bar (bottom field on the window). It shows what you have to do.
         </p>
         <p>
         You can run project downloading of next project via <strong>Project &gt; Download</strong> while annotating a previous project 
         </p>
         <p>
-           You can remove project data from your computer by clicking <strong>Project &gt; Remove project by ID</strong> and then selecting the project id you want to remove 
+           You can remove project data from your device by clicking <strong>Project &gt; Remove project by ID</strong> and then selecting the project id you want to remove 
         </p>
 
         <h2>Annotation</h2>
@@ -70,7 +70,7 @@
         Use <strong>Ctrl+Z</strong> and <strong>Ctrl+Y</strong> for undo/redo
         </p>
         <p>
-        Place cursor under the figure and press <strong>Ctrl+C</strong> to copy it. Use <strong>Ctrl+V</strong> to paste it on another image.
+        Place cursor under the figure and press <strong>Ctrl+C</strong> to copy it. Use <strong>Ctrl+V</strong> to paste it on another image. If you press <strong>Ctrl+C</strong> when any figure under cursor - it will copy all figures on the image.
         </p>
         <p>
         Press <strong>T</strong> if you want to tag image as a trash. After that the <strong>Trash</strong> section on the status bar become red. Press <strong>T</strong> again to remove trash tag from the image.
@@ -92,6 +92,15 @@
         </p>
         <p>
            You can edit visual settings in the <strong>Project &gt; Settings &gt; Interface</strong> 
+        </p>
+        <p>
+            Labeling projects have a blur class. The global rule is that we blur objects that we don't want add to the dataset not annotated and not unannotated. Any dataset-specific rules will be specified in the guides. In detection and keypoint projects, blur is a bounding box. In segmentation projects, blur is a mask. During review, the labels blur_zone and unblur_zone are used for blurring. 
+        </p>
+        <p>
+            You can adjust the color fill of the bounding boxes. Opacity is controlled in Settings (Color fill opacity). This can help differentiate overlapping boxes when there are many of them.
+        </p>
+        <p>
+            You can adjust the distance from which objects respond to the cursor (Cursor proximity threshold). A high value makes objects respond from farther away, while setting it to 1 means they will only activate when the cursor is directly over the corner pixel of the bounding box.
         </p>
       
     <h3>Segmentation mode guide</h3>

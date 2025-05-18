@@ -85,10 +85,16 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
         for label in Label.all():
             self.labels[label.type][label.name] = label
 
-        if project_data.stage is AnnotationStage.REVIEW:
-            self.controller = ObjectFigureController(active_label=labels[0])
+
+        labels_list = list(labels)
+        if len(labels_list) > 1:
+            active_label = labels_list[1]
         else:
-            self.controller = ControllerByMode[project_data.mode](active_label=labels[0])
+            active_label = labels_list[0]
+        if project_data.stage is AnnotationStage.REVIEW:
+            self.controller = ObjectFigureController(active_label=active_label)
+        else:
+            self.controller = ControllerByMode[project_data.mode](active_label=active_label)
 
         super().__init__(data_path=data_path, project_data=project_data)
 
