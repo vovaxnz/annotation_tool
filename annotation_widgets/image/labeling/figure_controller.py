@@ -135,17 +135,19 @@ class ObjectFigureController(AbstractFigureController):
 
     def copy(self):
         self.serialized_figures_buffer = list()
-        figures_to_add = self.figures
+        
         if self.selected_figure_id is not None:
             figures_to_add = [self.figures[self.selected_figure_id]]
         else:
-            for figure in figures_to_add:
-                self.serialized_figures_buffer.append(
-                    {
-                        "kwargs": figure.serialize(),
-                        "type": type(figure)
-                    }
-                )
+            figures_to_add = self.figures
+            
+        for figure in figures_to_add:
+            self.serialized_figures_buffer.append(
+                {
+                    "kwargs": figure.serialize(),
+                    "type": type(figure)
+                }
+            )
 
     def paste(self):
         for figure in self.serialized_figures_buffer:
