@@ -187,17 +187,17 @@ class ImageLabelingLogic(AbstractImageAnnotationLogic):
 
         if self.project_data.stage is AnnotationStage.REVIEW:
             # review_labels was edited and figures stored unchanged
-            figures = self.figures 
+            figures = [figure for figure in self.figures]
             review_labels = self.controller.figures 
         else:
             # figures was edited and review_labels stored unchanged
-            figures = self.controller.figures
+            figures = [figure for figure in self.controller.figures]
             review_labels = self.review_labels 
 
         if not self.hide_review_labels:
             result_figures = figures + review_labels
         else:
-            result_figures = figures
+            result_figures = [figure for figure in figures]
 
         if self.controller.preview_figure is not None:
             result_figures.append(self.controller.preview_figure)

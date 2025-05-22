@@ -139,7 +139,7 @@ class ObjectFigureController(AbstractFigureController):
         if self.selected_figure_id is not None:
             figures_to_add = [self.figures[self.selected_figure_id]]
         else:
-            figures_to_add = self.figures
+            figures_to_add = [figure for figure in self.figures]
             
         for figure in figures_to_add:
             self.serialized_figures_buffer.append(
